@@ -1,0 +1,31 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+}
+
+/* Visible only once focused, so a keyboard or switch user can reach content
+   without tabbing through the header every time.
+   Moved with `transform` rather than `inset-block-start` — the motion policy
+   allows transitions on colour, opacity and transform only, and offsets
+   would not transition smoothly anyway. */
+.skip-link {
+  position: absolute;
+  z-index: 10;
+  inset-inline-start: var(--gm-gutter);
+  inset-block-start: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--gm-tap-min);
+  padding-inline: 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--gm-accent);
+  color: var(--gm-on-accent);
+  font-weight: 600;
+  transform: translateY(calc(-100% - 1rem));
+  transition: transform var(--gm-duration) var(--gm-ease);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}

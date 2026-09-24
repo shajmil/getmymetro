@@ -1,0 +1,49 @@
+<a class="skip-link" href="#main-content">{{ t('shell.skip') }}</a>
+
+<header class="border-b border-border">
+  <div class="page-shell flex items-center justify-between gap-tap-gap py-2">
+    <div class="min-w-0">
+      <p class="text-station font-bold tracking-tight">getmymetro</p>
+      <p class="text-min text-muted">{{ t('shell.tagline') }}</p>
+    </div>
+
+    <!--
+      The language toggle. A real anchor with a real href, not a button:
+      /ml/station/aluva is a page in its own right, it is in the sitemap with
+      an hreflang pair, and CLAUDE.md's search strategy 4 rests on those pages
+      being crawlable. A button would hide every Malayalam page behind a click
+      no crawler makes. `routerLink` keeps the in-app navigation instant, and
+      `hreflang` plus `lang` tell a browser and a screen reader that the label
+      itself is in the other language.
+    -->
+    <a
+      class="tap-target shrink-0 rounded-lg border-2 border-outline font-semibold transition-colors hover:bg-surface"
+      [routerLink]="alternate()"
+      [attr.lang]="otherLang()"
+      [attr.hreflang]="otherLang()"
+      [attr.title]="t('shell.switchTitle')"
+      >{{ t('shell.switch') }}</a
+    >
+  </div>
+</header>
+
+<main id="main-content" class="page-shell grow py-6">
+  <router-outlet />
+</main>
+
+<footer class="mt-8 border-t border-border py-6">
+  <div class="page-shell space-y-2 text-min">
+    <!--
+      Both lines are licence conditions, not copy. See CLAUDE.md finding 1:
+      the attribution string is required verbatim, and the app must not imply
+      that KMRL endorses it. Breach terminates the data licence automatically.
+      Do not reword, abbreviate or remove either line.
+
+      The attribution is NOT translated, on either page. "Verbatim" is the
+      word the licence uses, and a translation is by definition not verbatim.
+      The disclaimer under it carries no such requirement, so it is.
+    -->
+    <p lang="en">Contains data provided by Kochi Metro Rail Limited</p>
+    <p class="text-muted">{{ t('shell.disclaimer') }}</p>
+  </div>
+</footer>

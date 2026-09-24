@@ -1,0 +1,2444 @@
+KOCHI TRANSIT — COMPLETE PROJECT TECHNICAL DOCUMENTATION
+==============================================================
+
+Document purpose
+----------------
+Master technical specification for a free-to-start Kochi Metro transit SaaS.
+
+Product working name:
+    Kochi Transit
+
+Product statement:
+    "Know where your train is, when it will arrive, and when you should leave."
+
+IMPORTANT DATA ASSUMPTION
+-------------------------
+KMRL's current Open Data platform advertises GTFS Static and GTFS-Realtime
+capabilities including vehicle positions, ETA predictions and service alerts.
+Before production development, verify the exact public GTFS-RT endpoint,
+authentication/access requirements, update frequency, available entities and
+usage/licensing terms.
+
+The existing kochimetro.keralam.co experience explicitly describes its train
+locations as schedule-based rather than live. The project should therefore
+differentiate itself through genuine realtime data where publicly accessible.
+
+==============================================================
+1. PRODUCT VISION
+==============================================================
+
+Do NOT build another basic metro timetable/map website.
+
+Core value:
+    Turn transit data into decisions for passengers.
+
+Primary question:
+    "If I need to reach X at Y time, when should I leave?"
+
+Core product loop:
+
+    User
+      |
+      v
+    Where am I?
+      |
+      v
+    Where am I going?
+      |
+      v
+    Journey Engine
+      |
+      +------ Schedule
+      |
+      +------ Realtime
+      |
+      +------ Walking
+      |
+      +------ Alerts
+      |
+      v
+    ETA
+      |
+      v
+    LEAVE-BY recommendation
+
+Differentiators:
+    - Realtime train positions
+    - Realtime ETA
+    - Journey planning
+    - "Leave by" intelligence
+    - Delay impact
+    - Service alerts
+    - Mobile-first PWA
+    - Eventually multimodal Kochi transit
+    - Eventually AI transit assistant
+
+==============================================================
+2. PRODUCT SCOPE
+==============================================================
+
+MVP MUST HAVE
+-------------
+- Kochi Metro stations
+- Metro routes
+- Interactive map
+- Station search
+- From -> To journey planning
+- Fare calculation
+- Scheduled departures
+- Realtime train positions if public feed is accessible
+- Realtime ETA if public data supports it
+- Train direction
+- Train status
+- Service alerts
+- Nearest station
+- "Leave by" calculation
+- Responsive mobile UI
+- PWA
+- Data-source attribution
+- Graceful failure when realtime is unavailable
+
+V2
+--
+- Favorites
+- Home / work / college locations
+- Push notifications
+- Delay notifications
+- Saved journeys
+- Journey history
+- Water Metro
+- Multimodal journeys
+- Better walking routes
+- Accessibility-aware routing
+
+V3
+--
+- AI transit assistant
+- Personalized commute
+- Historical travel-time analytics
+- Reliability statistics
+- Predictive ETA
+- Crowd estimation if legitimate data becomes available
+- Multimodal bus/metro/water-metro optimization
+
+DO NOT BUILD INITIALLY
+----------------------
+- Native Android app
+- Native iOS app
+- Complex authentication
+- Social features
+- Payments
+- Kubernetes
+- Kafka
+- Microservice explosion
+- ML ETA prediction
+- Generic AI chatbot
+- Huge admin dashboard
+
+==============================================================
+3. RECOMMENDED STACK
+==============================================================
+
+FRONTEND
+--------
+Angular 21
+Signals
+RxJS
+Standalone Components
+Typed Reactive Forms
+Angular Router
+Angular PWA / Service Worker
+Nx
+Tailwind CSS
+
+MAP
+---
+MapLibre GL JS
+CARTO basemap initially, subject to current usage/licensing terms
+OpenStreetMap data
+
+BACKEND
+-------
+Node.js
+TypeScript
+Fastify
+
+DATABASE
+--------
+PostgreSQL
+PostGIS
+
+REALTIME
+--------
+GTFS-Realtime
+Protocol Buffers
+Redis or Cloudflare KV
+SSE initially
+WebSocket only if bidirectional realtime becomes necessary
+
+TRANSIT ROUTING
+---------------
+MVP:
+    Custom Kochi Metro graph using Dijkstra/A*
+
+Later:
+    OpenTripPlanner for Metro + Water Metro + walking + buses and other
+    multimodal journeys.
+
+DATA INGESTION
+--------------
+Python or Node.js worker
+GTFS parser
+GTFS-Realtime protobuf parser
+
+INFRASTRUCTURE
+--------------
+Cloudflare
+GitHub
+GitHub Actions
+Docker
+Potential free-tier database/cache providers
+
+TESTING
+-------
+Vitest
+Angular TestBed
+Playwright
+API integration tests
+Load tests
+
+OBSERVABILITY
+-------------
+Structured logging
+Health endpoints
+Cloudflare logs / equivalent
+Realtime feed freshness metrics
+
+==============================================================
+4. WHY THIS STACK
+==============================================================
+
+Angular:
+    Strong fit for complex reactive UI and existing project expertise.
+
+Signals:
+    UI state, derived state, selected station/train, map state.
+
+RxJS:
+    HTTP streams, SSE, debouncing, search, realtime transformations.
+
+MapLibre:
+    Open-source map renderer with strong control over layers and animations.
+
+CARTO:
+    Can provide polished basemaps while MapLibre handles rendering.
+    Keep a MapProvider abstraction so CARTO can later be replaced.
+
+PostgreSQL + PostGIS:
+    Best fit for geospatial queries such as nearest station, radius search,
+    route geometry and geographic distance.
+
+Redis/KV:
+    Realtime vehicle state should not require database queries for every
+    user request.
+
+Fastify:
+    Lightweight Node.js API layer and good fit with TypeScript.
+
+Custom Metro graph:
+    Kochi Metro's initial network is small enough that a dedicated graph is
+    far simpler than deploying OpenTripPlanner immediately.
+
+OpenTripPlanner:
+    Add when the system becomes genuinely multimodal.
+
+SSE:
+    Realtime information mostly flows server -> browser, so SSE is simpler
+    than WebSocket for the initial implementation.
+
+==============================================================
+5. HIGH-LEVEL ARCHITECTURE
+==============================================================
+
+                         KMRL
+                          |
+                +---------+---------+
+                |                   |
+                v                   v
+           GTFS STATIC          GTFS-RT
+                |                   |
+                v                   v
+          GTFS Importer       Realtime Worker
+                |                   |
+                v                   v
+       PostgreSQL/PostGIS          Redis/KV
+                |                   |
+                |                   v
+                |                  SSE
+                |                   |
+                +---------+---------+
+                          |
+                          v
+                    Node/Fastify
+                          |
+          +---------------+---------------+
+          |               |               |
+          v               v               v
+       Stations        Journey        Realtime
+          |             Engine           |
+          +---------------+---------------+
+                          |
+                          v
+                     Angular 21
+                          |
+                  +-------+-------+
+                  |               |
+                  v               v
+               MapLibre        Signals
+                  |
+                  v
+                CARTO*
+                  |
+                  v
+             OpenStreetMap
+
+*CARTO usage must comply with its current terms and quotas.
+
+==============================================================
+6. DATA ARCHITECTURE
+==============================================================
+
+KMRL should be treated as an external provider.
+
+Never make the Angular frontend depend directly on raw KMRL feed formats.
+
+Architecture:
+
+    KMRL raw data
+        |
+        v
+    Ingestion layer
+        |
+        v
+    Normalized internal model
+        |
+        +---- PostgreSQL/PostGIS
+        |
+        +---- Redis/KV for realtime
+
+This makes it possible to replace the external feed later without rewriting
+the entire frontend.
+
+==============================================================
+7. GTFS STATIC DATA
+==============================================================
+
+Expected concepts include:
+
+- Stops/stations
+- Routes
+- Trips
+- Stop times
+- Calendar/service definitions
+- Shapes
+- Fare information
+- Transfers where supplied
+
+Import process:
+
+    Download feed
+        |
+        v
+    Validate ZIP/files
+        |
+        v
+    Parse
+        |
+        v
+    Validate references
+        |
+        v
+    Build version
+        |
+        v
+    Import database
+        |
+        v
+    Activate version
+
+Never blindly overwrite the previous feed.
+
+Store:
+
+    feed_version
+    feed_hash
+    downloaded_at
+    effective_date
+    source_url
+
+==============================================================
+8. GTFS-REALTIME
+==============================================================
+
+Potential entities:
+
+- Vehicle positions
+- Trip updates
+- Service alerts
+
+Target normalized vehicle model:
+
+{
+    vehicleId,
+    tripId,
+    routeId,
+    latitude,
+    longitude,
+    bearing,
+    speed,
+    currentStopId,
+    nextStopId,
+    status,
+    sourceTimestamp,
+    receivedAt
+}
+
+IMPORTANT:
+    sourceTimestamp and receivedAt are different.
+
+A feed can be delayed even if the request succeeds.
+
+==============================================================
+9. REALTIME PIPELINE
+==============================================================
+
+    KMRL GTFS-RT
+          |
+          v
+    Download protobuf
+          |
+          v
+    Decode
+          |
+          v
+    Validate
+          |
+          v
+    Normalize
+          |
+          v
+    Match vehicle -> trip -> route
+          |
+          v
+    Redis/KV
+          |
+          +------> REST snapshot API
+          |
+          +------> SSE stream
+                         |
+                         v
+                      Angular
+
+Do not request KMRL independently for every user.
+
+Bad:
+    100 users -> 100 requests -> KMRL
+
+Better:
+    KMRL -> one ingestion worker -> cache -> many users
+
+==============================================================
+10. DATABASE SCHEMA
+==============================================================
+
+stations
+--------
+id
+external_id
+code
+name
+name_local
+latitude
+longitude
+location GEOGRAPHY(Point)
+zone
+is_active
+created_at
+updated_at
+
+routes
+------
+id
+external_id
+short_name
+long_name
+route_type
+color
+geometry
+
+trips
+-----
+id
+external_id
+route_id
+service_id
+direction
+headsign
+
+stop_times
+----------
+id
+trip_id
+station_id
+arrival_time
+departure_time
+stop_sequence
+
+fares
+-----
+id
+origin_station_id
+destination_station_id
+amount
+currency
+
+vehicles
+--------
+id
+external_id
+label
+current_trip_id
+latitude
+longitude
+bearing
+speed
+current_station_id
+next_station_id
+status
+last_seen_at
+
+service_alerts
+--------------
+id
+external_id
+cause
+effect
+header
+description
+start_time
+end_time
+severity
+created_at
+updated_at
+
+==============================================================
+11. REALTIME CACHE MODEL
+==============================================================
+
+Example:
+
+vehicle:KM-23
+
+{
+    vehicleId: "KM-23",
+    tripId: "T123",
+    latitude: 10.0264,
+    longitude: 76.3082,
+    bearing: 82,
+    speed: 11.3,
+    nextStop: "MG Road",
+    timestamp: "...",
+    receivedAt: "..."
+}
+
+Do not use PostgreSQL as the high-frequency realtime read path.
+
+==============================================================
+12. REALTIME FRESHNESS
+==============================================================
+
+Define explicit states.
+
+Example:
+
+< 30 seconds:
+    LIVE
+
+30-90 seconds:
+    RECENT
+
+90 seconds-5 minutes:
+    STALE
+
+> 5 minutes:
+    UNAVAILABLE
+
+Make thresholds configurable.
+
+Never display "LIVE" when the source data is stale.
+
+UI example:
+
+    LIVE
+    Updated 8 sec ago
+
+or:
+
+    Data may be stale
+    Last updated 2 min ago
+
+==============================================================
+13. REALTIME FAILURE STATES
+==============================================================
+
+If KMRL feed is unavailable:
+
+    Do not crash the app.
+
+Fallback:
+
+    Last known realtime
+        |
+        v
+    Static schedule
+
+Display:
+
+    "Live data temporarily unavailable.
+     Showing scheduled times."
+
+If Redis is unavailable:
+    Realtime API becomes degraded but static data should continue.
+
+If database is unavailable:
+    Return proper health/degraded responses.
+
+==============================================================
+14. TRAIN POSITION INTERPOLATION
+==============================================================
+
+Realtime feeds may update every few seconds.
+
+Example:
+
+10:30:00:
+    Position A
+
+10:30:20:
+    Position B
+
+At 10:30:10:
+    visually interpolate between A and B.
+
+Keep two concepts:
+
+    sourcePosition
+    displayPosition
+
+Never claim interpolated coordinates are measured GPS coordinates.
+
+==============================================================
+15. TRAIN LIFECYCLE
+==============================================================
+
+Train states:
+
+    ACTIVE
+      |
+      v
+    STALE
+      |
+      v
+    EXPIRED
+      |
+      v
+    REMOVED
+
+Do not immediately remove a train when one update is missing.
+
+This prevents map marker flickering.
+
+==============================================================
+16. TRAIN MATCHING
+==============================================================
+
+Prefer explicit identifiers:
+
+    vehicleId
+    tripId
+    routeId
+
+Use:
+
+    vehicle
+      |
+      v
+    trip
+      |
+      v
+    route
+      |
+      v
+    direction
+      |
+      v
+    stop sequence
+
+Do not infer everything from latitude/longitude.
+
+==============================================================
+17. CLOCK AND TIMEZONE
+==============================================================
+
+Use:
+    Asia/Kolkata
+
+Prefer UTC for stored timestamps where practical.
+
+Display:
+    IST
+
+GTFS times can exceed 24:00.
+
+Example:
+
+    25:10:00
+
+means:
+
+    01:10 next service day.
+
+Do not naïvely parse GTFS times with JavaScript Date.
+
+==============================================================
+18. SERVICE DAY
+==============================================================
+
+A trip after midnight can belong to the previous service day.
+
+The schedule engine must explicitly understand GTFS service dates.
+
+==============================================================
+19. STATION MODEL
+==============================================================
+
+Do not assume:
+
+    station = one coordinate
+
+Eventually model:
+
+    Station
+      |
+      +-- Entrances
+      +-- Platforms
+      +-- Exits
+      +-- Transfer paths
+      +-- Accessibility information
+
+Nearest station should eventually use entrance/walking distance rather than
+only straight-line distance.
+
+==============================================================
+20. USER LOCATION
+==============================================================
+
+Use browser geolocation.
+
+Possible states:
+
+    Permission granted
+    Permission denied
+    Timeout
+    Low accuracy
+    GPS unavailable
+
+Never require location.
+
+Fallback:
+
+    Search station manually.
+
+Do not store precise location by default.
+
+==============================================================
+21. ROUTING ENGINE
+==============================================================
+
+MVP:
+    Custom graph.
+
+Model:
+
+    Station = Node
+    Track connection = Edge
+
+Algorithm:
+
+    Dijkstra
+or:
+    A*
+
+For Kochi Metro's small graph, computational complexity is not the biggest
+problem. Transit semantics are harder.
+
+Later:
+    OpenTripPlanner.
+
+==============================================================
+22. TRANSFER HANDLING
+==============================================================
+
+Do not assume:
+
+    transfer time = 0
+
+Use GTFS transfer data when available.
+
+Otherwise use configurable station transfer defaults.
+
+==============================================================
+23. FARE ENGINE
+==============================================================
+
+Do not hardcode fares by number of stations.
+
+Use imported fare data.
+
+Flow:
+
+    Origin
+      |
+      v
+    Destination
+      |
+      v
+    Fare lookup
+      |
+      v
+    Fare result
+
+Keep fare rules data-driven because prices can change.
+
+==============================================================
+24. ETA ENGINE
+==============================================================
+
+Priority:
+
+1. Official TripUpdate ETA, if available.
+2. Official vehicle position + route geometry.
+3. Scheduled timetable as fallback.
+
+Never promise exact arrival.
+
+Use:
+
+    Expected 08:37
+
+or:
+
+    ~08:37
+
+not:
+
+    Exactly 08:37
+
+==============================================================
+25. LEAVE-BY ENGINE
+==============================================================
+
+Signature feature.
+
+Inputs:
+
+    current location
+    destination
+    target arrival time
+    walking time
+    station
+    available trains
+    realtime ETA
+    transfer time
+    safety buffer
+
+Concept:
+
+    targetArrival
+        -
+    lastMileWalk
+        -
+    transitDuration
+        -
+    transfer
+        -
+    firstMileWalk
+        -
+    buffer
+        =
+    leaveBy
+
+But actual train departure availability must be checked.
+
+Example:
+
+    Target: 09:00
+    Destination walk: 5 min
+    Metro: 17 min
+    Transfer: 3 min
+    Station walk: 6 min
+    Buffer: 5 min
+
+    Approximate leave time:
+    08:24
+
+Then validate against actual available departures.
+
+==============================================================
+26. DELAY IMPACT
+==============================================================
+
+Static:
+
+    Scheduled arrival = 08:52
+
+Realtime:
+
+    Predicted arrival = 08:58
+
+System:
+
+    delay = +6 minutes
+
+Then recompute the user's journey.
+
+Example:
+
+    Previous arrival: 08:52
+    New arrival: 08:58
+    Target: 09:00
+
+    Result:
+    Very small remaining buffer.
+
+Never make unsupported certainty claims.
+
+==============================================================
+27. PAGE-BY-PAGE SPECIFICATION
+==============================================================
+
+PAGE 1 — HOME
+-------------
+Purpose:
+    Fast access to the most important features.
+
+Elements:
+    App logo
+    Destination search
+    Plan Journey button
+    Live train count
+    Active alert count
+    Nearby station
+    Recent/favorite journeys
+
+Example:
+
+    Kochi Transit
+
+    Where are you going?
+    [ Search destination ]
+
+    [ Plan journey ]
+
+    8 trains running
+    1 service alert
+
+    Nearby:
+    Edappally Station
+
+PAGE 2 — LIVE MAP
+-----------------
+Layers:
+    Base map
+    Metro routes
+    Stations
+    Live trains
+    User
+    Destination
+    Journey route
+
+Controls:
+    Zoom
+    Locate me
+    Metro toggle
+    Stations toggle
+    Trains toggle
+    Theme
+
+Train popup:
+
+    Train 21
+    Direction: Thrippunithura
+    Current: Kaloor
+    Next: MG Road
+    ETA: 2 min
+    Updated: 8 sec ago
+
+PAGE 3 — STATION
+----------------
+Example:
+
+    MG Road
+
+    Towards Aluva
+      2 min
+      8 min
+      15 min
+
+    Towards Thrippunithura
+      4 min
+      10 min
+      18 min
+
+Additional:
+    Accessibility
+    Parking
+    Entrances
+    Facilities
+    Nearby places
+
+PAGE 4 — JOURNEY PLANNER
+------------------------
+Inputs:
+
+    From
+    To
+
+    [ Plan journey ]
+
+Results can show measurable alternatives:
+
+    Fastest
+      22 min
+
+    Cheapest
+      Rs. X
+
+    Fewest transfers
+      25 min
+
+Avoid arbitrary overall rankings without objective criteria.
+
+PAGE 5 — JOURNEY DETAILS
+------------------------
+Show:
+
+    Walking
+    Metro
+    Walking
+
+    Total duration
+    Expected arrival
+    Fare
+    Transfer information
+    Map route
+
+PAGE 6 — LEAVE-BY
+-----------------
+Inputs:
+
+    Destination
+    Target arrival time
+
+Output:
+
+    LEAVE BY
+    08:31 AM
+
+    Expected arrival
+    08:54 AM
+
+    Buffer
+    6 minutes
+
+PAGE 7 — ALERTS
+---------------
+Show:
+
+    Active service alerts
+    Affected direction
+    Expected impact
+    Updated time
+
+PAGE 8 — FAVORITES
+------------------
+Show:
+
+    Home
+    Office
+    College
+    Favorite stations
+    Recent journeys
+
+PAGE 9 — SETTINGS
+-----------------
+Show:
+
+    Theme
+    Notifications
+    Location permissions
+    Default station
+    Time format
+    Language
+    Data usage
+    Privacy
+    About
+
+PAGE 10 — ABOUT / DATA SOURCES
+------------------------------
+Show:
+
+    Kochi Metro Rail Limited
+    GTFS
+    GTFS-Realtime
+    OpenStreetMap
+    CARTO
+
+    Last data update
+    App version
+
+Include attribution according to provider requirements.
+
+==============================================================
+28. FRONTEND ARCHITECTURE
+==============================================================
+
+Nx recommended.
+
+apps/
+    web/
+    api/
+    realtime-worker/
+
+libs/
+    core/
+    domain/
+    data-access/
+    map/
+    metro/
+    journey/
+    realtime/
+    stations/
+    alerts/
+    favorites/
+    notifications/
+    ui/
+    utils/
+
+Separate state domains:
+
+    AppState
+    RealtimeState
+    JourneyState
+    MapState
+    StationState
+    AlertState
+    UserState
+
+Do not create one giant global store.
+
+Use Signals for:
+    UI state
+    selected station
+    selected train
+    map state
+    derived values
+
+Use RxJS for:
+    HTTP
+    SSE
+    search
+    debounce
+    stream transformations
+
+==============================================================
+29. BACKEND API
+==============================================================
+
+Static endpoints:
+
+    GET /api/stations
+    GET /api/stations/:id
+    GET /api/routes
+    GET /api/routes/:id
+    GET /api/trains
+    GET /api/trains/:id
+    GET /api/alerts
+    GET /api/fares
+
+Journey:
+
+    POST /api/journeys
+
+Example request:
+
+{
+    "origin": {
+        "lat": 10.026,
+        "lng": 76.312
+    },
+    "destination": {
+        "lat": 9.981,
+        "lng": 76.299
+    },
+    "arrivalBy": "2026-09-22T09:00:00+05:30"
+}
+
+Realtime:
+
+    GET /api/realtime/trains
+    GET /api/realtime/trains/:id
+    GET /api/realtime/stream
+
+SSE is preferred initially.
+
+==============================================================
+30. SECURITY
+==============================================================
+
+Implement:
+
+    Rate limiting
+    CORS
+    Input validation
+    Security headers
+    API request size limits
+    Authentication only where necessary
+    Secrets management
+
+Never expose:
+    PostgreSQL
+    Redis
+    Internal worker credentials
+
+Never commit API keys.
+
+==============================================================
+31. PRIVACY
+==============================================================
+
+Default principle:
+
+    Do not store precise user location.
+
+Use location transiently for:
+    nearest station
+    walking calculation
+
+Favorites can initially be stored locally.
+
+Authentication can be added later for cross-device sync.
+
+==============================================================
+32. FAILURE HANDLING
+==============================================================
+
+KMRL feed down:
+    Use cached/static schedule
+    Show degraded state
+
+Database down:
+    Return health/degraded state
+
+Redis down:
+    Static API continues
+    Realtime becomes degraded
+
+Network down:
+    PWA shell + cached station data
+    Realtime unavailable
+
+No GPS:
+    Manual station search
+
+Invalid coordinates:
+    Reject or ignore the record
+
+Missing vehicle:
+    Mark stale before removal
+
+==============================================================
+33. EDGE CASES
+==============================================================
+
+GTFS:
+    - Invalid references
+    - Missing stations
+    - Invalid shapes
+    - Duplicate trips
+    - Times beyond 24:00
+    - Service-day boundaries
+    - Feed version changes
+
+Realtime:
+    - Missing vehicle ID
+    - Missing trip ID
+    - Missing coordinates
+    - Duplicate vehicles
+    - Stale timestamp
+    - Future timestamp
+    - Invalid latitude
+    - Invalid longitude
+    - Train disappears
+    - Feed outage
+    - Partial feed update
+    - Out-of-order messages
+
+Journey:
+    - Origin is station
+    - Origin is arbitrary GPS point
+    - Destination is station
+    - Destination is arbitrary GPS point
+    - No route
+    - Last train
+    - First train
+    - Target arrival already impossible
+    - Very tight buffer
+    - Station transfer
+    - User misses train
+
+UI:
+    - Offline
+    - Slow network
+    - Empty search
+    - No trains
+    - Stale data
+    - Location denied
+    - Reduced motion
+    - Small screen
+
+==============================================================
+34. TIME EDGE CASES
+==============================================================
+
+Handle:
+
+    Midnight
+    24+ hour GTFS times
+    Daylight-saving assumptions are not relevant to IST
+    Device clock incorrect
+    Server clock incorrect
+    KMRL timestamp delayed
+    Service date vs calendar date
+
+Prefer server/provider timestamps for transit logic.
+
+==============================================================
+35. MAP EDGE CASES
+==============================================================
+
+- GPS outside Kochi
+- GPS near multiple stations
+- Train slightly outside route geometry
+- Duplicate markers
+- Marker flicker
+- Missing route geometry
+- Map tile provider outage
+- Map tile quota exceeded
+- Low-end phone performance
+- Reduced motion
+
+Use MapLibre layers rather than hundreds of DOM markers.
+
+==============================================================
+36. PERFORMANCE
+==============================================================
+
+Targets:
+
+Frontend:
+    Initial load target: ~2-3 seconds on reasonable mobile network.
+
+API:
+    Cached/simple endpoint target: p95 < 300ms.
+
+Realtime:
+    Keep source-to-browser latency as low as provider frequency allows.
+
+Map:
+    Prefer vector/source layers.
+    Avoid excessive DOM markers.
+
+Do not claim guaranteed latency; measure it in production.
+
+==============================================================
+37. TESTING STRATEGY
+==============================================================
+
+UNIT TESTS
+----------
+Test:
+    GTFS time parsing
+    Fare calculation
+    Route calculation
+    ETA calculation
+    Leave-by calculation
+    Stale detection
+    Train lifecycle
+    Service alert filtering
+
+INTEGRATION TESTS
+-----------------
+Test:
+    GTFS -> DB
+    GTFS-RT -> Redis/KV
+    API -> DB
+    API -> realtime
+    SSE -> client
+
+E2E
+---
+Test:
+    Search station
+    Plan journey
+    Open map
+    Select train
+    View ETA
+    Leave-by flow
+    Alerts
+
+LOAD
+----
+Test:
+    100 concurrent
+    500 concurrent
+    1000 concurrent
+    Higher loads as needed
+
+Focus:
+    realtime endpoint
+    SSE connections
+    journey endpoint
+
+==============================================================
+38. REALTIME SIMULATOR
+==============================================================
+
+Build a development-only simulator.
+
+Example input:
+
+{
+    "vehicleId": "T1",
+    "route": "ALUVA_THRIPUNITHURA",
+    "startStation": "ALUVA",
+    "speed": 35
+}
+
+Simulator outputs:
+    Vehicle positions
+    timestamps
+    trip IDs
+    station transitions
+
+This allows complete realtime development without relying on KMRL.
+
+Fault simulation:
+
+    simulateDelay()
+    simulateMissingTrain()
+    simulateStaleFeed()
+    simulateDuplicateVehicle()
+    simulateInvalidCoordinate()
+    simulateKMRLDown()
+
+==============================================================
+39. OBSERVABILITY
+==============================================================
+
+Track:
+
+    API latency
+    Error rate
+    Feed age
+    Active trains
+    Stale trains
+    SSE clients
+    DB health
+    Cache health
+
+Critical metric:
+
+    realtime_feed_age_seconds
+
+Example health endpoint:
+
+{
+    "api": "ok",
+    "database": "ok",
+    "realtime": "degraded"
+}
+
+==============================================================
+40. ADMIN / INTERNAL HEALTH DASHBOARD
+==============================================================
+
+Internal-only page:
+
+    SYSTEM HEALTH
+
+    KMRL Feed
+    Healthy
+
+    Last update
+    12 sec
+
+    Vehicles
+    17
+
+    Stations
+    25
+
+    Redis
+    Healthy
+
+    Database
+    Healthy
+
+    API
+    Healthy
+
+Useful for debugging user reports such as:
+    "The train is not moving."
+
+==============================================================
+41. ANALYTICS
+==============================================================
+
+Anonymous product metrics:
+
+    Home opens
+    Station searches
+    Journey plans
+    Live map opens
+    Alerts viewed
+    Leave-by usage
+
+Important funnel:
+
+    App open
+      |
+      v
+    Search
+      |
+      v
+    Journey
+      |
+      v
+    Useful result
+
+Avoid collecting precise travel history by default.
+
+==============================================================
+42. ACCESSIBILITY
+==============================================================
+
+Support:
+
+    Keyboard navigation
+    Screen readers
+    High contrast
+    Large touch targets
+    Reduced motion
+    Accessible labels
+    Focus states
+
+Train animation should respect:
+
+    prefers-reduced-motion
+
+==============================================================
+43. MOBILE-FIRST
+==============================================================
+
+Priority:
+
+    Mobile
+      |
+    Tablet
+      |
+    Desktop
+
+Important because the product is used while travelling.
+
+Optimize:
+    one-hand use
+    large buttons
+    fast launch
+    minimal typing
+    clear ETA
+    clear "Leave by"
+
+==============================================================
+44. PWA
+==============================================================
+
+Provide:
+
+    Installable app
+    Offline shell
+    Cached station data
+    Cached static assets
+    Fast launch
+    Optional push notifications
+
+Offline UI:
+
+    Map:
+        cached if available
+
+    Stations:
+        cached
+
+    Live trains:
+        unavailable / last known
+
+Never pretend realtime is available offline.
+
+==============================================================
+45. NOTIFICATIONS
+==============================================================
+
+Potential notifications:
+
+    "Your train arrives in 3 minutes."
+
+    "Your usual train is delayed."
+
+    "Leave now to reach by 9:00."
+
+    "Service disruption on your route."
+
+Use opt-in subscriptions.
+
+Avoid notification spam.
+
+==============================================================
+46. AUTHENTICATION STRATEGY
+==============================================================
+
+MVP:
+    No login.
+
+Store locally:
+    favorite stations
+    home
+    work
+    preferences
+
+Later:
+    Google
+    Apple
+    Email
+
+Only introduce accounts when cross-device sync becomes valuable.
+
+==============================================================
+47. MAP ARCHITECTURE
+==============================================================
+
+MapProvider abstraction:
+
+    MapProvider
+        |
+        +-- CartoProvider
+        +-- MapTilerProvider
+        +-- SelfHostedProvider
+
+Methods:
+
+    initialize()
+    addStationLayer()
+    addTrainLayer()
+    updateTrain()
+    addRoute()
+    removeRoute()
+
+This allows map-provider replacement without rewriting the application.
+
+==============================================================
+48. MAP LAYERS
+==============================================================
+
+Layer order:
+
+    Base map
+      |
+    Roads
+      |
+    Buildings/places
+      |
+    Metro route
+      |
+    Stations
+      |
+    Journey route
+      |
+    Trains
+      |
+    User
+      |
+    Destination
+
+Train markers should use source/layer rendering where possible.
+
+==============================================================
+49. COST STRATEGY
+==============================================================
+
+GOAL:
+    Zero-cost MVP, not unlimited free forever.
+
+Development:
+    ₹0 using local Docker.
+
+Potential early public stack:
+    Frontend:
+        Cloudflare Pages
+
+    API:
+        Cloudflare Workers or free-tier Node host
+
+    Database:
+        Free-tier Postgres or Cloudflare D1 depending on feature needs
+
+    Cache:
+        Cloudflare KV or free-tier Redis
+
+    Source:
+        GitHub
+
+    CI/CD:
+        GitHub Actions
+
+    Domain:
+        *.pages.dev initially
+
+    Map:
+        CARTO free basemap if current usage and project terms allow it
+
+Important:
+    Free quotas and commercial-use terms can change.
+
+Never promise unlimited free infrastructure.
+
+==============================================================
+50. MAP TILE COST WARNING
+==============================================================
+
+MapLibre is free.
+
+OpenStreetMap data is open.
+
+That does NOT mean unlimited map tiles are free.
+
+Map tiles require infrastructure/bandwidth.
+
+For early MVP:
+    Use a suitable free-tier provider within its terms.
+
+Later:
+    Commercial map provider
+    or
+    self-hosted vector tiles
+
+Do not hammer public OSM tile servers.
+
+==============================================================
+51. DEVELOPMENT PHASES
+==============================================================
+
+PHASE 0 — FEASIBILITY
+---------------------
+Do this BEFORE building the UI.
+
+1. Obtain current KMRL GTFS.
+2. Inspect all tables/files.
+3. Validate feed.
+4. Find actual GTFS-RT endpoint.
+5. Test public access.
+6. Determine authentication.
+7. Decode realtime protobuf.
+8. Confirm VehiclePosition.
+9. Confirm TripUpdate.
+10. Confirm ServiceAlert.
+11. Measure update frequency.
+12. Review usage/licensing terms.
+
+SUCCESS CONDITION:
+    Receive at least one real vehicle-position record.
+
+If realtime access fails:
+    Continue static product development.
+    Keep realtime adapter replaceable.
+
+PHASE 1 — DATA ENGINE
+---------------------
+Build:
+    GTFS downloader
+    validator
+    parser
+    database importer
+    versioning
+
+Output:
+    stations
+    routes
+    trips
+    stop_times
+    fares
+    shapes
+
+PHASE 2 — METRO GRAPH
+---------------------
+Build:
+    Station graph
+    Dijkstra/A*
+    Direction calculation
+    Journey result
+    Fare lookup
+
+PHASE 3 — API
+-------------
+Build:
+    stations
+    routes
+    schedules
+    fares
+    journeys
+    alerts
+
+Test API independently.
+
+PHASE 4 — MAP
+-------------
+Build:
+    MapLibre
+    CARTO
+    stations
+    routes
+    user location
+    destination
+
+PHASE 5 — REALTIME
+------------------
+Build:
+    GTFS-RT collector
+    protobuf parser
+    normalization
+    Redis/KV
+    SSE
+    Angular realtime state
+    train markers
+
+PHASE 6 — ETA
+-------------
+Use:
+    TripUpdate if available
+    VehiclePosition fallback
+    Schedule fallback
+
+PHASE 7 — LEAVE-BY
+------------------
+Combine:
+    walking
+    station
+    train
+    ETA
+    transfer
+    destination
+    buffer
+
+PHASE 8 — PWA
+-------------
+Add:
+    manifest
+    service worker
+    offline shell
+    install experience
+
+PHASE 9 — NOTIFICATIONS
+-----------------------
+Add:
+    subscriptions
+    favorite journey monitoring
+    delay alerts
+
+PHASE 10 — LAUNCH
+-----------------
+Test:
+    mobile
+    accessibility
+    performance
+    security
+    realtime failure
+    offline
+    load
+
+PHASE 11 — AI
+-------------
+Only after deterministic transit engine is reliable.
+
+==============================================================
+52. AI ARCHITECTURE
+==============================================================
+
+AI should be an interface, not the source of truth.
+
+User:
+    "Can I reach MG Road before 9?"
+
+AI:
+    |
+    +-- getRealtime()
+    +-- getAlerts()
+    +-- planJourney()
+    +-- calculateLeaveBy()
+    |
+    v
+Deterministic transit engine
+    |
+    v
+AI response
+
+The LLM must never invent:
+    train positions
+    ETA
+    fares
+    schedules
+    alerts
+
+==============================================================
+53. FUTURE AI TOOLS
+==============================================================
+
+Potential tools:
+
+    searchStations()
+    getStation()
+    getLiveTrains()
+    getJourney()
+    getETA()
+    getAlerts()
+    getFare()
+    getNearestStation()
+    calculateLeaveBy()
+
+Eventually:
+    MCP can expose these tools to an AI assistant.
+
+Do not introduce MCP merely for buzzword value.
+
+==============================================================
+54. FUTURE MULTIMODAL ARCHITECTURE
+==============================================================
+
+Eventually:
+
+    Metro GTFS
+        +
+    Water Metro GTFS
+        +
+    Bus GTFS
+        +
+    OpenStreetMap
+        +
+    GTFS-RT
+        |
+        v
+    OpenTripPlanner
+        |
+        v
+    Multimodal journey
+
+Example:
+
+    Walk
+      |
+    Metro
+      |
+    Water Metro
+      |
+    Walk
+
+This is where OpenTripPlanner becomes much more valuable.
+
+==============================================================
+55. REPOSITORY STRUCTURE
+==============================================================
+
+kochitransit/
+
+apps/
+    web/
+    api/
+    realtime-worker/
+
+libs/
+    core/
+    domain/
+        station/
+        route/
+        trip/
+        vehicle/
+        journey/
+    data-access/
+        stations/
+        journeys/
+        realtime/
+        alerts/
+    map/
+    metro/
+    journey/
+    realtime/
+    stations/
+    alerts/
+    favorites/
+    notifications/
+    ui/
+    utils/
+
+services/
+    gtfs-importer/
+    gtfs-realtime/
+    routing/
+
+==============================================================
+56. CI/CD
+==============================================================
+
+Pull Request:
+
+    Lint
+      |
+    Typecheck
+      |
+    Unit tests
+      |
+    Build
+      |
+    E2E
+      |
+    Preview deployment
+
+Main:
+
+    Merge
+      |
+    Build
+      |
+    Test
+      |
+    Deploy
+
+Never merge broken realtime code simply because it works locally.
+
+==============================================================
+57. ENVIRONMENT VARIABLES
+==============================================================
+
+Examples:
+
+    KMRL_GTFS_URL
+    KMRL_GTFS_RT_URL
+    DATABASE_URL
+    REDIS_URL
+    CARTO_API_KEY
+    CARTO_STYLE_URL
+    SENTRY_DSN
+
+Never commit secrets.
+
+==============================================================
+58. GIT STRATEGY
+==============================================================
+
+Branches:
+
+    main
+    develop
+    feature/*
+    fix/*
+
+PR requirements:
+
+    lint
+    typecheck
+    tests
+    build
+
+==============================================================
+59. MAJOR CHALLENGES
+==============================================================
+
+1. Realtime data quality
+2. Public GTFS-RT accessibility
+3. Transit semantics
+4. ETA reliability
+5. Feed changes
+6. Map tile costs
+7. Free infrastructure quotas
+8. Network reliability
+9. Mobile performance
+10. Correct time handling
+11. Station transfer logic
+12. Realtime scaling
+
+The hardest problems are not Angular.
+
+The hardest problems are:
+    realtime
+    geospatial data
+    transit semantics
+    ETA
+    reliability
+
+==============================================================
+60. COMPLEXITY
+==============================================================
+
+Angular shell:
+    LOW
+
+Station UI:
+    LOW
+
+Static GTFS parsing:
+    MEDIUM
+
+Fare engine:
+    MEDIUM
+
+Metro graph:
+    MEDIUM
+
+Map:
+    MEDIUM
+
+Live train markers:
+    MEDIUM
+
+GTFS-RT:
+    HIGH
+
+ETA:
+    HIGH
+
+Leave-by:
+    HIGH
+
+Multimodal routing:
+    VERY HIGH
+
+OpenTripPlanner:
+    VERY HIGH
+
+Realtime scaling:
+    VERY HIGH
+
+AI assistant:
+    MEDIUM after deterministic APIs exist
+
+==============================================================
+61. BIGGEST RISK
+==============================================================
+
+The biggest technical risk is assuming:
+
+    "KMRL advertises GTFS-RT"
+
+means:
+
+    "An anonymous external developer can directly download the public
+     vehicle-position protobuf feed."
+
+These are not necessarily equivalent.
+
+Before making realtime a hard dependency, verify:
+
+    Actual endpoint
+    Authentication
+    Update frequency
+    VehiclePosition availability
+    TripUpdate availability
+    ServiceAlert availability
+    Rate limits
+    Usage rights
+    Commercial-use restrictions
+
+==============================================================
+62. MVP ACCEPTANCE CRITERIA
+==============================================================
+
+DATA
+----
+[ ] KMRL GTFS imported
+[ ] Stations correct
+[ ] Routes correct
+[ ] Timetables correct
+[ ] Fare data imported
+
+MAP
+---
+[ ] Map loads
+[ ] Stations render
+[ ] Metro routes render
+[ ] User location works
+[ ] Destination works
+[ ] Train markers work
+
+REALTIME
+--------
+[ ] GTFS-RT connected
+[ ] Vehicle positions parsed
+[ ] Trip matching works
+[ ] Stale detection works
+[ ] Train disappearance handled
+[ ] Realtime stream works
+[ ] Feed failure handled
+
+JOURNEY
+-------
+[ ] A -> B works
+[ ] Direction correct
+[ ] Duration correct
+[ ] Fare correct
+[ ] ETA works
+[ ] Leave-by works
+
+RELIABILITY
+-----------
+[ ] KMRL failure handled
+[ ] Network failure handled
+[ ] Database failure handled
+[ ] Realtime stale state handled
+
+UX
+--
+[ ] Mobile responsive
+[ ] PWA
+[ ] Accessibility
+[ ] Dark mode
+[ ] Loading states
+[ ] Empty states
+[ ] Error states
+
+==============================================================
+63. RECOMMENDED FIRST VERTICAL SLICE
+==============================================================
+
+Do not build 20 pages first.
+
+Build:
+
+    KMRL GTFS
+        |
+        v
+    Stations
+        |
+        v
+    Angular
+        |
+        v
+    MapLibre
+        |
+        v
+    Kochi map
+        |
+        v
+    Metro stations
+        |
+        v
+    Station click
+        |
+        v
+    Next scheduled trains
+
+Then:
+
+    GTFS-RT
+        |
+        v
+    Actual train
+        |
+        v
+    Map marker
+
+Then:
+
+    A -> B
+        |
+        v
+    Journey
+
+Then:
+
+    Journey + realtime
+        |
+        v
+    Leave-by
+
+This creates a working product at every stage.
+
+==============================================================
+64. PRODUCT NORTH STAR
+==============================================================
+
+Do not position it as:
+
+    "Kochi Metro live map"
+
+Position it as:
+
+    "Know when to leave, not just where the train is."
+
+The map is the interface.
+The realtime feed is the data.
+The decision engine is the product.
+
+==============================================================
+65. FINAL FROZEN MVP STACK
+==============================================================
+
+Frontend:
+    Angular 21
+    Signals
+    RxJS
+    Nx
+    Tailwind
+    PWA
+
+Map:
+    MapLibre GL JS
+    CARTO Basemap
+    OpenStreetMap
+
+Backend:
+    Node.js
+    TypeScript
+    Fastify
+
+Data:
+    PostgreSQL
+    PostGIS
+
+Realtime:
+    GTFS-Realtime
+    Protocol Buffers
+    Redis/KV
+    SSE
+
+Transit:
+    KMRL GTFS
+    KMRL GTFS-RT
+
+Routing:
+    Custom Metro Graph initially
+    OpenTripPlanner later
+
+Infrastructure:
+    Cloudflare
+    GitHub
+    Docker
+
+Testing:
+    Vitest
+    Angular TestBed
+    Playwright
+    Integration tests
+    Load tests
+
+CI/CD:
+    GitHub Actions
+
+Observability:
+    Structured logging
+    Health endpoints
+    Feed freshness monitoring
+
+==============================================================
+66. DEVELOPMENT RULE
+==============================================================
+
+Do not over-engineer.
+
+Start with:
+
+    Static GTFS
+      ->
+    Metro graph
+      ->
+    API
+      ->
+    Angular
+      ->
+    MapLibre
+      ->
+    Realtime
+      ->
+    ETA
+      ->
+    Leave-by
+      ->
+    PWA
+      ->
+    Notifications
+      ->
+    Multimodal
+      ->
+    AI
+
+Every stage must produce a usable increment.
+
+==============================================================
+67. FINAL REALITY CHECK
+==============================================================
+
+"Completely free SaaS" should mean:
+
+    Zero-cost MVP
+    + free/open-source software
+    + free-tier hosting
+    + no unnecessary paid APIs
+    + architecture that can scale later
+
+It should NOT mean:
+
+    Unlimited users
+    Unlimited bandwidth
+    Unlimited map tiles
+    Unlimited realtime connections
+    Unlimited database
+    Free forever
+
+Third-party quotas and terms can change.
+
+The safest strategy is:
+
+    Build locally for ₹0
+        |
+        v
+    Validate product
+        |
+        v
+    Deploy on free tiers
+        |
+        v
+    Measure actual usage
+        |
+        v
+    Pay only when the product requires it
+
+==============================================================
+END OF DOCUMENT
+==============================================================

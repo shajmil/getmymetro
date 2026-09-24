@@ -1,0 +1,39 @@
+# Cloudflare Pages routing. First match wins; a real file always wins first.
+#
+# 1. Spelling aliases -> the canonical station URL.
+#
+#    KMRL and the GTFS feed disagree on five station names and passengers
+#    search all of them (CLAUDE.md, search strategy 7). `core/data/slugs.ts`
+#    already resolves the variant so a typed or linked URL answers instead of
+#    404ing; this is the other half — a 301 so only one URL is ever indexed and
+#    the link equity lands on it.
+#
+#    Both languages, because /ml/station/petta is as linkable as /station/petta.
+
+/station/petta            /station/pettah            301
+/ml/station/petta         /ml/station/pettah         301
+/station/thaikoodam       /station/thykoodam         301
+/ml/station/thaikoodam    /ml/station/thykoodam      301
+/station/thrippunithura   /station/tripunithura      301
+/ml/station/thrippunithura /ml/station/tripunithura  301
+/station/thripunithura    /station/tripunithura      301
+/ml/station/thripunithura /ml/station/tripunithura   301
+/station/edappally        /station/edapally          301
+/ml/station/edappally     /ml/station/edapally       301
+/station/m-g-road         /station/mg-road           301
+/ml/station/m-g-road      /ml/station/mg-road        301
+
+# 2. Everything else that is not a prerendered file: the client shell.
+#
+#    All 1,252 pages are prerendered, so this only catches a URL nobody
+#    built — a mistyped slug, or a route page for a pair that does not exist.
+#    It rewrites (200) rather than redirects, so the URL survives and the
+#    router lands on the page's own "no station with that name" branch, which
+#    carries the whole line and is not a dead end.
+#
+#    index.csr.html and NOT index.html: index.html is the prerendered home
+#    page, complete with hydration annotations for the home route. Serving it
+#    for /station/typo would make Angular try to hydrate the home page's DOM
+#    into a station page — an NG0500 mismatch. index.csr.html has no
+#    annotations, so the app simply client-renders.
+/*                        /index.csr.html            200

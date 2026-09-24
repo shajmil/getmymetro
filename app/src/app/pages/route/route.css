@@ -1,0 +1,51 @@
+/* Route page layout.
+   -------------------------------------------------------------------------
+   No @keyframes. No transition over 150ms, and none on anything but colour,
+   opacity and transform. Every length is a token or a multiple of one. */
+
+/* Reserved height for the journey panel, which arrives after the HTML paints.
+   Everything below it — the fare, both service patterns, the stop list — would
+   otherwise jump up the page when it does. 18rem is a measured three-option
+   panel. */
+.journey-slot {
+  min-block-size: 18rem;
+}
+
+/* The countdown is the largest text on the page and changes every minute:
+   "10 min" to "9 min" loses a character. `departure-time` already supplies
+   tabular figures, so digits cannot change width; this reserves enough inline
+   space that losing one cannot pull anything leftwards either. */
+.countdown {
+  display: block;
+  min-inline-size: 6ch;
+}
+
+/* A following departure. Two fixed columns, so a shrinking countdown cannot
+   move the clock time beside it. */
+.following {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: baseline;
+  column-gap: 0.75rem;
+}
+
+/* The fare, at departure size. It is the second thing people came for and it
+   never changes, so it costs nothing to make it the second largest thing on
+   the page. */
+.fare-figure {
+  font-size: var(--text-departure);
+  line-height: 1.2;
+  margin-block-start: 0.5rem;
+}
+
+/* Label above value rather than beside it: "Last train that reaches
+   Tripunithura" against a clock time would wrap to four lines at 320px while
+   the value sat alone on the right. */
+.fact-list dt {
+  margin-block-start: 0.5rem;
+  color: var(--gm-text-muted);
+}
+
+.fact-list dt:first-child {
+  margin-block-start: 0;
+}

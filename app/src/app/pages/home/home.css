@@ -1,0 +1,58 @@
+/* Home screen layout.
+   -------------------------------------------------------------------------
+   Everything here exists to hold the page still. CLS must be 0 and a live
+   countdown reflows once a second, so the two elements that change — the
+   countdown and the clock time beside it — are given reserved width, and the
+   region the boards arrive into is given reserved height.
+
+   No @keyframes. No transition longer than --gm-duration (150ms), and none on
+   anything but colour, opacity and transform. Nothing animates on load. */
+
+/* Reserved height for the answer.
+   The boards arrive a few hundred milliseconds after the HTML paints, and
+   without a reservation everything below them drops down the page when they
+   do. 30rem is a measured two-platform board without warnings, which is the
+   overwhelmingly common case; a terminus renders one platform and a late
+   evening renders warnings, so this cannot be exact for every screen.
+   What it does guarantee is that the departure times themselves sit at the
+   top of the reserved box and therefore never move, which is the shift a
+   once-a-second countdown would otherwise cause. */
+.board-slot {
+  min-block-size: 30rem;
+}
+
+/* The same reservation, for the block that only exists once a station does.
+   The destination list and the two links appear when the bundle lands; without
+   a reservation the picker and the provenance line below them would drop down
+   the page at that moment. 14rem is the collapsed height: a heading, a
+   56px disclosure row and two 56px links, plus the gaps between them. */
+.journey-slot {
+  min-block-size: 14rem;
+}
+
+/* One station in the picker. Full width so the target is unmissable, and
+   56px tall so it meets the floor on its own. */
+.station-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  inline-size: 100%;
+  min-block-size: var(--gm-tap-min);
+  padding-inline: 0.75rem;
+  border-radius: 0.5rem;
+  text-align: start;
+  transition:
+    background-color var(--gm-duration) var(--gm-ease),
+    color var(--gm-duration) var(--gm-ease);
+}
+
+.station-button:hover {
+  background-color: var(--gm-surface);
+}
+
+.station-button[aria-current='true'] {
+  background-color: var(--gm-accent);
+  color: var(--gm-on-accent);
+  font-weight: 600;
+}

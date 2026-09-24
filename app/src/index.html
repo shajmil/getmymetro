@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>getmymetro — Kochi Metro times</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Kochi Metro departure times, fares and last-train warnings. Know when to leave, not just where the train is."
+    />
+
+    <!-- Lets the browser paint native scrollbars and form controls in the
+         right theme before any CSS loads, avoiding a white flash on dark. -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
+
+    <!-- Self-hosted fonts: no Google Fonts CDN anywhere. A CDN would cost a
+         DNS + TLS round trip on a patchy connection and would break the
+         offline guarantee the service worker provides from Phase 6.
+
+         Only the Latin face is preloaded. The Malayalam face (89KB) and the
+         rupee subset are gated behind `unicode-range`, so the browser fetches
+         them only when those codepoints actually appear on the page. -->
+    <link
+      rel="preload"
+      href="/fonts/noto-sans-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+    <!-- The PWA the competitor advertises and does not ship: keralam.co's
+         manifest has an empty name and there is no service worker behind it
+         (CLAUDE.md finding 7). This one installs, and `public/sw.js`
+         precaches the shell and the whole 7 kB network, so the app works with
+         the network off. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

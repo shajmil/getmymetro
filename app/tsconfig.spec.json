@@ -1,0 +1,20 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec",
+    // `node` is here so specs can read the raw GTFS files off disk. The data
+    // round-trip test compares the decoder against KMRLOpenData/ rather than
+    // against a fixture, because a fixture built from the bundle could only
+    // prove the bundle agrees with itself.
+    "types": [
+      "vitest/globals",
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.d.ts",
+    "src/**/*.spec.ts"
+  ]
+}

@@ -1,0 +1,585 @@
+/* =========================================================================
+   getmymetro — global styles and design tokens
+   -------------------------------------------------------------------------
+   The constraints encoded here come from docs/build-checklist.md
+   ("Non-negotiable design constraints"). The primary user is elderly and on
+   a mid-range Android phone. Do not soften these values.
+
+     Body text ............ 18px minimum, never below 16px anywhere
+     Departure times ...... 36-44px, tabular numerals
+     Station names ........ 20-24px
+     Touch targets ........ 56x56px minimum, 8px apart
+     Contrast ............. 7:1 for text (WCAG AAA), 4.5:1 absolute floor
+     Line height .......... 1.5 body, 1.2 large numbers
+     Font weight .......... never below 400
+     Motion ............... CSS transitions only, <=150ms, colour/opacity/transform
+
+   Every colour pair below was computed, not estimated. See the ratios
+   annotated against each token.
+   ========================================================================= */
+
+@import 'tailwindcss';
+
+/* -------------------------------------------------------------------------
+   1. Fonts — self-hosted, no CDN (the app must work offline from Phase 6).
+   -------------------------------------------------------------------------
+   All three files are genuine variable fonts (verified: fvar/gvar/avar/STAT
+   tables present), so `font-weight: 400 700` yields real weight instances —
+   bold is never synthesized.
+
+   Subsetting: Google's `latin-ext` subset for Noto Sans is 164KB and the only
+   glyph this app needs from it is the rupee sign. It is replaced below by a
+   3.1KB single-glyph subset covering U+20B9 alone — a 165KB saving.
+
+   `unicode-range` means the Malayalam face is only downloaded when Malayalam
+   codepoints are actually on the page, so English views never pay for it.
+   ------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Rupee sign only — fares are rendered in ₹ throughout. */
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-rupee.woff2') format('woff2');
+  unicode-range: U+20B9;
+}
+
+/* The GTFS feed ships Malayalam station names (translations.txt). */
+@font-face {
+  font-family: 'Noto Sans Malayalam';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-malayalam.woff2') format('woff2');
+  unicode-range: U+0307, U+0323, U+0951-0952, U+0964-0965, U+0D00-0D7F, U+1CDA,
+    U+1CF2, U+200C-200D, U+20B9, U+25CC, U+A830-A832;
+}
+
+/* -------------------------------------------------------------------------
+   2. Colour tokens.
+   -------------------------------------------------------------------------
+   Light theme is the default. Dark applies when the OS asks for it, unless
+   the document is explicitly forced light. `[data-theme]` on <html> overrides
+   the OS in both directions, so a manual toggle can be wired up later without
+   touching this file.
+
+   Ratios are WCAG 2.1 relative luminance, computed from these exact hexes.
+   ------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light dark;
+
+  /* --- light palette ----------------------------------------------------
+     text    on bg       17.82:1     text  on surface   15.84:1
+     muted   on bg        8.34:1     muted on surface    7.41:1
+     accent  on bg        9.29:1     accent on surface   8.26:1
+     alert   on bg        8.68:1     alert on surface    7.71:1
+     on-accent on accent  9.29:1     outline on bg       4.89:1 (non-text, 3:1)
+     Lowest text ratio: 7.41:1 — above the 7:1 AAA requirement.
+     --------------------------------------------------------------------- */
+  --gm-bg: #ffffff;
+  --gm-surface: #eef2f6;
+  --gm-text: #14181d;
+  --gm-text-muted: #454f5a;
+  --gm-border: #b9c3cd;
+  --gm-outline: #67727f;
+  --gm-accent: #00497f;
+  --gm-on-accent: #ffffff;
+  --gm-alert: #8a2a12;
+
+  /* --- metrics ---------------------------------------------------------- */
+  --gm-gutter: 1rem; /* 16px side gutters */
+  --gm-tap-min: 3.5rem; /* 56px minimum touch target */
+  --gm-tap-gap: 0.5rem; /* 8px minimum between targets */
+  --gm-measure: 34rem; /* single-column max width */
+
+  /* Motion: the ceiling, not a suggestion. */
+  --gm-duration: 150ms;
+  --gm-ease: cubic-bezier(0.2, 0, 0.38, 1);
+}
+
+/* Dark values are repeated in both blocks below because CSS cannot share a
+   declaration list between an @media rule and an attribute selector. Keep
+   them in sync; the ratios apply to both.
+
+     text    on bg       16.80:1     text  on surface   14.91:1
+     muted   on bg       10.23:1     muted on surface    9.08:1
+     accent  on bg       10.49:1     accent on surface   9.31:1
+     alert   on bg       10.59:1     alert on surface    9.40:1
+     on-accent on accent 10.46:1     outline on bg       6.36:1 (non-text, 3:1)
+     Lowest text ratio: 9.08:1 — above the 7:1 AAA requirement. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --gm-bg: #0d1117;
+    --gm-surface: #171e26;
+    --gm-text: #edf2f7;
+    --gm-text-muted: #b4c0cc;
+    --gm-border: #39434f;
+    --gm-outline: #8b97a4;
+    --gm-accent: #8cc6ff;
+    --gm-on-accent: #06121e;
+    --gm-alert: #ffae96;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --gm-bg: #0d1117;
+  --gm-surface: #171e26;
+  --gm-text: #edf2f7;
+  --gm-text-muted: #b4c0cc;
+  --gm-border: #39434f;
+  --gm-outline: #8b97a4;
+  --gm-accent: #8cc6ff;
+  --gm-on-accent: #06121e;
+  --gm-alert: #ffae96;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* -------------------------------------------------------------------------
+   3. Tailwind theme.
+   -------------------------------------------------------------------------
+   The default font-size, colour and font-weight namespaces are cleared
+   (`--*: initial`) rather than extended. That is deliberate: it deletes
+   `text-xs` (12px), `text-sm` (14px), `font-light` (300), `font-thin` (100)
+   and the 22-hue default palette from the utility surface entirely, so a
+   later phase physically cannot ship 12px text, a 300 weight, or an
+   unverified colour. Every value that remains has been checked against the
+   constraint table.
+
+   `static` keeps every token in the output even while nothing uses it yet.
+   Tailwind would otherwise tree-shake the unused half of the scale, and a
+   design system you cannot inspect in devtools is not a design system. The
+   whole scale costs a few hundred bytes against 74kB of budget headroom.
+   ------------------------------------------------------------------------- */
+
+@theme static {
+  /* -- type ------------------------------------------------------------- */
+  --font-*: initial;
+  --font-sans: 'Noto Sans', 'Noto Sans Malayalam', ui-sans-serif, system-ui, sans-serif;
+  --font-malayalam: 'Noto Sans Malayalam', 'Noto Sans', ui-sans-serif, sans-serif;
+
+  --text-*: initial;
+
+  /* 16px — the absolute floor. Fine print only, never body copy. */
+  --text-min: 1rem;
+  --text-min--line-height: 1.5;
+
+  /* 18px — default body text. */
+  --text-body: 1.125rem;
+  --text-body--line-height: 1.5;
+
+  /* 20px */
+  --text-lead: 1.25rem;
+  --text-lead--line-height: 1.5;
+
+  /* 22px — station names (20-24px band). */
+  --text-station: 1.375rem;
+  --text-station--line-height: 1.3;
+
+  /* 24px — top of the station-name band. */
+  --text-station-lg: 1.5rem;
+  --text-station-lg--line-height: 1.25;
+
+  /* 28px */
+  --text-title: 1.75rem;
+  --text-title--line-height: 1.25;
+
+  /* 40px — departure times (36-44px band), line-height 1.2. */
+  --text-departure: 2.5rem;
+  --text-departure--line-height: 1.2;
+
+  /* 44px — top of the departure band. */
+  --text-departure-lg: 2.75rem;
+  --text-departure-lg--line-height: 1.2;
+
+  /* -- weight ----------------------------------------------------------- */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* -- colour ----------------------------------------------------------- */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--gm-bg);
+  --color-surface: var(--gm-surface);
+  --color-text: var(--gm-text);
+  --color-muted: var(--gm-text-muted);
+  --color-border: var(--gm-border);
+  --color-outline: var(--gm-outline);
+  --color-accent: var(--gm-accent);
+  --color-on-accent: var(--gm-on-accent);
+  --color-alert: var(--gm-alert);
+
+  /* -- spacing ---------------------------------------------------------- */
+  --spacing-gutter: var(--gm-gutter);
+  --spacing-tap: var(--gm-tap-min);
+  --spacing-tap-gap: var(--gm-tap-gap);
+
+  /* -- motion ----------------------------------------------------------- */
+  --default-transition-duration: var(--gm-duration);
+  --default-transition-timing-function: var(--gm-ease);
+}
+
+/* Make `dark:` follow the same resolution as the tokens above: OS preference
+   unless forced light, plus an explicit [data-theme="dark"] override.
+   Tailwind's built-in `dark:` is media-only and would ignore [data-theme]. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+  &:where(:root[data-theme='dark'], :root[data-theme='dark'] *) {
+    @slot;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   4. Utilities.
+   ------------------------------------------------------------------------- */
+
+/* Minimum 56x56px hit area. Apply to every interactive element — the size is
+   a floor, so a visually smaller control still gets a full-size target. */
+@utility tap-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-inline-size: var(--gm-tap-min);
+  min-block-size: var(--gm-tap-min);
+  padding-inline: 0.75rem;
+  touch-action: manipulation;
+}
+
+/* A row of touch targets, spaced by the required 8px minimum. */
+@utility tap-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gm-tap-gap);
+}
+
+/* Departure times. Bundles the size, the 1.2 line-height and — critically —
+   tabular numerals, so a countdown cannot jitter as digits change width. */
+@utility departure-time {
+  font-size: var(--text-departure);
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
+/* Any figure that updates in place (countdowns, clock times, fares). */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* A link that has to look and behave like a button: full 56px height, a
+   visible border, and no reliance on colour alone to be findable. Used for
+   every navigation affordance outside the picker — including the WhatsApp
+   booking link, which is the one place a control must not be mistaken for a
+   control of ours. */
+@utility link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: var(--gm-tap-min);
+  padding-inline: 1rem;
+  border: 2px solid var(--gm-outline);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  touch-action: manipulation;
+  transition:
+    background-color var(--gm-duration) var(--gm-ease),
+    color var(--gm-duration) var(--gm-ease);
+}
+
+/* Single column, 16px side gutters, centred. No horizontal scroll at 320px. */
+@utility page-shell {
+  inline-size: 100%;
+  max-inline-size: var(--gm-measure);
+  margin-inline: auto;
+  padding-inline: var(--gm-gutter);
+}
+
+/* -------------------------------------------------------------------------
+   4b. Shared component classes.
+   -------------------------------------------------------------------------
+   Four rules that every screen uses. They are plain global classes rather
+   than @utility blocks because they are always wanted and because a component
+   with emulated style encapsulation cannot reach a sibling's styles — putting
+   them here is what stops the warning rule being redefined per page and
+   drifting. `.fare-row` joined them in Phase 7, when the home screen grew its
+   own destination list and the station page's copy would otherwise have been
+   the second.
+   ------------------------------------------------------------------------- */
+
+/* Warnings read as warnings without relying on colour alone: the rule down
+   the side survives a monochrome screen and a colour-blind reader. */
+.warning {
+  border-inline-start: 4px solid var(--gm-alert);
+  padding-inline-start: 0.75rem;
+}
+
+.note {
+  border-inline-start: 4px solid var(--gm-border);
+  padding-inline-start: 0.75rem;
+}
+
+/* A <details> summary is a real 56px touch target, and the default disclosure
+   triangle is far too small to aim at, so the whole row is the target. */
+.disclosure {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--gm-tap-min);
+  padding-inline: 0.75rem;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: background-color var(--gm-duration) var(--gm-ease);
+}
+
+.disclosure:hover {
+  background-color: var(--gm-surface);
+}
+
+/* One destination. Full width so the target is unmissable, 56px tall so it
+   meets the floor on its own, and the fare hard against the right edge so a
+   column of prices can be read down without reading the names.
+
+   Filled rather than outlined. --gm-border is a 1.9:1 hairline against the
+   page, which is under the 3:1 floor for the visual boundary of a control, and
+   --gm-outline at 2px across 24 stacked rows reads as a cage. A surface fill
+   carries the boundary at full strength and keeps every ratio: text on surface
+   is 15.84:1 light and 14.91:1 dark, accent on surface 8.26:1 and 9.31:1. */
+.fare-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-block-size: var(--gm-tap-min);
+  padding-inline: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: var(--gm-surface);
+  touch-action: manipulation;
+  transition: color var(--gm-duration) var(--gm-ease);
+}
+
+.fare-row:hover {
+  color: var(--gm-accent);
+}
+
+
+/* -------------------------------------------------------------------------
+   4c. The map's markers.
+   -------------------------------------------------------------------------
+   These are global rather than component styles for a mechanical reason:
+   Leaflet builds its markers imperatively, so they never carry Angular's
+   `_ngcontent` attribute and an emulated-encapsulation component style cannot
+   match them. Putting them here also keeps every colour in the map on the same
+   tokens as the rest of the app, so the two themes stay in step by
+   construction.
+
+   Leaflet's own stylesheet is NOT here — it is `public/vendor/leaflet-1.9.4.css`,
+   fetched at the moment a map initialises. Its header says why.
+
+   Nothing below animates. The only transition is the one that carries a train
+   from one scheduled second to the next, and the reduced-motion block at the
+   end of this file already collapses it to nothing.
+   ------------------------------------------------------------------------- */
+
+.leaflet-container {
+  font-family: var(--font-sans);
+  background-color: var(--gm-surface);
+}
+
+/* A station. The dot is 18px; the target around it is the full 56px floor. */
+.gm-pin {
+  display: block;
+  background: none;
+  border: 0;
+}
+
+.gm-pin-dot {
+  position: absolute;
+  inset-block-start: 19px;
+  inset-inline-start: 19px;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: 50%;
+  background-color: var(--gm-bg);
+  border: 4px solid var(--gm-accent);
+}
+
+/* The station this page is about, or the one the answer above is for. */
+.gm-pin-current .gm-pin-dot {
+  inset-block-start: 15px;
+  inset-inline-start: 15px;
+  inline-size: 26px;
+  block-size: 26px;
+  background-color: var(--gm-accent);
+  border-color: var(--gm-bg);
+}
+
+/* The name beside the dot. 16px is the floor and this is the only text the
+   map draws itself, so it never goes below it. */
+.gm-pin-name {
+  position: absolute;
+  inset-block-start: 16px;
+  inset-inline-start: 46px;
+  padding-inline: 0.25rem;
+  border-radius: 0.25rem;
+  background-color: var(--gm-bg);
+  color: var(--gm-text);
+  font-size: var(--text-min);
+  line-height: 1.5;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Zoomed far enough out that 25 names would overlap into mush. The dots stay;
+   only the names go. */
+.gm-map-wide .gm-pin-name {
+  display: none;
+}
+
+/* A train. Not a target — it carries no link, so it takes no tap. */
+.gm-train {
+  background: none;
+  border: 0;
+}
+
+.gm-train svg {
+  display: block;
+  inline-size: 28px;
+  block-size: 28px;
+  transform-origin: 50% 50%;
+}
+
+.gm-train svg path,
+.gm-train svg rect {
+  fill: var(--gm-text);
+  stroke: var(--gm-bg);
+  stroke-width: 2;
+  paint-order: stroke;
+}
+
+/* One of the 20 trips that terminate before the end of the line. The bar
+   across the nose is drawn in the icon, so this reads without colour too. */
+.gm-train-short svg path,
+.gm-train-short svg rect {
+  fill: var(--gm-alert);
+}
+
+/* Trains are repositioned once a second, which at line speed is about two
+   pixels. The transition only smooths that step; the reduced-motion block
+   below removes it, and it is inside the 150ms ceiling either way. */
+.leaflet-marker-icon.gm-train {
+  transition: transform var(--gm-duration) linear;
+}
+
+/* A zoom repositions every marker at once. Gliding the trains to their new
+   screen position while the stations snap looks like a fault, so the
+   transition is suspended for the duration of the zoom. */
+.gm-map-zooming .leaflet-marker-icon.gm-train {
+  transition: none;
+}
+
+/* -------------------------------------------------------------------------
+   5. Base layer.
+   ------------------------------------------------------------------------- */
+
+@layer base {
+  html {
+    /* Never scale text down on orientation change. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--gm-bg);
+    color: var(--gm-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body); /* 18px */
+    line-height: 1.5;
+    font-weight: 400;
+    min-block-size: 100dvh;
+    /* Guards the 320px requirement against a stray wide child. */
+    overflow-x: clip;
+  }
+
+  /* Malayalam sits slightly small against Latin at the same px value, and its
+     stacked conjuncts need more leading. */
+  :lang(ml) {
+    font-size: 1.05em;
+    line-height: 1.6;
+  }
+
+  /* A visible, high-contrast focus ring is load-bearing for the primary user. */
+  :focus-visible {
+    outline: 3px solid var(--gm-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Headings inherit the family and never drop below 400. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 700;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  /* Interactive elements get the correct cursor and never a <400 weight. */
+  button,
+  [role='button'],
+  a {
+    font-weight: inherit;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   6. Motion policy.
+   -------------------------------------------------------------------------
+   No animation library, ever. CSS transitions only, capped at 150ms by
+   --default-transition-duration above, and only on colour / opacity /
+   transform. Nothing animates on page load — there are no @keyframes in this
+   stylesheet and none should be added.
+   ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

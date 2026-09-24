@@ -1,0 +1,29 @@
+/* Station page layout.
+   -------------------------------------------------------------------------
+   Same rules as everywhere: no @keyframes, no transition over 150ms, and none
+   on anything but colour, opacity and transform. Every length below is either
+   a token or a multiple of one. */
+
+/* Reserved height for the departure boards, which arrive a few hundred
+   milliseconds after the HTML paints. Without it, the whole reference block
+   and the fare list drop down the page when they do. 30rem is a measured
+   two-platform board without warnings; a terminus renders one platform and a
+   late evening renders warnings, so it cannot be exact for every screen. What
+   it guarantees is that the departure times sit at the top of the reserved box
+   and therefore never move, which is the shift a once-a-second countdown
+   would otherwise cause. */
+.board-slot {
+  min-block-size: 30rem;
+}
+
+/* Label above value rather than beside it. Two columns would put a 22-glyph
+   label ("Last train all the way to Tripunithura") against a clock time at
+   320px, and the label would wrap to four lines while the value sat alone. */
+.fact-list dt {
+  margin-block-start: 0.5rem;
+  color: var(--gm-text-muted);
+}
+
+.fact-list dt:first-child {
+  margin-block-start: 0;
+}

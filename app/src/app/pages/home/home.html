@@ -1,0 +1,277 @@
+<!--
+  Order on this page is the order of the question "am I going to be OK?":
+  where you are, what leaves next, whether to run, and whether the train you
+  can see is the last one that goes where you are going.
+
+  Nothing above renders a time that did not come from the feed, and nothing
+  renders a time that was computed anywhere but the reader's own browser at
+  the moment they read it. A departure baked into a prerendered page would be
+  wrong by the time anyone saw it.
+-->
+
+<!-- 1. Where. The station is the heading, so the answer starts at the top. -->
+<section aria-live="polite">
+  @if (stop(); as station) {
+    <h1 class="text-station-lg font-bold">{{ stationLabel() }}</h1>
+
+    @switch (source()) {
+      @case ('located') {
+        @if (fix(); as located) {
+          @switch (located.kind) {
+            @case ('at') {
+              <p class="text-muted">{{ t('home.fixAt', { distance: distanceLabel() ?? '' }) }}</p>
+            }
+            @case ('near') {
+              <p class="text-muted">{{ t('home.fixNear', { distance: distanceLabel() ?? '' }) }}</p>
+            }
+            @case ('far') {
+              <p class="warning">
+                {{
+                  t('home.fixFar', {
+                    distance: distanceLabel() ?? '',
+                    station: stationLabel(),
+                  })
+                }}
+              </p>
+            }
+            @case ('vague') {
+              <p class="note">{{ t('home.fixVague', { accuracy: located.accuracyM }) }}</p>
+            }
+          }
+        }
+      }
+      @case ('remembered') {
+        <p class="text-muted">{{ t('home.remembered') }}</p>
+      }
+      @case ('picked') {
+        <p class="text-muted">{{ t('home.picked') }}</p>
+      }
+    }
+  } @else {
+    <h1 class="text-station-lg font-bold">{{ t('home.heading') }}</h1>
+
+    @switch (data()) {
+      @case ('failed') {
+        <p class="warning">{{ t('common.dataFailed') }}</p>
+        <p class="tap-row mt-2">
+          <button
+            type="button"
+            class="tap-target rounded-lg border-2 border-outline font-semibold"
+            (click)="retryData()"
+          >
+            {{ t('common.tryAgain') }}
+          </button>
+        </p>
+      }
+      @default {
+        @switch (location().kind) {
+          @case ('locating') {
+            <p class="text-muted">{{ t('home.locating') }}</p>
+          }
+          @default {
+            <p class="text-muted">{{ t('home.chooseBelow') }}</p>
+          }
+        }
+      }
+    }
+  }
+
+  <!-- Every failure mode lands here, and every one of them has a way out. -->
+  @if (location(); as located) {
+    @switch (located.kind) {
+      @case ('failed') {
+        @switch (located.reason) {
+          @case ('denied') {
+            <p class="note mt-3">{{ t('home.denied') }}</p>
+          }
+          @case ('unsupported') {
+            <p class="note mt-3">{{ t('home.unsupported') }}</p>
+          }
+          @default {
+            <p class="note mt-3">
+              @if (located.reason === 'timeout') {
+                {{ t('home.timedOut') }}
+              } @else {
+                {{ t('home.noFix') }}
+              }
+              {{ t('home.chooseOrRetry') }}
+            </p>
+            <p class="tap-row mt-2">
+              <button
+                type="button"
+                class="tap-target rounded-lg border-2 border-outline font-semibold"
+                (click)="retryLocation()"
+              >
+                {{ t('home.retryLocation') }}
+              </button>
+            </p>
+          }
+        }
+      }
+    }
+  }
+</section>
+
+<!-- 2. The answer. Reserved height so nothing below it moves when it arrives. -->
+<div class="board-slot mt-6">
+  @if (boards().length > 0) {
+    <div class="grid gap-6">
+      @for (board of boards(); track board.direction) {
+        <app-departure-board [board]="board" />
+      }
+    </div>
+  } @else if (stop() !== null && data() === 'ready') {
+    <p class="note">{{ t('common.noDeparturesHere') }}</p>
+  } @else {
+    <p class="text-muted">
+      @if (data() === 'failed') {
+        {{ t('home.waiting') }}
+      } @else {
+        {{ t('common.loading') }}
+      }
+    </p>
+  }
+</div>
+
+<!--
+  3. The map. Immediately below the answer and never above it.
+
+  This is the reversal CLAUDE.md records: a map library was rejected in favour
+  of the schematic, and the brief overrode that. The order is the part that
+  matters and it is not negotiable — the departure answer is the product, the
+  map is the orientation. The schematic still ships, as the fallback inside
+  <app-line-map> for when the tiles cannot be reached.
+-->
+<app-line-map [stations]="stations()" [selected]="stationId()" />
+
+<!--
+  4. The rest of the app, in words.
+
+  The complaint this phase answers was that the features existed and could not
+  be found: A→B journeys, fares, the first and last train, and the 600
+  prerendered route pages were all three taps deep. Every one of them is now
+  one tap from here, behind a label that says what it is rather than an icon.
+  No carousel, no hamburger, no icon-only control — every target is a 56px row
+  with words in it.
+-->
+<section class="journey-slot mt-6">
+  <h2 class="text-station font-bold">{{ t('home.journeyHeading') }}</h2>
+
+  @if (platforms().length > 0) {
+    <details class="mt-3 rounded-xl border-2 border-border">
+      <summary class="disclosure text-lead font-semibold text-accent">
+        {{ t('home.whereTo') }}
+      </summary>
+      <p class="px-3 pb-1">{{ t('home.whereToBody') }}</p>
+      @for (platform of platforms(); track platform.direction) {
+        <h3 class="px-3 pt-3 text-lead font-bold">
+          {{ t('board.towards', { name: platform.towardsName }) }}
+        </h3>
+        <ul class="p-2">
+          @for (destination of platform.destinations; track destination.id) {
+            <li class="mt-tap-gap first:mt-0">
+              <a class="fare-row" [routerLink]="destination.path">
+                <span>{{ destination.name }}</span>
+                <span class="tabular font-semibold">{{
+                  t('home.destinationCost', {
+                    fare: destination.fare,
+                    hops: destination.hops,
+                    stopWord: stopWord(destination.hops),
+                  })
+                }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </details>
+  } @else {
+    <p class="mt-3 text-muted">{{ t('home.whereToWaiting') }}</p>
+  }
+
+  <!--
+    The full timetable page for this station: every departure, first and last
+    train per pattern, and the fare to all 24 other stations. Real <a> elements
+    with real hrefs, because internal linking is how 1,250 prerendered pages
+    get discovered (CLAUDE.md search strategy 2).
+
+    Two links to one page, deliberately. "All departures and fares" and "first
+    and last train" are different questions and the second is the dangerous one
+    — at 20 stations the advertised last train towards Aluva does not reach
+    Aluva (finding 9). A reader looking for it should not have to guess that it
+    lives under a heading about fares, so it gets its own label and lands on
+    its own section.
+  -->
+  @if (stationHref(); as href) {
+    <p class="tap-row mt-3">
+      <a class="link-button hover:bg-surface" [routerLink]="href">{{
+        t('home.allFrom', { station: stationLabel() })
+      }}</a>
+    </p>
+    <p class="tap-row mt-2">
+      <a class="link-button hover:bg-surface" [routerLink]="href" fragment="first-last">{{
+        t('home.firstLast', { station: stationLabel() })
+      }}</a>
+    </p>
+  }
+</section>
+
+<!--
+  5. The picker. Always in the document, one tap from anywhere on the page,
+  and usable as the primary path rather than a fallback. It is a <details>
+  so the 25 station names are in the prerendered HTML source: a reader with
+  no JavaScript, and a crawler, both see the real network.
+-->
+<details class="mt-6 rounded-xl border-2 border-border" #pickerEl [open]="pickerOpen()" (toggle)="togglePicker(pickerEl.open)">
+  <summary class="disclosure text-lead font-semibold text-accent">
+    @if (stop() === null) {
+      {{ t('home.choosePicker') }}
+    } @else {
+      {{ t('home.changeStation') }}
+    }
+  </summary>
+  <ul class="p-2">
+    @for (station of stations(); track station.id) {
+      <li class="mt-tap-gap first:mt-0">
+        <button
+          type="button"
+          class="station-button"
+          [attr.aria-current]="station.id === stationId() ? 'true' : null"
+          (click)="choose(station.id)"
+        >
+          <span>{{ label(station) }}</span>
+          @if (station.id === stationId()) {
+            <span class="text-min">{{ t('home.showing') }}</span>
+          }
+        </button>
+      </li>
+    }
+  </ul>
+  @if (stations().length === 0) {
+    <p class="p-4 text-muted">{{ t('home.listLoading') }}</p>
+  }
+</details>
+
+<!--
+  6. Provenance, and the holiday caveat.
+
+  The caveat fires Monday to Saturday — six days a week — because KMRL ships
+  no calendar_dates.txt and nobody has checked a holiday list. That makes the
+  tone the whole point: the timings themselves are confirmed accurate
+  (CLAUDE.md finding 6), and the only open question is whether today happens
+  to be a holiday. A red banner would overstate that, and suppressing it would
+  understate it. Both are forbidden by the same rule. The copy lives in
+  <app-service-caveat> so the station and route pages cannot drift from it.
+-->
+<app-service-caveat [caveat]="caveat()" />
+
+<app-provenance />
+
+<!-- Plain text only, and it must stay that way. With JavaScript ENABLED the
+     browser parses noscript contents as one raw text node and never builds
+     DOM from it, while the server renders it as real elements — so any child
+     element here is an automatic NG0500 hydration mismatch. Do not style the
+     noscript element either: author CSS beats the UA `display:none` and would show
+     this to everyone. `scripts/check-bundle-size.mjs` greps every prerendered
+     document for an element inside a noscript and fails the build. -->
+<noscript>{{ t('home.noscript') }}</noscript>

@@ -1,0 +1,278 @@
+<!--
+  One journey. The order is the order of the question: where to where, when
+  does the next one leave, how long, how much, which stations, what about
+  Sunday, and how do I buy a ticket.
+
+  Everything except the "Next trains" panel is in the prerendered HTML — the
+  fare, the stops, the service patterns and the strand warning are properties
+  of the timetable, so they are the same at any hour and the server computes
+  them. The panel is not: every departure time in it is computed in the
+  reader's browser against their own clock, because a time baked into a static
+  page served from a CDN edge is wrong for as long as that cache lives.
+-->
+
+@switch (problem()) {
+  @case ('same-station') {
+    <section>
+      <h1 class="text-station-lg font-bold">{{ t('route.sameHeading', { name: originName() }) }}</h1>
+      <!--
+        The feed prices every self-pair at ₹10 — KMRL's published minimum — and
+        the licence forbids modifying the data, so the number stays in the
+        table. Quoting it here would be selling a ticket for a journey that
+        does not exist (CLAUDE.md finding 5).
+      -->
+      <p class="warning mt-3">{{ t('route.sameBody') }}</p>
+      @if (originPath(); as here) {
+        <p class="tap-row mt-4">
+          <a class="link-button hover:bg-surface" [routerLink]="here">
+            {{ t('route.timesAt', { name: originName() }) }}
+          </a>
+        </p>
+      }
+    </section>
+  }
+  @case ('unknown') {
+    <section>
+      <h1 class="text-station-lg font-bold">{{ t('route.unknownHeading') }}</h1>
+      <p class="mt-2">
+        {{ t('route.unknownLead', { pair: pair() }) }}
+        <span class="font-semibold">aluva-to-edapally</span>{{ t('route.unknownTail') }}
+      </p>
+      <p class="tap-row mt-4">
+        <a class="link-button hover:bg-surface" [routerLink]="localPath('/')">{{
+          t('station.backHome')
+        }}</a>
+      </p>
+    </section>
+  }
+  @default {
+    <section>
+      <h1 class="text-station-lg font-bold">
+        {{ t('route.heading', { origin: originName(), destination: destinationName() }) }}
+      </h1>
+      @if (reference(); as facts) {
+        <p class="text-muted">
+          {{
+            t('route.summary', {
+              towards: facts.towardsName,
+              hops: facts.hops,
+              stopWord: facts.hops === 1 ? t('common.stop') : t('common.stops'),
+              fare: facts.fare,
+            })
+          }}
+        </p>
+      }
+
+      @if (data() === 'failed') {
+        <p class="warning mt-3">{{ t('common.dataFailed') }}</p>
+        <p class="tap-row mt-2">
+          <button
+            type="button"
+            class="tap-target rounded-lg border-2 border-outline font-semibold"
+            (click)="retryData()"
+          >
+            {{ t('common.tryAgain') }}
+          </button>
+        </p>
+      }
+    </section>
+
+    <!-- 1. The next trains that actually get you there. Browser-side only. -->
+    <div class="journey-slot mt-6">
+      @if (journey(); as plan) {
+        <section class="rounded-xl border-2 border-border p-4">
+          <h2 class="text-station font-bold">{{ t('route.nextTrains') }}</h2>
+
+          @if (plan.rows.length === 0) {
+            <p class="warning mt-3">
+              {{
+                t('route.noTrain', {
+                  origin: plan.originName,
+                  destination: plan.destinationName,
+                })
+              }}
+            </p>
+          }
+
+          @for (row of plan.rows; track row.key; let first = $first) {
+            @if (first) {
+              <div class="mt-3">
+                <p class="departure-time countdown">{{ row.countdown }}</p>
+                <p class="text-lead tabular">
+                  {{ t('route.leaves', { clock: row.clock }) }}@if (row.nextDay) {
+                    <span>{{ t('common.tomorrow') }}</span>
+                  }{{ t('route.arrives', { clock: row.arrivalClock }) }}
+                </p>
+                <p class="text-muted tabular">
+                  {{ t('route.minutesOnTrain', { minutes: row.durationMinutes }) }}
+                </p>
+              </div>
+            } @else {
+              <div class="following mt-3">
+                <p class="text-station-lg font-bold tabular">{{ row.countdown }}</p>
+                <p class="tabular">
+                  {{ t('board.then', { clock: row.clock }) }}@if (row.nextDay) {
+                    <span>{{ t('common.tomorrow') }}</span>
+                  }{{ t('route.arriving', { clock: row.arrivalClock }) }}
+                </p>
+              </div>
+            }
+          }
+
+          <p class="note mt-4 text-min">{{ t('route.ridingNote') }}</p>
+        </section>
+      } @else if (data() !== 'failed') {
+        <p class="text-muted">{{ t('common.loading') }}</p>
+      }
+    </div>
+
+    @if (reference(); as facts) {
+      <!-- 2. Fare. A lookup in KMRL's 625-pair table, never a calculation. -->
+      <section class="mt-6">
+        <h2 class="text-station font-bold">{{ t('route.fareHeading') }}</h2>
+        <p class="fare-figure tabular font-bold">₹{{ facts.fare }}</p>
+        <p class="mt-1">
+          {{
+            t('route.fareBody', {
+              origin: facts.originName,
+              destination: facts.destinationName,
+            })
+          }}
+        </p>
+      </section>
+
+      <!--
+        3. Both service patterns. Not a footnote: Sunday service starts about 90
+        minutes later than Monday-to-Saturday across the network, and 103 minutes
+        later at the worst platform. Somebody planning an early Sunday trip on
+        the weekday first train misses it by an hour and a half.
+
+        `lastClock` is the last train that *reaches the destination*, because the
+        engine only counts trips calling at it after the origin. Where a later
+        train leaves the same platform and stops short, that is said plainly
+        rather than advertised or hidden (CLAUDE.md finding 9).
+      -->
+      @if (facts.patterns.length > 0) {
+        <section class="mt-6">
+          <h2 class="text-station font-bold">{{ t('route.firstLastHeading') }}</h2>
+          @for (pattern of facts.patterns; track pattern.serviceId) {
+            <div class="mt-3 rounded-xl border-2 border-border p-4">
+              <h3 class="text-lead font-bold">{{ pattern.dayLabel }}</h3>
+              <dl class="mt-2 fact-list">
+                <dt>{{ t('station.firstTrain') }}</dt>
+                <dd class="tabular font-semibold">{{ pattern.firstClock }}</dd>
+
+                <dt>{{ t('route.lastReaches', { name: facts.destinationName }) }}</dt>
+                <dd class="tabular font-semibold">{{ pattern.lastClock }}</dd>
+
+                <dt>{{ t('station.trainsADay') }}</dt>
+                <dd class="tabular font-semibold">{{ pattern.trains }}</dd>
+
+                <dt>{{ t('route.timeOnTrain') }}</dt>
+                <dd class="tabular font-semibold">
+                  @if (pattern.fastestMinutes === pattern.slowestMinutes) {
+                    {{ t('route.minutesExact', { minutes: pattern.fastestMinutes }) }}
+                  } @else {
+                    {{
+                      t('route.minutesRange', {
+                        fastest: pattern.fastestMinutes,
+                        slowest: pattern.slowestMinutes,
+                      })
+                    }}
+                  }
+                </dd>
+              </dl>
+
+              @if (pattern.strandMinutes > 0) {
+                <p class="warning mt-3 font-semibold text-alert">
+                  {{
+                    t('route.strand', {
+                      clock: pattern.lastFromPlatformClock,
+                      minutes: pattern.strandMinutes,
+                      destination: facts.destinationName,
+                      last: pattern.lastClock,
+                    })
+                  }}
+                </p>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- 4. What you pass through. The plain-language check that this is the right train. -->
+      <section class="mt-6">
+        <h2 class="text-station font-bold">{{ t('route.onTheWayHeading') }}</h2>
+        @if (facts.stopsBetween.length === 0) {
+          <p class="mt-1">{{ t('route.nextStation', { destination: facts.destinationName }) }}</p>
+        } @else {
+          <p class="mt-1">
+            {{
+              t('route.between', {
+                count: facts.stopsBetween.length,
+                origin: facts.originName,
+                destination: facts.destinationName,
+              })
+            }}
+          </p>
+          <ol class="mt-1 ps-6 list-decimal">
+            @for (name of facts.stopsBetween; track name) {
+              <li>{{ name }}</li>
+            }
+          </ol>
+        }
+      </section>
+    }
+
+    <app-booking />
+
+    <app-service-caveat [caveat]="caveat()" />
+
+    <section class="mt-6">
+      <h2 class="text-station font-bold">{{ t('route.relatedHeading') }}</h2>
+      <p class="tap-row mt-2">
+        @if (reversePath(); as back) {
+          <a class="link-button hover:bg-surface" [routerLink]="back">
+            {{ t('route.heading', { origin: destinationName(), destination: originName() }) }}
+          </a>
+        }
+        @if (originPath(); as from) {
+          <a class="link-button hover:bg-surface" [routerLink]="from">
+            {{ t('route.allTimesAt', { name: originName() }) }}
+          </a>
+        }
+        @if (destinationPath(); as to) {
+          <a class="link-button hover:bg-surface" [routerLink]="to">
+            {{ t('route.allTimesAt', { name: destinationName() }) }}
+          </a>
+        }
+      </p>
+    </section>
+  }
+}
+
+<!--
+  The line, with this journey on it. The map opens on the origin, so the first
+  thing on screen is where the reader is starting from rather than the whole
+  28 km. When the tiles cannot be reached <app-line-map> draws the schematic
+  instead, with "From" at the top of the marked run and "To" at the bottom —
+  which is what makes the direction readable at 320px without an arrow too
+  small to see.
+-->
+<app-line-map
+  [stations]="stations()"
+  [selected]="origin()?.id ?? null"
+  [from]="origin()?.id ?? null"
+  [to]="destination()?.id ?? null"
+/>
+
+<app-provenance />
+
+<!-- Plain text only, and it must stay that way. With JavaScript ENABLED the
+     browser parses noscript contents as one raw text node and never builds
+     DOM from it, while the server renders it as real elements — so any child
+     element here is an automatic NG0500 hydration mismatch. Do not style the
+     noscript element either: author CSS beats the UA `display:none` and would show
+     this to everyone. `scripts/check-bundle-size.mjs` greps every prerendered
+     document for an element inside a noscript and fails the build. -->
+<noscript>{{ t('route.noscript') }}</noscript>
