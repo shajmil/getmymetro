@@ -76,39 +76,60 @@ export type LaneSide = 'aluva' | 'tripunithura';
       display: flex;
       flex-direction: column;
       gap: var(--gmm-space-2);
-      /* A long Malayalam terminus name must wrap inside the column rather than
-         widening the grid track and pushing the other lane off screen. */
       min-inline-size: 0;
     }
 
-    /* The lane head: "← ALUVA" / "TRIPUNITHURA →". 16px — the reference HTML
-       sets these at 15px in the SVG labels and the floor has no exceptions. */
+    /* The lane head: "← ALUVA" / "TRIPUNITHURA →". Pill badge for clear directional framing. */
     .head {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: var(--gmm-space-2);
-      font-size: var(--text-min);
-      font-weight: 600;
-      line-height: 1.3;
+      gap: 6px;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      line-height: 1.25;
       letter-spacing: var(--tracking-lane);
       text-transform: uppercase;
       color: var(--gmm-ink);
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.05);
+      width: fit-content;
+      margin-block-end: 2px;
     }
 
-    /* Malayalam is never uppercased and takes no added tracking — DESIGN.md
-       §3. Applied by language rather than by a flag the caller has to pass, so
-       it cannot be forgotten at one call site. */
+    :host(.is-yours) .head {
+      background: var(--gmm-line-soft);
+      color: var(--gmm-line-text);
+    }
+
+    /* Malayalam is never uppercased and takes no added tracking — DESIGN.md §3. */
     :host-context([lang='ml']) .head {
       text-transform: none;
       letter-spacing: normal;
     }
 
-    .lane-aluva .head {
+    .lane-aluva:not(.is-single) .head,
+    .lane-aluva:not(.is-single) .tag,
+    .lane-aluva:not(.is-single) .countdown,
+    .lane-aluva:not(.is-single) .clock-line {
       justify-content: flex-start;
+      text-align: start;
     }
 
-    .lane-tripunithura .head {
+    .lane-tripunithura:not(.is-single) .head,
+    .lane-tripunithura:not(.is-single) .tag,
+    .lane-tripunithura:not(.is-single) .countdown,
+    .lane-tripunithura:not(.is-single) .clock-line {
       justify-content: flex-end;
+      text-align: end;
+    }
+
+    :host(.is-single) .head,
+    :host(.is-single) .tag,
+    :host(.is-single) .countdown,
+    :host(.is-single) .clock-line {
+      justify-content: flex-start;
+      text-align: start;
     }
 
     .head-arrow {
@@ -121,11 +142,7 @@ export type LaneSide = 'aluva' | 'tripunithura';
     }
 
     /* The "Your train" tag, and the spacer that stands in for it. Both are
-       exactly TAG_HEIGHT so the countdowns below them share a baseline.
-       'min-block-size', not 'block-size': at 200% text the tag's own text is
-       taller than the reservation and must be allowed to push the row down —
-       at which point both lanes are wrong together rather than one being
-       wrong alone, and the comparison still reads. */
+       exactly TAG_HEIGHT so the countdowns below them share a baseline. */
     .tag,
     .tag-spacer {
       min-block-size: 22px;
@@ -138,125 +155,101 @@ export type LaneSide = 'aluva' | 'tripunithura';
       font-size: var(--text-min);
       font-weight: 600;
       line-height: 1.375;
-      /* line-text, 5.82:1 on the soft panel. The brand teal is 2.78:1 there
-         and is never used for text. */
       color: var(--gmm-line-text);
     }
 
-    .lane-aluva .tag {
-      justify-content: flex-start;
-    }
-
-    .lane-tripunithura .tag {
-      justify-content: flex-end;
-    }
-
-    /* The square beside "Your train" — the shape that carries the state when
-       the colour does not (golden rule 3). */
+    /* The square beside "Your train" */
     .tag-mark {
       flex-shrink: 0;
       fill: currentColor;
     }
 
-    /* The countdown: 52px narrow, 60px at 1024px and above (DESIGN.md §3). The
-       unit sits on the baseline beside it, not superscripted.
-
-       Set here rather than by the global 'lg-countdown-board-lg' hook, which
-       emulated encapsulation makes unreachable: this rule compiles to
-       '.countdown[_ngcontent-x]' at (0,2,0) and the hook is (0,1,0). */
+    /* The countdown: consistent locked height so adjacent lanes share exact baselines */
     .countdown {
       display: flex;
       align-items: baseline;
-      gap: var(--gmm-space-2);
+      gap: var(--gmm-space-1);
       font-size: var(--text-countdown-board);
-      font-weight: 600;
-      line-height: 0.8;
+      font-weight: 700;
+      line-height: 0.9;
       letter-spacing: var(--tracking-board);
       color: var(--gmm-ink);
+      min-block-size: 44px;
     }
 
     .countdown.is-word {
-      font-size: clamp(1.25rem, 3.5vw, 1.875rem);
+      font-size: 1.5rem;
+      font-weight: 700;
       line-height: 1.1;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
+      min-block-size: 44px;
+      display: flex;
+      align-items: center;
     }
 
     @media (min-width: 1024px) {
       .countdown {
         font-size: var(--text-countdown-board-lg);
-        line-height: 0.9;
+        line-height: 0.95;
+        min-block-size: 52px;
       }
 
       .countdown.is-word {
-        font-size: 2.25rem;
+        font-size: 2.125rem;
         line-height: 1;
+        min-block-size: 52px;
       }
     }
 
-    .lane-aluva .countdown {
-      justify-content: flex-start;
-    }
-
-    .lane-tripunithura .countdown {
-      justify-content: flex-end;
-    }
-
-    /* Your lane's countdown is in line-text, the other's in ink. Both are over
-       5:1 on the soft panel; the difference is emphasis, and it is never the
-       only signal — the tag above it says "Your train" in words. */
     :host(.is-yours) .countdown {
       color: var(--gmm-line-text);
     }
 
-    /* 18px at the 52px countdown, which is ~23% of the number and over the
-       16px floor. Fixed rather than proportional here because the board
-       countdown has two sizes and 0.23em of 52 is 11.96px — under the floor.
-       The hero's 'countdown-unit' utility can be proportional because its
-       smallest parent is 96px; this one cannot. */
     .countdown-unit {
-      font-size: 1.125rem;
+      font-size: 1rem;
       font-weight: 600;
       letter-spacing: var(--tracking-tight);
+      margin-inline-start: 2px;
     }
 
-    /* "6:21 PM · 17 stations". */
+    /* "6:21 PM · 17 stations" - clean single-line fit that never breaks or wraps */
     .clock-line {
-      font-size: var(--text-min);
-      line-height: 1.375;
+      font-size: 0.8125rem;
+      line-height: 1.35;
       color: var(--gmm-ink-2);
-    }
-
-    .lane-aluva .clock-line {
-      text-align: start;
-    }
-
-    .lane-tripunithura .clock-line {
-      text-align: end;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-inline-size: 100%;
+      margin-block-end: 2px;
     }
 
     /* A following departure: hairline top border, time left, countdown right. */
+    .following-row {
+      inline-size: 100%;
+      padding-block: 8px;
+      border-block-start: 1px solid var(--gmm-rule);
+      margin-block-start: 4px;
+    }
+
     .following {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
       gap: var(--gmm-space-2);
-      font-size: var(--text-body);
-      line-height: 1.4;
+      line-height: 1.3;
     }
 
     .following-clock {
+      font-size: 0.9375rem;
       font-weight: 600;
       color: var(--gmm-ink);
     }
 
     .following-countdown {
-      font-size: var(--text-min);
+      font-size: 0.8125rem;
+      font-weight: 500;
       color: var(--gmm-ink-2);
-    }
-
-    .following-row {
-      padding-block: 9px;
-      border-block-start: 1px solid var(--gmm-rule);
     }
 
     /* Rendered in every document, shown only at 1024px and above. DESIGN.md
@@ -453,10 +446,13 @@ export type LaneSide = 'aluva' | 'tripunithura';
   host: {
     '[class]': 'laneClass()',
     '[class.is-yours]': 'isYours()',
+    '[class.is-single]': 'isSingleLane()',
   },
 })
 export class BoardLane {
   protected readonly t = inject(I18nService).t;
+
+  readonly isSingleLane = input<boolean>(false);
 
   /** Which end of the line. Decides the arrow, the alignment and nothing else. */
   readonly side = input.required<LaneSide>();

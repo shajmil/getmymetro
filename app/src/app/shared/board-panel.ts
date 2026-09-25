@@ -63,14 +63,14 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
       justify-content: space-between;
       align-items: baseline;
       gap: var(--gmm-space-3);
-      padding-inline: var(--gmm-gutter-mobile);
-      padding-block-end: 10px;
+      padding-inline: var(--gmm-space-4);
+      padding-block-end: 8px;
     }
 
     .heading {
       margin: 0;
       font-size: var(--text-min);
-      font-weight: 600;
+      font-weight: 700;
       line-height: 1.25;
       letter-spacing: var(--tracking-label);
       text-transform: uppercase;
@@ -83,9 +83,7 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
       letter-spacing: normal;
     }
 
-    /* "Timetable · 6:16 PM". ink-2 is 6.59:1 on the soft panel. It wraps rather
-       than truncating: it is the provenance line, and a provenance line that
-       can be cut off is worse than none. */
+    /* "Timetable · 6:16 PM". ink-2 is 6.59:1 on the soft panel. */
     .provenance {
       font-size: var(--text-min);
       line-height: 1.375;
@@ -94,39 +92,56 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
     }
 
     .track {
-      padding-inline: var(--gmm-space-2);
+      padding-inline: var(--gmm-space-3);
+      margin-block: var(--gmm-space-1) var(--gmm-space-2);
     }
 
-    /* The two lanes. 28px gap, per DESIGN.md §5.4. 'align-items: start' so a
-       taller lane does not stretch the shorter one's rows to match — the
-       reservations handle alignment, and stretching would hide a missing one. */
+    /* The lanes: two-column when both directions exist, single full-width when at terminus */
     .lanes {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      column-gap: var(--gmm-space-6);
+      column-gap: var(--gmm-space-4);
       align-items: start;
-      padding-inline: var(--gmm-gutter-mobile);
-      padding-block-start: var(--gmm-space-3);
+      padding-inline: var(--gmm-space-4);
+      padding-block-start: var(--gmm-space-2);
     }
 
-    /* "Full board ›" — 48px, per the spec. */
+    .lanes.is-single-lane {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .lanes:not(.is-single-lane) > app-board-lane:first-child {
+      padding-inline-end: var(--gmm-space-3);
+      border-inline-end: 1px solid var(--gmm-rule);
+    }
+
+    .lanes:not(.is-single-lane) > app-board-lane:last-child {
+      padding-inline-start: var(--gmm-space-1);
+    }
+
+    /* "Full board ›" — 44px touch target, per spec. */
     .footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: var(--gmm-space-3);
-      min-block-size: 48px;
+      min-block-size: 44px;
       margin-block-start: var(--gmm-space-2);
-      margin-inline: var(--gmm-gutter-mobile);
+      margin-inline: var(--gmm-space-4);
       border-block-start: 1px solid var(--gmm-rule);
       color: var(--gmm-ink);
       font-size: var(--text-min);
       font-weight: 600;
       text-decoration: none;
+      transition: color var(--gmm-hover) var(--gmm-ease);
     }
 
     .footer:hover {
       color: var(--gmm-line-text);
+    }
+
+    .footer:hover .footer-chevron {
+      transform: translateX(3px);
     }
 
     .footer-chevron {
@@ -136,16 +151,13 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
       stroke-width: 1.75;
       stroke-linecap: round;
       stroke-linejoin: round;
+      transition: transform var(--gmm-hover) var(--gmm-ease);
     }
   `,
   template: `
     <section class="inner" [attr.aria-label]="t('board.heading')">
       <div class="header">
         <h2 class="heading">{{ t('board.heading') }}</h2>
-        <!--
-          Provenance. Never "Live" — these are timetable times, and saying
-          otherwise is the one thing the honesty rules forbid outright.
-        -->
         <p class="provenance tabular">{{ provenance() }}</p>
       </div>
 
@@ -157,7 +169,7 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
         />
       </div>
 
-      <div class="lanes">
+      <div class="lanes" [class.is-single-lane]="isSingleLane()">
         @if (aluva(); as lane) {
           <app-board-lane
             side="aluva"
@@ -171,6 +183,7 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
             [opensAt]="opensAt()"
             [followingCount]="followingCount()"
             [followingCountWide]="followingCountWide()"
+            [isSingleLane]="isSingleLane()"
           />
         }
         @if (tripunithura(); as lane) {
@@ -186,6 +199,7 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
             [opensAt]="opensAt()"
             [followingCount]="followingCount()"
             [followingCountWide]="followingCountWide()"
+            [isSingleLane]="isSingleLane()"
           />
         }
       </div>
@@ -256,6 +270,10 @@ export class BoardPanel {
   protected readonly tripunithura = computed(
     () => this.boards().find((board) => board.direction === 0) ?? null,
   );
+
+  protected readonly isSingleLane = computed<boolean>(() => {
+    return (this.aluva() === null) !== (this.tripunithura() === null);
+  });
 
   protected readonly trackSide = computed<TrackSide>(() => {
     const direction = this.yourDirection();

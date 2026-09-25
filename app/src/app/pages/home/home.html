@@ -113,58 +113,90 @@
                 </button>
 
                 <!--
-                  The picker, inside the origin row and directly under the button
-                  that opens it. It used to live at the foot of the page, below the
-                  board, the line band and the map — so "Change" scrolled the reader
-                  past the whole answer to a section they had not asked for. A
-                  control that opens something must open it where it is.
+                  The picker. On mobile it renders as a sleek fixed bottom-sheet modal overlay,
+                  and on desktop it floats as an anchored dropdown below the Change button.
                 -->
-                <details class="picker" id="stations" #pickerEl (toggle)="togglePicker(pickerEl.open)">
+                <details
+                  class="picker"
+                  id="stations"
+                  #pickerEl
+                  (toggle)="togglePicker(pickerEl.open)"
+                  (click)="onPickerClick($event)"
+                  (keydown.escape)="closePicker()"
+                >
                   <summary class="picker-summary">
-                    <span>
-                      @if (stop() === null) {
-                        {{ t('home.choosePicker') }}
-                      } @else {
-                        {{ t('home.changeStation') }}
-                      }
-                    </span>
-                    <span class="picker-count tabular">
-                      {{ t('screen.stationsCount', { count: stations().length }) }}
-                    </span>
+                    <div class="picker-summary-header">
+                      <div class="picker-title-group">
+                        <span class="picker-dialog-title">
+                          @if (stop() === null) {
+                            {{ t('home.choosePicker') }}
+                          } @else {
+                            {{ t('home.changeStation') }}
+                          }
+                        </span>
+                        <span class="picker-count tabular">
+                          {{ t('screen.stationsCount', { count: stations().length }) }}
+                        </span>
+                      </div>
+                      <span class="picker-close-btn" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="20" height="20" class="picker-close-icon">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </span>
+                    </div>
                   </summary>
 
-                  <div class="picker-search">
-                    <label class="sr-only" for="station-filter">{{ t('home.choosePicker') }}</label>
-                    <input
-                      id="station-filter"
-                      type="search"
-                      class="picker-input"
-                      [attr.placeholder]="t('screen.searchPlaceholder')"
-                      (input)="onFilterInput($event)"
-                      (click)="$event.stopPropagation()"
-                    />
-                  </div>
-
-                  <ul class="picker-list">
-                    @for (station of stations(); track station.id) {
-                      <li [hidden]="!stationMatches(station)">
+                  <div class="picker-sheet-body" (click)="$event.stopPropagation()">
+                    <div class="picker-search">
+                      <label class="sr-only" for="station-filter">{{ t('home.choosePicker') }}</label>
+                      <svg viewBox="0 0 24 24" width="18" height="18" class="picker-search-icon" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7" />
+                        <path d="M21 21l-4.35-4.35" />
+                      </svg>
+                      <input
+                        id="station-filter"
+                        type="search"
+                        class="picker-input"
+                        [attr.placeholder]="t('screen.searchPlaceholder')"
+                        [value]="filterQuery()"
+                        (input)="onFilterInput($event)"
+                        (click)="$event.stopPropagation()"
+                      />
+                      @if (filterQuery().length > 0) {
                         <button
                           type="button"
-                          class="station-button"
-                          [attr.aria-current]="station.id === stationId() ? 'true' : null"
-                          (click)="onStationSelect(station.id)"
+                          class="picker-clear-btn"
+                          aria-label="Clear search"
+                          (click)="clearFilter(); $event.stopPropagation()"
                         >
-                          <span class="station-button-name">{{ label(station) }}</span>
-                          @if (station.id === stationId()) {
-                            <span class="station-button-state">{{ t('home.showing') }}</span>
-                          }
+                          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                          </svg>
                         </button>
-                      </li>
+                      }
+                    </div>
+
+                    <ul class="picker-list">
+                      @for (station of stations(); track station.id) {
+                        <li [hidden]="!stationMatches(station)">
+                          <button
+                            type="button"
+                            class="station-button"
+                            [attr.aria-current]="station.id === stationId() ? 'true' : null"
+                            (click)="onStationSelect(station.id)"
+                          >
+                            <span class="station-button-name">{{ label(station) }}</span>
+                            @if (station.id === stationId()) {
+                              <span class="station-button-state">{{ t('home.showing') }}</span>
+                            }
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                    @if (stations().length === 0) {
+                      <p class="note">{{ t('home.listLoading') }}</p>
                     }
-                  </ul>
-                  @if (stations().length === 0) {
-                    <p class="note">{{ t('home.listLoading') }}</p>
-                  }
+                  </div>
                 </details>
               </div>
             }

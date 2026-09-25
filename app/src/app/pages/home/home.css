@@ -48,6 +48,7 @@
 
 .answer-board {
   min-inline-size: 0;
+  margin-block-start: var(--gmm-space-6);
 }
 
 /* The product promise, above the station name.
@@ -234,8 +235,14 @@
    hundred milliseconds after the HTML paints. 22rem is a measured two-lane
    board with one following train each, which is what this screen renders. */
 .board {
-  min-block-size: 22rem;
-  margin-inline: calc(-1 * var(--gmm-gutter-mobile));
+  display: block;
+  min-block-size: 20rem;
+  margin-inline: 0;
+  border-radius: var(--gmm-radius-panel);
+  border: 1px solid var(--gmm-rule);
+  background-color: var(--gmm-soft);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
 }
 
 /* "No departures here", when the board has nothing. Keeps the board column's
@@ -310,47 +317,31 @@
 
 /* --- the picker ---------------------------------------------------------- */
 
-/*
-  The picker is a dropdown anchored to the Change button, not a page section.
-
-  It sits inside the origin row, so `.origin-meta` is the positioning context.
-  Floating it means opening the picker does not push the answer — the
-  countdown, the board — down the page underneath it. On a phone there is not
-  enough width to float without covering the name it belongs to, so below
-  640px it stays in flow and simply expands.
-*/
-.picker {
-  margin-block-start: var(--gmm-space-2);
+.picker:not([open]) {
+  display: none;
 }
 
 .picker[open] {
-  position: relative;
-  z-index: 20;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: pickerFadeIn 150ms ease-out;
 }
 
-@media (min-width: 640px) {
-  .picker[open] {
-    position: absolute;
-    /* Right-aligned: the button sits at the end of the origin row, so a panel
-       growing leftwards stays on screen where one growing rightwards would not. */
-    inset-inline-end: 0;
-    inset-block-start: calc(100% + var(--gmm-space-2));
-    inline-size: min(22rem, calc(100vw - 2 * var(--gmm-space-5)));
-    background: var(--gmm-bg);
-    border: 1px solid var(--gmm-grey);
-    border-radius: var(--gmm-radius-input);
-    padding: var(--gmm-space-3);
-  }
+@keyframes pickerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/*
-  Cap the list so 25 stations cannot run off the screen. `dvh` because a mobile
-  browser's toolbars change the viewport as it scrolls.
-*/
-.picker[open] .picker-list {
-  max-block-size: min(22rem, 50dvh);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+@keyframes pickerSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .picker-summary {
@@ -359,15 +350,40 @@
   justify-content: space-between;
   gap: var(--gmm-space-3);
   min-block-size: var(--gmm-touch-primary);
+  background-color: var(--gmm-bg);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: var(--gmm-space-4) var(--gmm-space-5) var(--gmm-space-3);
   font-size: var(--text-body);
   font-weight: 600;
   color: var(--gmm-ink);
   cursor: pointer;
   list-style: none;
+  border-bottom: 1px solid var(--gmm-rule);
 }
 
 .picker-summary::-webkit-details-marker {
   display: none;
+}
+
+.picker-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  inline-size: 100%;
+}
+
+.picker-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmm-space-2);
+}
+
+.picker-dialog-title {
+  font-size: var(--text-body);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--gmm-ink);
 }
 
 .picker-count {
@@ -376,15 +392,56 @@
   color: var(--gmm-ink-2);
 }
 
+.picker-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--gmm-radius-toggle);
+  color: var(--gmm-ink-2);
+}
+
+.picker-close-icon {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.picker-sheet-body {
+  background-color: var(--gmm-bg);
+  display: flex;
+  flex-direction: column;
+  max-block-size: 75dvh;
+  overflow: hidden;
+  animation: pickerSlideUp 180ms ease-out;
+}
+
 .picker-search {
-  padding-block-end: var(--gmm-space-3);
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: var(--gmm-space-3) var(--gmm-space-5);
+  background-color: var(--gmm-soft);
+  border-bottom: 1px solid var(--gmm-rule);
+}
+
+.picker-search-icon {
+  position: absolute;
+  left: calc(var(--gmm-space-5) + var(--gmm-space-3));
+  color: var(--gmm-ink-3);
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  pointer-events: none;
 }
 
 .picker-input {
   display: block;
   inline-size: 100%;
   min-block-size: var(--gmm-touch-primary);
-  padding: var(--gmm-space-3) var(--gmm-space-4);
+  padding: 0 var(--gmm-space-4) 0 40px;
   border: 1px solid var(--gmm-grey);
   border-radius: var(--gmm-radius-input);
   background-color: var(--gmm-bg);
@@ -392,6 +449,13 @@
   font-family: inherit;
   font-size: var(--text-body);
   line-height: 1.5;
+  outline: none;
+  transition: border-color var(--gmm-hover) var(--gmm-ease);
+}
+
+.picker-input:focus {
+  border-color: var(--gmm-line-text);
+  box-shadow: 0 0 0 3px var(--gmm-line-soft);
 }
 
 .picker-input::placeholder {
@@ -399,15 +463,43 @@
   opacity: 1;
 }
 
+.picker-clear-btn {
+  position: absolute;
+  right: calc(var(--gmm-space-5) + var(--gmm-space-3));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--gmm-ink-3);
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.picker-clear-btn:hover {
+  color: var(--gmm-ink);
+  background-color: var(--gmm-rule);
+}
+
+.picker-clear-btn svg {
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
 .picker-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-block-size: 26rem;
+  max-block-size: 55dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* One station. Full width so the target is unmissable, and 56px tall so it
+/* One station. Full width so the target is unmissable, and 48px tall so it
    meets the floor on its own without a declared height. */
 .station-button {
   display: flex;
@@ -415,8 +507,8 @@
   justify-content: space-between;
   gap: var(--gmm-space-3);
   inline-size: 100%;
-  min-block-size: var(--gmm-touch-primary);
-  padding-inline: var(--gmm-space-3);
+  min-block-size: 48px;
+  padding: var(--gmm-space-2) var(--gmm-space-5);
   border: 0;
   border-block-start: 1px solid var(--gmm-rule);
   border-radius: 0;
@@ -434,8 +526,7 @@
   background-color: var(--gmm-soft);
 }
 
-/* Selected: line-soft ground and a bold name. Two signals, one of them not a
-   colour, and the word "Showing" beside it makes three. */
+/* Selected: line-soft ground and a bold name. */
 .station-button[aria-current='true'] {
   background-color: var(--gmm-line-soft);
   font-weight: 600;
@@ -451,6 +542,47 @@
   font-size: var(--text-min);
   font-weight: 600;
   color: var(--gmm-line-text);
+  background: rgba(0, 112, 124, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+@media (min-width: 640px) {
+  .picker[open] {
+    position: absolute;
+    inset: auto;
+    inset-inline-end: 0;
+    inset-block-start: calc(100% + var(--gmm-space-2));
+    inline-size: min(24rem, calc(100vw - 2 * var(--gmm-space-5)));
+    background: var(--gmm-bg);
+    border: 1px solid var(--gmm-grey);
+    border-radius: var(--gmm-radius-panel);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .picker-summary {
+    border-top-left-radius: var(--gmm-radius-panel);
+    border-top-right-radius: var(--gmm-radius-panel);
+    padding: var(--gmm-space-3) var(--gmm-space-4);
+  }
+
+  .picker-sheet-body {
+    max-block-size: 26rem;
+  }
+
+  .picker-search {
+    padding: var(--gmm-space-2) var(--gmm-space-4);
+  }
+
+  .picker-list {
+    max-block-size: 20rem;
+  }
+
+  .station-button {
+    padding-inline: var(--gmm-space-4);
+  }
 }
 
 /* --- fares, and the links out -------------------------------------------- */
@@ -587,10 +719,12 @@
     color: var(--gmm-ink-2);
   }
 
+  .answer-board {
+    margin-block-start: 0;
+  }
+
   /* The board stops bleeding and becomes the panel the spec describes: soft
-     ground, 16px radius, in columns 8-12. On a phone the bleed *is* the
-     separation; at this width there is a 24px grid gutter and a white column
-     either side, so the radius is what says "this is one object". */
+     ground, 16px radius, in columns 8-12. */
   .board {
     border-radius: var(--gmm-radius-panel);
     overflow: hidden;

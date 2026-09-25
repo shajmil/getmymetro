@@ -244,35 +244,10 @@ export interface StripStation {
        geometries have to be two elements. */
     .strip-wide {
       display: none;
-    }
-
-    /* The wide strip is NEVER scaled, in either direction, and that is the
-       whole reason it renders at a fixed 1312px rather than at 100%.
-
-       An SVG scales its text with everything else. Scaled up, the 16px labels
-       grow; scaled down — which is what 'inline-size: 100%' would do at any
-       window narrower than 1440 — they shrink below the 16px floor that
-       DESIGN.md §3 makes structural and that the build gate enforces on CSS.
-       The gate cannot see a 16px label inside a viewBox the browser is about
-       to multiply by 0.94, so this is a floor breach no check in the build
-       would catch.
-
-       At 1440px the strip is exactly its own width: 1280px of content plus the
-       16px of bleed either side. Narrower than that, the band scrolls rather
-       than the type shrinking, which is the correct trade for a diagram whose
-       whole job is to be read.
-
-       The 1312 is the *box*, not the line. 120 of those units are right-hand
-       headroom for the rotated labels and the line stops short of them — see
-       WIDE_LABEL_PAD. Widening the box instead would have scaled every label
-       below the 16px floor, which is the one thing this width exists to
-       prevent. */
-    @media (min-width: 1024px) {
-      .strip-wide {
-        inline-size: 1312px;
-        max-inline-size: none;
-        block-size: auto;
-      }
+      inline-size: 100%;
+      max-inline-size: 100%;
+      block-size: auto;
+      overflow: visible;
     }
 
     @media (min-width: 1024px) {
@@ -282,6 +257,9 @@ export interface StripStation {
 
       .strip-wide {
         display: block;
+        inline-size: 100%;
+        max-inline-size: 100%;
+        block-size: auto;
       }
     }
   `,
@@ -333,8 +311,6 @@ export interface StripStation {
     <svg
       class="strip strip-wide"
       [attr.viewBox]="'0 0 ' + WIDE_WIDTH + ' ' + WIDE_HEIGHT"
-      [attr.width]="WIDE_WIDTH"
-      [attr.height]="WIDE_HEIGHT"
       aria-hidden="true"
       focusable="false"
     >

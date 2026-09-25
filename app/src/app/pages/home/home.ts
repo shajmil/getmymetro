@@ -665,6 +665,24 @@ export class Home {
     this.filterQuery.set((target.value ?? '').trim().toLowerCase());
   }
 
+  clearFilter(): void {
+    this.filterQuery.set('');
+  }
+
+  closePicker(): void {
+    const details = this.pickerEl()?.nativeElement;
+    if (details !== undefined) details.open = false;
+    this.pickerOpen.set(false);
+    this.filterQuery.set('');
+  }
+
+  onPickerClick(event: MouseEvent): void {
+    const details = this.pickerEl()?.nativeElement;
+    if (details && event.target === details) {
+      this.closePicker();
+    }
+  }
+
   stationMatches(station: { readonly name: string; readonly ml?: string }): boolean {
     const query = this.filterQuery();
     if (!query) return true;

@@ -85,26 +85,16 @@ import { NetworkStrip } from './network-strip';
       display: block;
       margin-inline: 0;
       inline-size: 100%;
+      max-inline-size: 100%;
+      overflow: hidden;
     }
 
-    /* At the 80px desktop margin the rotated labels have room to run past the
-       content edge, and they need it: the leftmost label is rotated away from
-       its dot and would otherwise clip against the margin.
-
-       The wide strip is a fixed 1312px and is never scaled — an SVG scales its
-       text, and scaling this one down would put its 16px labels under the
-       floor (see network-strip.ts). So at 1440px it fits exactly, and at
-       1024-1439px this band scrolls. The scroller is the band and not the
-       page: a horizontal scrollbar on one diagram is a normal way to read
-       a wide diagram, and a horizontal scrollbar on the document is a layout
-       bug. */
     @media (min-width: 1024px) {
       .figure {
-        margin-inline: calc(-1 * var(--gmm-space-4));
-        overflow-x: auto;
-        /* The band is the scroller, so it must not also be a flex/grid item
-           that refuses to shrink. */
-        max-inline-size: calc(100% + 2 * var(--gmm-space-4));
+        margin-inline: 0;
+        overflow: hidden;
+        inline-size: 100%;
+        max-inline-size: 100%;
       }
     }
   `,
