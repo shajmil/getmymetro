@@ -40,6 +40,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   TransferState,
   afterNextRender,
   computed,
@@ -47,18 +48,39 @@ import {
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import {
   StationDirectoryService,
   stationName,
+  type StationEntry,
 } from '../../core/data/station-directory';
-import { pairForSlug, routePath, stationPath } from '../../core/data/slugs';
+import {
+  destinationPath as chooseDestinationPath,
+  pairForSlug,
+  routePath,
+  stationPath,
+} from '../../core/data/slugs';
 import { I18nService } from '../../core/i18n/i18n';
 import { MetroEngineService } from '../../core/engine/metro-engine.service';
 import { PageTitleService } from '../../core/seo/page-title';
-import { Booking } from '../../shared/booking';
+import { BOOKING_URL } from '../../shared/booking';
+import { Alert } from '../../shared/controls';
+import { JourneyRow } from '../../shared/journey-line';
+import { JourneySummary } from '../../shared/journey-summary';
+import { BoardPanel } from '../../shared/board-panel';
+import { LineBand } from '../../shared/line-band';
+import type { TrackEnd } from '../../shared/line-track';
+import { boardView, type BoardView } from '../../shared/board-view';
+import { asSeconds } from '../../core/data/seconds';
+import { istSecondsOfDay } from '../../core/engine/civil-time';
+import { formatClock } from '../../core/engine/clock';
+import type { Stop, StopId } from '../../core/data/network.types';
+
+/** Number of departures to show per platform for the origin board. */
+const ROWS_PER_PLATFORM = 3;
 import {
   PAGE_FACTS_KEY,
   routeFactsOf,
@@ -69,8 +91,10 @@ import { LineMap } from '../../shared/map/line-map';
 import { caveatOf, ServiceCaveat, type CaveatView } from '../../shared/service-caveat';
 import { startTicking } from '../../shared/ticker';
 import {
+  journeyStops,
   journeyView,
   routeReference,
+  type JourneyStopRow,
   type RouteJourneyView,
   type RouteReference,
 } from './route-view';
@@ -85,10 +109,23 @@ export type RouteProblem = 'unknown' | 'same-station';
 
 @Component({
   selector: 'app-route',
-  imports: [RouterLink, Booking, LineMap, Provenance, ServiceCaveat],
+  imports: [
+    RouterLink,
+    Alert,
+    JourneyRow,
+    JourneySummary,
+    BoardPanel,
+    LineBand,
+    LineMap,
+    Provenance,
+    ServiceCaveat,
+  ],
   templateUrl: './route.html',
   styleUrl: './route.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(keydown.escape)': 'closePicker()',
+  },
 })
 export class RoutePage {
   readonly #engineService = inject(MetroEngineService);
@@ -97,6 +134,7 @@ export class RoutePage {
   readonly #state = inject(TransferState);
   readonly #i18n = inject(I18nService);
   readonly #pageTitle = inject(PageTitleService);
+  readonly #router = inject(Router);
 
   protected readonly t = this.#i18n.t;
   protected readonly localPath = this.#i18n.localPath;
@@ -234,6 +272,258 @@ export class RoutePage {
 
   readonly caveat = computed<CaveatView | null>(() => caveatOf(this.#plan()));
 
+  /**
+   * Every stop on the way, with the time the **next** train calls there.
+   *
+   * DESIGN.md §6, screen 04. Walks the trip the engine already chose rather
+   * than interpolating between the two ends: the times on this list have to be
+   * one real train's times, and a plausible list belonging to no train is
+   * exactly what the honesty rules exist to prevent.
+   *
+   * Empty until the engine lands, which is correct — these are clock-dependent
+   * and therefore the half of the page that must not be prerendered. The
+   * stations themselves are still in the document without it, through
+   * {@link reference}'s `stopsBetween`, so a crawler reads the route's stop
+   * list even though it reads no times.
+   */
+  readonly stops = computed<readonly JourneyStopRow[]>(() => {
+    const outlook = this.#plan();
+    const engine = this.#engineService.engine();
+    if (outlook === null || engine === null) return [];
+    const plan = outlook.certainty === 'unverified' ? outlook.provisional : outlook.result;
+    const option = plan.options[0];
+    if (option === undefined) return [];
+    return journeyStops(engine.network, plan, option, this.#i18n.locale());
+  });
+
+  /** The countdown split for the hero, exactly as `JourneySummary` splits it. */
+  readonly #nextRow = computed(() => this.journey()?.rows[0] ?? null);
+
+  readonly #originStop = computed<Stop | null>(() => {
+    const engine = this.#engineService.engine();
+    const origin = this.origin();
+    if (engine === null || origin === null) return null;
+    try {
+      return engine.stop(origin.id);
+    } catch {
+      return null;
+    }
+  });
+
+  readonly #outlook = computed(() => {
+    const engine = this.#engineService.engine();
+    const stop = this.#originStop();
+    if (engine === null || stop === null) return null;
+    return engine.station(stop, this.#engineService.now(), ROWS_PER_PLATFORM);
+  });
+
+  readonly boards = computed<readonly BoardView[]>(() => {
+    const outlook = this.#outlook();
+    const engine = this.#engineService.engine();
+    if (outlook === null || engine === null) return [];
+    const departures =
+      outlook.certainty === 'unverified' ? outlook.provisional : outlook.result;
+    return departures.boards.map((board) =>
+      boardView(
+        engine.network,
+        board,
+        this.#engineService.now(),
+        ROWS_PER_PLATFORM,
+        this.#i18n.locale(),
+      ),
+    );
+  });
+
+  readonly journeyDirection = computed<number | null>(() => {
+    const outlook = this.#plan();
+    if (outlook === null) return null;
+    const plan = outlook.certainty === 'unverified' ? outlook.provisional : outlook.result;
+    return plan.direction;
+  });
+
+  readonly trackEnd = computed<TrackEnd>(() => {
+    const boards = this.boards();
+    if (boards.length !== 1) return null;
+    return boards[0].direction === 0 ? 'aluva' : 'tripunithura';
+  });
+
+  readonly provenanceLine = computed<string>(() => {
+    const clock = formatClock(asSeconds(istSecondsOfDay(this.#engineService.now())));
+    return this.data() === 'failed'
+      ? this.t('board.savedAt', { clock })
+      : this.t('board.timetableAt', { clock });
+  });
+
+  readonly originHref = computed<string | null>(() => {
+    const origin = this.origin();
+    return origin === null ? null : this.localPath(stationPath(origin.name));
+  });
+
+  readonly opensAt = computed<string | null>(() => {
+    const boards = this.boards();
+    if (boards.length === 0) return null;
+    const closed = boards.every((board) => board.rows.length > 0 && board.rows[0].nextDay);
+    if (!closed) return null;
+    const clocks = boards
+      .map((board) => board.rows[0]?.clock)
+      .filter((clock): clock is string => clock !== undefined);
+    return clocks.length === 0 ? null : clocks[0];
+  });
+
+  readonly changePath = computed<string | null>(() => {
+    const origin = this.origin();
+    return origin === null ? null : this.localPath(chooseDestinationPath(origin.name));
+  });
+
+  readonly changeDestinationPath = computed<string | null>(() => {
+    const origin = this.origin();
+    return origin === null ? null : this.localPath(chooseDestinationPath(origin.name));
+  });
+
+  readonly countdownKicker = computed<string>(() => {
+    const cd = this.countdownNumber();
+    return cd === 'Arriving' || cd === 'ഇപ്പോൾ'
+      ? this.t('route.nextMetroArriving')
+      : this.t('route.nextMetroArrivesIn');
+  });
+
+  readonly activePicker = signal<'origin' | 'destination' | null>(null);
+  readonly filterQuery = signal('');
+
+  openPicker(mode: 'origin' | 'destination'): void {
+    this.filterQuery.set('');
+    this.activePicker.set(mode);
+    requestAnimationFrame(() => {
+      if (typeof document !== 'undefined') {
+        const input = document.querySelector<HTMLInputElement>('.picker-dialog-input');
+        input?.focus();
+      }
+    });
+  }
+
+  closePicker(): void {
+    this.activePicker.set(null);
+    this.filterQuery.set('');
+  }
+
+  clearFilter(): void {
+    this.filterQuery.set('');
+    if (typeof document !== 'undefined') {
+      const input = document.querySelector<HTMLInputElement>('.picker-dialog-input');
+      input?.focus();
+    }
+  }
+
+  onFilterInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.filterQuery.set(input.value.trim().toLowerCase());
+  }
+
+  readonly filteredStations = computed(() => {
+    const query = this.filterQuery();
+    const list = this.stations();
+    if (query === '') return list;
+    return list.filter(
+      (s) =>
+        s.name.toLowerCase().includes(query) ||
+        (s.ml?.toLowerCase().includes(query) ?? false),
+    );
+  });
+
+  isCurrentStation(stationId: StopId, mode: 'origin' | 'destination'): boolean {
+    if (mode === 'origin') {
+      return this.origin()?.id === stationId;
+    }
+    return this.destination()?.id === stationId;
+  }
+
+  selectStation(station: StationEntry, mode: 'origin' | 'destination'): void {
+    const curOrigin = this.origin();
+    const curDest = this.destination();
+    this.closePicker();
+
+    if (mode === 'origin') {
+      if (curDest === null) {
+        this.#router.navigateByUrl(this.localPath(stationPath(station.name)));
+        return;
+      }
+      if (station.id === curDest.id) {
+        this.#router.navigateByUrl(this.localPath(stationPath(station.name)));
+        return;
+      }
+      this.#router.navigateByUrl(this.localPath(routePath(station.name, curDest.name)));
+    } else {
+      if (curOrigin === null) {
+        this.#router.navigateByUrl(this.localPath(stationPath(station.name)));
+        return;
+      }
+      if (station.id === curOrigin.id) {
+        this.#router.navigateByUrl(this.localPath(stationPath(station.name)));
+        return;
+      }
+      this.#router.navigateByUrl(this.localPath(routePath(curOrigin.name, station.name)));
+    }
+  }
+
+  swapRoute(): void {
+    const curOrigin = this.origin();
+    const curDest = this.destination();
+    if (curOrigin !== null && curDest !== null) {
+      this.#router.navigateByUrl(this.localPath(routePath(curDest.name, curOrigin.name)));
+    }
+  }
+
+  label(station: StationEntry): string {
+    return stationName(station, this.#i18n.locale());
+  }
+
+  readonly heroCountdown = computed<string | null>(() => this.#nextRow()?.countdown ?? null);
+
+  readonly heroClock = computed<string>(() => {
+    const clock = this.#nextRow()?.clock;
+    return clock === undefined ? '' : clock.replace(/\s+(AM|PM)$/i, '');
+  });
+
+  readonly heroMeridiem = computed<string | null>(() => {
+    const match = /\s+(AM|PM)$/i.exec(this.#nextRow()?.clock ?? '');
+    return match === null ? null : match[1];
+  });
+
+  readonly heroArrivalClock = computed<string | null>(() => {
+    const clock = this.#nextRow()?.arrivalClock;
+    return clock === undefined ? null : clock.replace(/\s+(AM|PM)$/i, '');
+  });
+
+  readonly heroMeta = computed<string | null>(() => {
+    const journey = this.journey();
+    const row = this.#nextRow();
+    if (journey === null || row === null) return null;
+    return [
+      this.t('journey.rideTime', { minutes: row.durationMinutes }),
+      `${journey.hops} ${this.stopWord(journey.hops)}`,
+      `₹${journey.fare}`,
+    ].join(' · ');
+  });
+
+  readonly countdownNumber = computed<string>(() => {
+    const text = this.#nextRow()?.countdown ?? '';
+    const space = text.indexOf(' ');
+    return space === -1 ? text : text.slice(0, space);
+  });
+
+  readonly countdownUnit = computed<string | null>(() => {
+    const text = this.#nextRow()?.countdown ?? '';
+    const space = text.indexOf(' ');
+    return space === -1 ? null : text.slice(space + 1);
+  });
+
+  /** Which rail segment a stop row draws. */
+  rowKind(index: number, total: number): 'first' | 'through' | 'last' | 'only' {
+    if (total === 1) return 'only';
+    if (index === 0) return 'first';
+    return index === total - 1 ? 'last' : 'through';
+  }
+
   /** The reverse journey, which is what somebody wants next about half the time. */
   readonly reversePath = computed<string | null>(() => {
     const ends = this.ends();
@@ -250,6 +540,12 @@ export class RoutePage {
     const destination = this.destination();
     return destination === null ? null : this.localPath(stationPath(destination.name));
   });
+
+  readonly bookingUrl = BOOKING_URL;
+
+  stopWord(hops: number): string {
+    return this.#i18n.t(hops === 1 ? 'common.stop' : 'common.stops');
+  }
 
   retryData(): void {
     this.#loadData();

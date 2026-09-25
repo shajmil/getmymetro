@@ -75,6 +75,8 @@ if (!existsSync(swPath)) fail('sw.js is missing from the browser output — is i
  *   - `*.html`   1,252 prerendered documents. Cached as they are visited.
  *   - the Malayalam font (89 kB), gated behind `unicode-range` so an English
  *     reader never fetches it. Cached the first time a Malayalam page needs it.
+ *   - the Geist licence text, which the SIL OFL requires be distributed with
+ *     the font but which no reader ever loads.
  *   - `sitemap.xml`, `robots.txt`, `_redirects` — for crawlers and the host.
  *   - `sw.js` itself, which the browser manages.
  */
@@ -85,6 +87,7 @@ const EXCLUDE = [
   /^_redirects$/,
   /^sw\.js$/,
   /noto-sans-malayalam\.woff2$/,
+  /geist-LICENSE\.txt$/,
 ];
 
 const precache = files

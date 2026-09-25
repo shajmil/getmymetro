@@ -11,25 +11,26 @@
     />
 
     <!-- Lets the browser paint native scrollbars and form controls in the
-         right theme before any CSS loads, avoiding a white flash on dark. -->
-    <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
+         right theme before any CSS loads.
 
-    <!-- Self-hosted fonts: no Google Fonts CDN anywhere. A CDN would cost a
-         DNS + TLS round trip on a patchy connection and would break the
-         offline guarantee the service worker provides from Phase 6.
+         Light only. The "the line" system is a single white-ground palette
+         (getmymetro-design/DESIGN.md §2) with no dark counterpart specified,
+         and declaring `light dark` here would have the browser paint dark
+         scrollbars and dark form controls around a permanently white page. -->
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#ffffff" />
 
-         Only the Latin face is preloaded. The Malayalam face (89KB) and the
-         rupee subset are gated behind `unicode-range`, so the browser fetches
-         them only when those codepoints actually appear on the page. -->
-    <link
-      rel="preload"
-      href="/fonts/noto-sans-latin.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
+    <!-- Self-hosted fonts: no Google Fonts CDN anywhere. DESIGN.md §3 names
+         Geist and `getmymetro-design/tokens.css` opens with a
+         `fonts.googleapis.com` @import; the typeface is adopted, the delivery
+         is not. A CDN would cost a DNS + TLS round trip on a patchy connection
+         and would break the offline guarantee the service worker provides.
+
+         Geist is SIL OFL 1.1, subset here to 28KB — smaller than the Noto Sans
+         latin face it replaces. Only the Latin face is preloaded: the
+         Malayalam face (89KB) is gated behind `unicode-range`, so an English
+         reader never fetches it. -->
+    <link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin />
 
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />

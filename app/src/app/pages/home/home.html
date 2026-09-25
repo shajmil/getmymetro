@@ -1,7 +1,10 @@
 <!--
-  Order on this page is the order of the question "am I going to be OK?":
-  where you are, what leaves next, whether to run, and whether the train you
-  can see is the last one that goes where you are going.
+  Home. DESIGN.md §6, screen 01.
+
+  Header → JourneySummary → Book → DepartureBoard, in that order and no other.
+  The rule the composition has to satisfy is golden rule 2: **both lanes' next
+  train is visible in the first viewport at 390x844**, which is why nothing —
+  no card, no pill row, no status banner — sits between the hero and the board.
 
   Nothing above renders a time that did not come from the feed, and nothing
   renders a time that was computed anywhere but the reader's own browser at
@@ -9,269 +12,410 @@
   wrong by the time anyone saw it.
 -->
 
-<!-- 1. Where. The station is the heading, so the answer starts at the top. -->
-<section aria-live="polite">
-  @if (stop(); as station) {
-    <h1 class="text-station-lg font-bold">{{ stationLabel() }}</h1>
+<div class="screen">
+  @if (showSkeleton()) {
+    <!-- The skeleton is the exact final layout, so nothing moves when the
+         answer lands. DESIGN.md §6, "Loading". -->
+    <app-journey-skeleton />
+  } @else {
+    <!--
+      The answer, composed. DESIGN.md §4 and screen 07.
 
-    @switch (source()) {
-      @case ('located') {
-        @if (fix(); as located) {
-          @switch (located.kind) {
-            @case ('at') {
-              <p class="text-muted">{{ t('home.fixAt', { distance: distanceLabel() ?? '' }) }}</p>
-            }
-            @case ('near') {
-              <p class="text-muted">{{ t('home.fixNear', { distance: distanceLabel() ?? '' }) }}</p>
-            }
-            @case ('far') {
-              <p class="warning">
-                {{
-                  t('home.fixFar', {
-                    distance: distanceLabel() ?? '',
-                    station: stationLabel(),
-                  })
-                }}
+      One 12-column grid. Below 1024px every child spans the full width, so
+      this is the same single column the phone has always had; at 1024px and
+      above the journey takes columns 1-6 and the board columns 8-12, with
+      column 7 left as the empty gutter the spec asks for.
+
+      The two halves are deliberately *not* two cards side by side. The journey
+      keeps the white ground and the board keeps its soft one, which is the
+      only separation the design has and the only one it needs.
+    -->
+    <div class="answer grid-page grid-12">
+      <div class="answer-journey lg-col-1-6">
+        <!--
+          The product promise. Desktop only, and that is a golden-rule-2
+          decision rather than a stylistic one: at 390x844 both lanes’ next
+          train has to be in the first viewport, and a line above the station
+          name costs that. At 1440 the journey column has the room, and the
+          sentence is the first thing that says what the app is for — it
+          existed only in the meta description before Phase D.
+        -->
+        <p class="promise">{{ t('home.promise') }}</p>
+
+        <!--
+          Timetable unavailable. DESIGN.md §6: an amber alert that says what it is
+          showing instead, above the answer rather than replacing it.
+        -->
+        @if (data() === 'failed') {
+          <div class="alert-slot">
+            <app-alert [title]="t('screen.staleTitle')" [message]="t('common.dataFailed')">
+              <p class="alert-action">
+                <button type="button" class="btn-secondary" (click)="retryData()">
+                  <svg viewBox="0 0 24 24" width="18" height="18" class="retry-icon" aria-hidden="true">
+                    <path d="M4 12a8 8 0 1 1 2.3 5.7" />
+                    <path d="M4 6v5h5" />
+                  </svg>
+                  <span>{{ t('common.tryAgain') }}</span>
+                </button>
               </p>
-            }
-            @case ('vague') {
-              <p class="note">{{ t('home.fixVague', { accuracy: located.accuracyM }) }}</p>
-            }
-          }
+            </app-alert>
+          </div>
         }
-      }
-      @case ('remembered') {
-        <p class="text-muted">{{ t('home.remembered') }}</p>
-      }
-      @case ('picked') {
-        <p class="text-muted">{{ t('home.picked') }}</p>
-      }
-    }
-  } @else {
-    <h1 class="text-station-lg font-bold">{{ t('home.heading') }}</h1>
 
-    @switch (data()) {
-      @case ('failed') {
-        <p class="warning">{{ t('common.dataFailed') }}</p>
-        <p class="tap-row mt-2">
-          <button
-            type="button"
-            class="tap-target rounded-lg border-2 border-outline font-semibold"
-            (click)="retryData()"
+        <section class="hero" aria-live="polite">
+          <app-journey-summary
+            [originName]="stationLabel() || t('home.heading')"
+            [hereLabel]="hereLabel()"
+            [destinationName]="destinationLabel() || null"
+            [towardsName]="journeyTowardsName()"
+            [countdown]="heroCountdown()"
+            [departureClock]="heroClock()"
+            [departureMeridiem]="heroMeridiem()"
+            [arrivalClock]="heroArrivalClock()"
+            [meta]="heroMeta()"
+            [variant]="heroVariant()"
+            [ariaLabel]="t('journey.yourJourney')"
           >
-            {{ t('common.tryAgain') }}
-          </button>
-        </p>
-      }
-      @default {
-        @switch (location().kind) {
-          @case ('locating') {
-            <p class="text-muted">{{ t('home.locating') }}</p>
-          }
-          @default {
-            <p class="text-muted">{{ t('home.chooseBelow') }}</p>
-          }
-        }
-      }
-    }
-  }
+            <!--
+              Change the origin. 44px secondary, per DESIGN.md §5.2.
 
-  <!-- Every failure mode lands here, and every one of them has a way out. -->
-  @if (location(); as located) {
-    @switch (located.kind) {
-      @case ('failed') {
-        @switch (located.reason) {
-          @case ('denied') {
-            <p class="note mt-3">{{ t('home.denied') }}</p>
-          }
-          @case ('unsupported') {
-            <p class="note mt-3">{{ t('home.unsupported') }}</p>
-          }
-          @default {
-            <p class="note mt-3">
-              @if (located.reason === 'timeout') {
-                {{ t('home.timedOut') }}
+              `aria-controls` and `aria-expanded` name the thing it opens, and
+              the handler moves focus into it. Both matter: Phase D wired this
+              button to a signal read by a `<details>` far down the page and
+              nothing else, so it set state nobody could see and read as a dead
+              control — the first thing a real browser caught.
+            -->
+            @if (stop() !== null) {
+              <!--
+                One projected element carrying BOTH the button and the picker.
+                `select="[slot=change]"` matches only the element it is put on —
+                a sibling <details> after </button> was never projected at all, so
+                it vanished from the rendered output. This wrapper is also the
+                positioning context: the anchor must live in the same component as
+                the dropdown, because .origin-meta belongs to JourneySummary and no
+                page stylesheet can reach into it.
+              -->
+              <div slot="change" class="change-anchor">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  aria-controls="stations"
+                  [attr.aria-expanded]="pickerOpen()"
+                  (click)="openOriginPicker()"
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" class="change-icon" aria-hidden="true">
+                    <path d="M7 4v16" />
+                    <path d="M4 7l3-3 3 3" />
+                    <path d="M17 20V4" />
+                    <path d="M20 17l-3 3-3-3" />
+                  </svg>
+                  <span>{{ t('screen.change') }}</span>
+                </button>
+
+                <!--
+                  The picker, inside the origin row and directly under the button
+                  that opens it. It used to live at the foot of the page, below the
+                  board, the line band and the map — so "Change" scrolled the reader
+                  past the whole answer to a section they had not asked for. A
+                  control that opens something must open it where it is.
+                -->
+                <details class="picker" id="stations" #pickerEl (toggle)="togglePicker(pickerEl.open)">
+                  <summary class="picker-summary">
+                    <span>
+                      @if (stop() === null) {
+                        {{ t('home.choosePicker') }}
+                      } @else {
+                        {{ t('home.changeStation') }}
+                      }
+                    </span>
+                    <span class="picker-count tabular">
+                      {{ t('screen.stationsCount', { count: stations().length }) }}
+                    </span>
+                  </summary>
+
+                  <div class="picker-search">
+                    <label class="sr-only" for="station-filter">{{ t('home.choosePicker') }}</label>
+                    <input
+                      id="station-filter"
+                      type="search"
+                      class="picker-input"
+                      [attr.placeholder]="t('screen.searchPlaceholder')"
+                      (input)="onFilterInput($event)"
+                      (click)="$event.stopPropagation()"
+                    />
+                  </div>
+
+                  <ul class="picker-list">
+                    @for (station of stations(); track station.id) {
+                      <li [hidden]="!stationMatches(station)">
+                        <button
+                          type="button"
+                          class="station-button"
+                          [attr.aria-current]="station.id === stationId() ? 'true' : null"
+                          (click)="onStationSelect(station.id)"
+                        >
+                          <span class="station-button-name">{{ label(station) }}</span>
+                          @if (station.id === stationId()) {
+                            <span class="station-button-state">{{ t('home.showing') }}</span>
+                          }
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                  @if (stations().length === 0) {
+                    <p class="note">{{ t('home.listLoading') }}</p>
+                  }
+                </details>
+              </div>
+            }
+
+            <!--
+              No destination, or no service. Both land here, and each says which
+              it is in words as well as by the line's shape. DESIGN.md §6.
+            -->
+            <ng-container slot="prompt">
+              @if (closed()) {
+                <p class="closed-head">
+                  <svg viewBox="0 0 24 24" width="22" height="22" class="closed-icon" aria-hidden="true">
+                    <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />
+                  </svg>
+                  <span>{{ t('screen.noMoreTonight') }}</span>
+                </p>
+                <p class="closed-body">{{ closedBody() }}</p>
+                @if (opensAt(); as clock) {
+                  <p class="closed-first">
+                    <span class="closed-first-label">{{ t('screen.firstTomorrow') }}</span>
+                    <span class="closed-first-time tabular">{{ clock }}</span>
+                  </p>
+                }
               } @else {
-                {{ t('home.noFix') }}
+                <p class="prompt">{{ t('screen.pickPrompt') }}</p>
+                @if (destinationPath(); as path) {
+                  <p class="prompt-action">
+                    <a class="where-to" [routerLink]="path">
+                      <span>{{ t('screen.whereTo') }}</span>
+                      <svg viewBox="0 0 24 24" width="20" height="20" class="where-to-chevron" aria-hidden="true">
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </a>
+                  </p>
+                }
               }
-              {{ t('home.chooseOrRetry') }}
-            </p>
-            <p class="tap-row mt-2">
-              <button
-                type="button"
-                class="tap-target rounded-lg border-2 border-outline font-semibold"
-                (click)="retryLocation()"
-              >
-                {{ t('home.retryLocation') }}
-              </button>
-            </p>
+            </ng-container>
+
+            <!-- The destination slot, when there is none. Keeps the dashed node
+                 from sitting beside an empty row. -->
+            <span slot="destination" class="destination-empty">{{ t('journey.whereTo') }}</span>
+          </app-journey-summary>
+        </section>
+
+
+
+        <!--
+          Book on KMRL WhatsApp. One primary action per screen (DESIGN.md §5.6),
+          and it is KMRL's channel, not ours — the licence forbids implying
+          endorsement (CLAUDE.md finding 1 and MVP item 8).
+        -->
+        @if (destinationStop() !== null) {
+          <div class="book">
+            <a class="btn-primary book-button" [href]="bookingUrl" rel="noopener nofollow">
+              <span>{{ t('journey.bookTicket') }}</span>
+              <svg viewBox="0 0 24 24" width="20" height="20" class="book-icon" aria-hidden="true">
+                <path d="M7 17L17 7" />
+                <path d="M8 7h9v9" />
+              </svg>
+              <span class="sr-only">{{ t('screen.opensWhatsApp') }}</span>
+            </a>
+            <p class="book-note">{{ t('booking.note') }}</p>
+          </div>
+        }
+      </div>
+
+      <!--
+        The board. Both directions, side by side, never two stacked cards.
+
+        On a phone it bleeds to the screen edge, because its soft ground is
+        what separates the journey from the timetable and a 20px white margin
+        either side would make it read as a card. On desktop it is a panel in
+        columns 8-12 with a 16px radius, per DESIGN.md §4 — at that width the
+        bleed would strand the board against the window edge instead.
+      -->
+      <div class="answer-board lg-col-8-12">
+        @if (boards().length > 0) {
+          <app-board-panel
+            class="board"
+            [stationName]="stationLabel()"
+            [boards]="boards()"
+            [yourDirection]="journeyDirection()"
+            [provenance]="provenanceLine()"
+            [trackEnd]="trackEnd()"
+            [fullBoardPath]="stationHref()"
+            [opensAt]="opensAt()"
+            [followingCount]="1"
+            [followingCountWide]="3"
+          />
+        } @else if (stop() !== null && data() === 'ready') {
+          <p class="prose board-prose">{{ t('common.noDeparturesHere') }}</p>
+        }
+
+        <!--
+          The last train home, and the run nudge. From ~21:00 this screen changes
+          character (MVP item 3) and this is the part that changes it.
+
+          It sits directly under the board because that is where the reader is
+          already looking, and *below* it rather than above because until the
+          evening there is nothing here at all — the component emits nothing
+          outside the last-train window, so no space is reserved for it and the
+          board keeps the first viewport (golden rule 2).
+
+          Never fold this into a lane. CLAUDE.md finding 9 is the most dangerous
+          fact in the dataset and it needs sentences: the advertised last train
+          towards Aluva is not the last train that reaches Aluva.
+        -->
+        @if (boards().length > 0) {
+          <div class="last-train-slot">
+            <app-last-train [boards]="boards()" />
+          </div>
+        }
+
+        <!--
+          Every way location can fail lands here, and every one of them has a way
+          out. None of them ever blocks the answer above.
+        -->
+        @if (location(); as located) {
+          @if (located.kind === 'failed') {
+            <div class="location-note">
+              @switch (located.reason) {
+                @case ('denied') {
+                  <p class="note">{{ t('home.denied') }}</p>
+                }
+                @case ('unsupported') {
+                  <p class="note">{{ t('home.unsupported') }}</p>
+                }
+                @default {
+                  <p class="note">
+                    @if (located.reason === 'timeout') {
+                      {{ t('home.timedOut') }}
+                    } @else {
+                      {{ t('home.noFix') }}
+                    }
+                    {{ t('home.chooseOrRetry') }}
+                  </p>
+                  <p class="tap-row">
+                    <button type="button" class="btn-secondary" (click)="retryLocation()">
+                      {{ t('home.retryLocation') }}
+                    </button>
+                  </p>
+                }
+              }
+            </div>
           }
         }
-      }
-    }
-  }
-</section>
 
-<!-- 2. The answer. Reserved height so nothing below it moves when it arrives. -->
-<div class="board-slot mt-6">
-  @if (boards().length > 0) {
-    <div class="grid gap-6">
-      @for (board of boards(); track board.direction) {
-        <app-departure-board [board]="board" />
-      }
+      </div>
     </div>
-  } @else if (stop() !== null && data() === 'ready') {
-    <p class="note">{{ t('common.noDeparturesHere') }}</p>
-  } @else {
-    <p class="text-muted">
-      @if (data() === 'failed') {
-        {{ t('home.waiting') }}
-      } @else {
-        {{ t('common.loading') }}
-      }
-    </p>
-  }
-</div>
 
-<!--
-  3. The map. Immediately below the answer and never above it.
+    <!--
+      The line, across the bottom. DESIGN.md screen 07 and §5.5.
 
-  This is the reversal CLAUDE.md records: a map library was rejected in favour
-  of the schematic, and the brief overrode that. The order is the part that
-  matters and it is not negotiable — the departure answer is the product, the
-  map is the orientation. The schematic still ships, as the fallback inside
-  <app-line-map> for when the tiles cannot be reached.
--->
-<app-line-map [stations]="stations()" [selected]="stationId()" />
+      Full width, every station labelled at −50° on desktop and the two ends
+      only on a phone — 25 labels across 350px would be unreadable, and the
+      component decides that for itself at its own breakpoint.
 
-<!--
-  4. The rest of the app, in words.
+      The "Open line map" link beside the heading is what the strip cannot be:
+      the strip is one `role="img"` with a text alternative and carries no
+      links at all, because 25 targets at a 14px pitch would fail the 44px
+      floor. So the link is how a reader gets from the diagram to the map.
+    -->
+    <app-line-band
+      class="network grid-page"
+      [stations]="stations()"
+      [you]="stationId()"
+      [destination]="destinationId()"
+    />
 
-  The complaint this phase answers was that the features existed and could not
-  be found: A→B journeys, fares, the first and last train, and the 600
-  prerendered route pages were all three taps deep. Every one of them is now
-  one tap from here, behind a label that says what it is rather than an icon.
-  No carousel, no hamburger, no icon-only control — every target is a 56px row
-  with words in it.
--->
-<section class="journey-slot mt-6">
-  <h2 class="text-station font-bold">{{ t('home.journeyHeading') }}</h2>
+    <!--
+      The map, below the answer and never above it.
+    -->
+    <div class="map-slot grid-page" id="line-map">
+      <app-line-map [stations]="stations()" [selected]="stationId()" [to]="destinationId()" />
+    </div>
 
-  @if (platforms().length > 0) {
-    <details class="mt-3 rounded-xl border-2 border-border">
-      <summary class="disclosure text-lead font-semibold text-accent">
-        {{ t('home.whereTo') }}
-      </summary>
-      <p class="px-3 pb-1">{{ t('home.whereToBody') }}</p>
-      @for (platform of platforms(); track platform.direction) {
-        <h3 class="px-3 pt-3 text-lead font-bold">
-          {{ t('board.towards', { name: platform.towardsName }) }}
-        </h3>
-        <ul class="p-2">
-          @for (destination of platform.destinations; track destination.id) {
-            <li class="mt-tap-gap first:mt-0">
-              <a class="fare-row" [routerLink]="destination.path">
-                <span>{{ destination.name }}</span>
-                <span class="tabular font-semibold">{{
-                  t('home.destinationCost', {
-                    fare: destination.fare,
-                    hops: destination.hops,
-                    stopWord: stopWord(destination.hops),
-                  })
-                }}</span>
-              </a>
-            </li>
-          }
-        </ul>
-      }
-    </details>
-  } @else {
-    <p class="mt-3 text-muted">{{ t('home.whereToWaiting') }}</p>
+    <!--
+      The picker. Always in the document, one tap from anywhere on the page.
+      A `<details>`, so it opens with JavaScript off.
+    -->
+    <!--
+      `open` is NOT bound. A <details> owns its own open state: the browser
+      toggles it on a summary click and fires `toggle` afterwards. Binding
+      [open] to the same signal that `toggle` writes makes the element and
+      Angular fight over one piece of state — zoneless, the binding re-applies
+      the stale value and the picker snaps shut. The signal now follows the
+      element (one direction only); `openPicker()` opens it imperatively.
+    -->
+
+    <!--
+      The rest of the app in words. Prerendered reference content: every
+      destination from here, priced, one link each into the 600 route pages.
+      CLAUDE.md search strategy 2 rests on this cross-linking.
+    -->
+    @if (platforms().length > 0) {
+      <section class="fares grid-page">
+        <h2 class="fares-heading">{{ t('home.journeyHeading') }}</h2>
+        <p class="fares-body">{{ t('home.whereToBody') }}</p>
+        @for (platform of platforms(); track platform.direction) {
+          <h3 class="fares-platform">{{ t('board.towards', { name: platform.towardsName }) }}</h3>
+          <ul class="fare-list">
+            @for (destination of platform.destinations; track destination.id) {
+              <li>
+                <a
+                  class="fare-row"
+                  [routerLink]="destination.path"
+                  (click)="onDestinationClick($event, destination.id)"
+                >
+                  <span class="fare-name">{{ destination.name }}</span>
+                  <span class="fare-value tabular">{{
+                    t('home.destinationCost', {
+                      fare: destination.fare,
+                      hops: destination.hops,
+                      stopWord: stopWord(destination.hops),
+                    })
+                  }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    @if (stationHref(); as href) {
+      <div class="links grid-page">
+        <a class="link-row" [routerLink]="href">
+          <span>{{ t('home.allFrom', { station: stationLabel() }) }}</span>
+          <svg viewBox="0 0 24 24" width="20" height="20" class="link-chevron" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </a>
+        <a class="link-row" [routerLink]="href" fragment="first-last">
+          <span>{{ t('home.firstLast', { station: stationLabel() }) }}</span>
+          <svg viewBox="0 0 24 24" width="20" height="20" class="link-chevron" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </a>
+      </div>
+    }
   }
 
   <!--
-    The full timetable page for this station: every departure, first and last
-    train per pattern, and the fare to all 24 other stations. Real <a> elements
-    with real hrefs, because internal linking is how 1,250 prerendered pages
-    get discovered (CLAUDE.md search strategy 2).
-
-    Two links to one page, deliberately. "All departures and fares" and "first
-    and last train" are different questions and the second is the dangerous one
-    — at 20 stations the advertised last train towards Aluva does not reach
-    Aluva (finding 9). A reader looking for it should not have to guess that it
-    lives under a heading about fares, so it gets its own label and lands on
-    its own section.
+    Provenance, and the holiday caveat. Prominent, per the honesty rules:
+    these are timetable times, confirmed with KMRL, and the page says so.
   -->
-  @if (stationHref(); as href) {
-    <p class="tap-row mt-3">
-      <a class="link-button hover:bg-surface" [routerLink]="href">{{
-        t('home.allFrom', { station: stationLabel() })
-      }}</a>
-    </p>
-    <p class="tap-row mt-2">
-      <a class="link-button hover:bg-surface" [routerLink]="href" fragment="first-last">{{
-        t('home.firstLast', { station: stationLabel() })
-      }}</a>
-    </p>
-  }
-</section>
+  <div class="provenance-slot grid-page">
+    <app-service-caveat [caveat]="caveat()" />
+    <app-provenance />
+  </div>
+</div>
 
-<!--
-  5. The picker. Always in the document, one tap from anywhere on the page,
-  and usable as the primary path rather than a fallback. It is a <details>
-  so the 25 station names are in the prerendered HTML source: a reader with
-  no JavaScript, and a crawler, both see the real network.
--->
-<details class="mt-6 rounded-xl border-2 border-border" #pickerEl [open]="pickerOpen()" (toggle)="togglePicker(pickerEl.open)">
-  <summary class="disclosure text-lead font-semibold text-accent">
-    @if (stop() === null) {
-      {{ t('home.choosePicker') }}
-    } @else {
-      {{ t('home.changeStation') }}
-    }
-  </summary>
-  <ul class="p-2">
-    @for (station of stations(); track station.id) {
-      <li class="mt-tap-gap first:mt-0">
-        <button
-          type="button"
-          class="station-button"
-          [attr.aria-current]="station.id === stationId() ? 'true' : null"
-          (click)="choose(station.id)"
-        >
-          <span>{{ label(station) }}</span>
-          @if (station.id === stationId()) {
-            <span class="text-min">{{ t('home.showing') }}</span>
-          }
-        </button>
-      </li>
-    }
-  </ul>
-  @if (stations().length === 0) {
-    <p class="p-4 text-muted">{{ t('home.listLoading') }}</p>
-  }
-</details>
-
-<!--
-  6. Provenance, and the holiday caveat.
-
-  The caveat fires Monday to Saturday — six days a week — because KMRL ships
-  no calendar_dates.txt and nobody has checked a holiday list. That makes the
-  tone the whole point: the timings themselves are confirmed accurate
-  (CLAUDE.md finding 6), and the only open question is whether today happens
-  to be a holiday. A red banner would overstate that, and suppressing it would
-  understate it. Both are forbidden by the same rule. The copy lives in
-  <app-service-caveat> so the station and route pages cannot drift from it.
--->
-<app-service-caveat [caveat]="caveat()" />
-
-<app-provenance />
-
-<!-- Plain text only, and it must stay that way. With JavaScript ENABLED the
-     browser parses noscript contents as one raw text node and never builds
-     DOM from it, while the server renders it as real elements — so any child
-     element here is an automatic NG0500 hydration mismatch. Do not style the
-     noscript element either: author CSS beats the UA `display:none` and would show
-     this to everyone. `scripts/check-bundle-size.mjs` greps every prerendered
-     document for an element inside a noscript and fails the build. -->
+<!-- TEXT ONLY. An element inside a noscript is an NG0500 hydration mismatch. -->
 <noscript>{{ t('home.noscript') }}</noscript>

@@ -179,11 +179,11 @@ describe('the run nudge', () => {
 });
 
 describe('countdowns', () => {
-  it('rounds a wait down, and reads "Due" only once the train is leaving', () => {
+  it('rounds a wait down, and reads "Arriving" only once the train is leaving', () => {
     // 1 min 44 s to the 6:05 reads "1 min", never "2 min": rounding up is how
     // someone misses a train a countdown told them they would catch.
     expect(view('MGRD', 1, at(TUESDAY, 6, 4)).rows[0].countdown).toBe('1 min');
-    expect(view('MGRD', 1, at(TUESDAY, 6, 5)).rows[0].countdown).toBe('Due');
+    expect(view('MGRD', 1, at(TUESDAY, 6, 5)).rows[0].countdown).toBe('Arriving');
   });
 
   it('renders the after-midnight train as 12:01 AM, not 12:01 PM', () => {

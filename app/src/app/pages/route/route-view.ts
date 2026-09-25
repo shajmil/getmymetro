@@ -25,7 +25,12 @@
  * baked into a static page is a wrong time.
  */
 
-import type { Rupees, Stop } from '../../core/data/network.types';
+import type {
+  NetworkData,
+  Rupees,
+  Stop,
+  TripId,
+} from '../../core/data/network.types';
 import { stationName, type StationEntry } from '../../core/data/station-directory';
 import { istDateOf, sameCivilDate, type Instant } from '../../core/engine/civil-time';
 import { formatClock } from '../../core/engine/clock';
@@ -181,4 +186,86 @@ export function routeReference(
       strandMinutes: pattern.strandMinutes,
     })),
   };
+}
+
+// ------------------------------------------- the stop list, with real times
+
+/**
+ * One station on the way, with the time the chosen train calls there.
+ *
+ * DESIGN.md §6, screen 04: the route page lists **every** stop between the two
+ * ends with the time against each, not just the origin and destination.
+ */
+export interface JourneyStopRow {
+  readonly id: string;
+  readonly name: string;
+  /** Arrival at this station on the chosen train. "6:24". */
+  readonly clock: string;
+  /** True for the boarding station. */
+  readonly isOrigin: boolean;
+  /** True for the one that says "Get off here". */
+  readonly isDestination: boolean;
+}
+
+/**
+ * Every stop the chosen train makes between the two ends, with its time.
+ *
+ * Walks the trip the engine already picked rather than re-planning anything,
+ * which is what makes the times on this list the same train's times. Building
+ * it from `stopsBetween` and an interpolation would produce a plausible list
+ * that belongs to no actual train — and the whole product rests on never doing
+ * that.
+ *
+ * The origin's time is its **departure** and every other row's is its
+ * **arrival**, because that is what the reader does at each: they board at the
+ * first and they are carried through the rest. A single "time" column that
+ * silently meant two different things would be off by the dwell at the origin,
+ * which is small enough never to be noticed and wrong every time.
+ *
+ * Returns an empty list when the trip is not in the network — which cannot
+ * happen for an option the engine produced, but the lookup is a `Map#get` and
+ * inventing a stop list to cover for a missing one would be worse than
+ * rendering none.
+ */
+export function journeyStops(
+  network: NetworkData,
+  plan: JourneyPlan,
+  option: JourneyOption,
+  locale: AppLocale = 'en',
+): readonly JourneyStopRow[] {
+  const trip = network.tripsById.get(option.tripId as TripId);
+  if (trip === undefined) return [];
+
+  const rows: JourneyStopRow[] = [];
+  let boarded = false;
+
+  for (const event of trip.stops) {
+    const stop = network.stops[event.stopIndex];
+    if (stop === undefined) continue;
+
+    if (!boarded) {
+      if (stop.index !== plan.origin.index) continue;
+      boarded = true;
+      rows.push({
+        id: stop.id,
+        name: stop.name[locale],
+        clock: formatClock(event.departure),
+        isOrigin: true,
+        isDestination: false,
+      });
+      continue;
+    }
+
+    const isDestination = stop.index === plan.destination.index;
+    rows.push({
+      id: stop.id,
+      name: stop.name[locale],
+      clock: formatClock(event.arrival),
+      isOrigin: false,
+      isDestination,
+    });
+    if (isDestination) break;
+  }
+
+  return rows;
 }

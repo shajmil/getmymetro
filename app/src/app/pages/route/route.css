@@ -1,51 +1,1309 @@
-/* Route page layout.
+/* Route. DESIGN.md §6, screen 04.
    -------------------------------------------------------------------------
-   No @keyframes. No transition over 150ms, and none on anything but colour,
-   opacity and transform. Every length is a token or a multiple of one. */
+   One column, on the gutter throughout. The only structural piece is the stop
+   list, and its geometry comes from `JourneyRow` — the rail, the nodes and
+   the 22px node offset are all that component's, so nothing here re-declares
+   them and they cannot drift.
 
-/* Reserved height for the journey panel, which arrives after the HTML paints.
-   Everything below it — the fare, both service patterns, the stop list — would
-   otherwise jump up the page when it does. 18rem is a measured three-option
-   panel. */
-.journey-slot {
-  min-block-size: 18rem;
+   The stop rows have a minimum height and never a fixed one: at 200% text, or
+   in Malayalam, a station name wraps and the rail segment grows with it.
+
+   No @keyframes. Nothing animates on load. */
+
+.screen {
+  display: flex;
+  flex-direction: column;
 }
 
-/* The countdown is the largest text on the page and changes every minute:
-   "10 min" to "9 min" loses a character. `departure-time` already supplies
-   tabular figures, so digits cannot change width; this reserves enough inline
-   space that losing one cannot pull anything leftwards either. */
-.countdown {
-  display: block;
-  min-inline-size: 6ch;
+.back-row { 
+  margin: 0;
 }
 
-/* A following departure. Two fixed columns, so a shrinking countdown cannot
-   move the clock time beside it. */
-.following {
-  display: grid;
-  grid-template-columns: 6rem 1fr;
+.back-icon, 
+.book-icon,
+.link-chevron,
+.strand-icon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.book-icon {
+  stroke-width: 2.25;
+}
+
+.heading-block {
+  padding-block: var(--gmm-space-2) var(--gmm-space-5);
+  border-block-end: 1px solid var(--gmm-rule);
+}
+
+/* "Pathadipalam to M.G. Road". The joiner is quieter than the names because
+   the names are what is being compared and "to" is punctuation. */
+.route-title {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  column-gap: 0.75rem;
+  gap: 0 var(--gmm-space-2);
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-station);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-station);
+  color: var(--gmm-ink);
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
-/* The fare, at departure size. It is the second thing people came for and it
-   never changes, so it costs nothing to make it the second largest thing on
-   the page. */
-.fare-figure {
-  font-size: var(--text-departure);
+:host-context([lang='ml']) .route-title {
+  font-size: var(--text-station-ml);
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+/* ink-3 is 5.18:1 — quieter than the names, still legible. */
+.route-joiner {
+  font-weight: 400;
+  color: var(--gmm-ink-3);
+}
+
+.route-title-station {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: var(--gmm-grey);
+  text-underline-offset: 4px;
+  border-radius: var(--gmm-radius-button);
+  transition:
+    color var(--gmm-hover) var(--gmm-ease),
+    text-decoration-color var(--gmm-hover) var(--gmm-ease);
+}
+
+.route-title-station:hover {
+  color: var(--gmm-line-text);
+  text-decoration-color: var(--gmm-line-text);
+}
+
+.route-title-swap {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--gmm-space-1);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--gmm-radius-toggle);
+  transition: background-color var(--gmm-hover) var(--gmm-ease);
+}
+
+.route-title-swap:hover {
+  background-color: var(--gmm-soft);
+}
+
+.route-title-swap:hover .route-joiner {
+  color: var(--gmm-line-text);
+}
+
+/* The hero: countdown left, "6:21 → 6:36" right, on one baseline. */
+.hero-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  flex-wrap: wrap;
+  margin-block-start: var(--gmm-space-4);
+}
+
+/* 72px, one step below the home hero's 96: this page has a heading above it
+   and a stop list below it, and the countdown is one of three things being
+   read rather than the only one. line-height 0.8 is safe — digits, and "Due"
+   has no descender either. */
+.countdown {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmm-space-2);
+  margin: 0;
+  font-size: 4.5rem;
+  font-weight: 600;
+  line-height: 0.8;
+  letter-spacing: var(--tracking-countdown);
+  color: var(--gmm-ink);
+}
+
+.countdown.is-word {
+  font-size: clamp(2rem, 5.5vw, 3.5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* 18px at 72px — a fixed size rather than a ratio, because 0.23em of 72 is
+   16.56px and the next size down would breach the floor. */
+.countdown-unit {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+.times {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gmm-space-2);
+  margin: 0;
+  font-size: var(--text-arrival);
+  font-weight: 600;
+  letter-spacing: var(--tracking-time);
+  color: var(--gmm-ink);
+}
+
+.hero-arrival-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-arrival-label {
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  margin: 0 0 var(--gmm-space-1);
+  font-size: var(--text-min);
+  font-weight: 600;
+  color: var(--gmm-line-text);
+}
+
+.hero-train-mark {
+  flex-shrink: 0;
+  fill: currentColor;
+}
+
+.hero-times-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.times-label {
+  margin: 0 0 var(--gmm-space-1);
+  font-size: var(--text-min);
+  font-weight: 500;
+  color: var(--gmm-ink-2);
+}
+
+.times-arrow {
+  font-weight: 400;
+  color: var(--gmm-ink-3);
+}
+
+.meta {
+  margin: var(--gmm-space-3) 0 0;
+  font-size: var(--text-min);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+/* Enhanced visibility for Duration, Stops, and Fare on mobile */
+.trip-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  margin-block-start: var(--gmm-space-3);
+  flex-wrap: wrap;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--gmm-radius-toggle);
+  font-size: 0.9375rem;
+  line-height: 1.3;
+}
+
+.meta-chip-duration {
+  background-color: var(--gmm-soft);
+  color: var(--gmm-ink);
+  font-weight: 600;
+  border: 1px solid var(--gmm-rule);
+}
+
+.chip-icon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--gmm-line-text);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.meta-chip-stops {
+  background-color: transparent;
+  color: var(--gmm-ink-2);
+  font-weight: 500;
+  padding-inline: 4px;
+}
+
+.chip-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--gmm-ink-3);
+  display: inline-block;
+}
+
+.meta-chip-fare {
+  background-color: var(--gmm-line-soft);
+  color: var(--gmm-line-text);
+  border: 1px solid rgba(0, 163, 180, 0.3);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.fare-currency {
+  font-size: 0.875rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.fare-amount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* What the ride time excludes. Directly under the ride time, because that is
+   what it qualifies — it sat under the book button until Phase E, where it
+   read as a caveat about booking. */
+.meta-note {
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-min);
+  line-height: 1.4;
+  color: var(--gmm-ink-2);
+}
+
+.alert-slot {
+  padding-block: var(--gmm-space-4) 0;
+}
+
+.alert-action {
+  margin: var(--gmm-space-3) 0 0;
+}
+
+/* --- the stop list -------------------------------------------------------- */
+
+/* The stop list carried the page gutter itself, from when the page was a
+   flat column of sections that each supplied their own. It sits inside the
+   grid's padded track now, so its own horizontal padding would indent it 40px
+   from the rest of the column. Block padding only. */
+.stops {
+  list-style: none;
+  margin: 0;
+  padding: var(--gmm-space-5) 0 var(--gmm-space-2);
+}
+
+.stop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  min-block-size: 38px;
+  padding-block: var(--gmm-space-1);
+}
+
+/* The two ends are set larger, because they are the journey and the rest are
+   the way. 22px against 17px, per the reference mockup. */
+.stop.is-end {
+  min-block-size: 44px;
+  align-items: flex-start;
+}
+
+.stop-name-block {
+  min-inline-size: 0;
+}
+
+.stop-name {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: 1.4;
+  color: var(--gmm-ink);
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.stop.is-end .stop-name {
+  font-size: var(--text-arrival);
+  font-weight: 600;
   line-height: 1.2;
-  margin-block-start: 0.5rem;
+  letter-spacing: var(--tracking-time);
 }
 
-/* Label above value rather than beside it: "Last train that reaches
-   Tripunithura" against a clock time would wrap to four lines at 320px while
-   the value sat alone on the right. */
-.fact-list dt {
-  margin-block-start: 0.5rem;
-  color: var(--gm-text-muted);
+/* DESIGN.md §3: Malayalam takes no negative tracking, and 1.45 leading or
+   better for its conjuncts.
+
+   Two things were wrong here. The rule set the leading and left the tracking
+   alone, so the origin and destination names — the two set at `--tracking-time`
+   above — kept -0.03em on a script that must not carry it. And `.stop-name`
+   at (0,1,0) under a host-context prefix could not have overridden
+   `.stop.is-end .stop-name` at (0,2,0) even if it had tried. Both selectors
+   are matched now, at the specificity that actually wins. */
+:host-context([lang='ml']) .stop-name,
+:host-context([lang='ml']) .stop.is-end .stop-name {
+  line-height: 1.45;
+  letter-spacing: normal;
 }
 
-.fact-list dt:first-child {
-  margin-block-start: 0;
+/* The clock beside it is digits, so the tracking is right — but it sits on the
+   same baseline as a name that has just grown, and 1.45 keeps the pair level. */
+:host-context([lang='ml']) .stop.is-end .stop-clock {
+  line-height: 1.45;
+}
+
+.stop-note {
+  margin: 2px 0 0;
+  font-size: var(--text-min);
+  line-height: 1.375;
+  color: var(--gmm-ink-2);
+}
+
+/* "Get off here" is the one line on this page the reader is looking for, so
+   it takes the line-text colour (5.82:1) and the weight. */
+.stop-note.is-destination {
+  font-weight: 600;
+  color: var(--gmm-line-text);
+}
+
+.stop-clock {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+.stop.is-end .stop-clock {
+  font-size: var(--text-arrival);
+  font-weight: 600;
+  letter-spacing: var(--tracking-time);
+  color: var(--gmm-ink);
+}
+
+/* The stations-between list, rendered when there are no times yet. Plain
+   text, in the prerendered HTML, because that is what a crawler reads. */
+.on-the-way {
+  padding-block-start: var(--gmm-space-5);
+}
+
+.between {
+  margin: var(--gmm-space-3) 0 0;
+  padding-inline-start: var(--gmm-space-5);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  color: var(--gmm-ink);
+}
+
+/* --- the primary action --------------------------------------------------- */
+
+.book {
+  padding-block: var(--gmm-space-4) var(--gmm-space-5);
+}
+
+/* Whose channel this is, above the button rather than buried under it. Ink and
+   semi-bold, never a coloured badge: the point it makes is that the booking is
+   KMRL's service and not ours, and a pill in a success colour says the
+   opposite. It is a licence condition (CLAUDE.md finding 1), not a label. */
+/*
+  The booking block is a column. Without this the children had no layout of
+  their own, and `.book-button`'s `position: relative` let it ride up over the
+  "KMRL's own channel" label — which is the one line the licence requires to be
+  legible, so an overlap there is a compliance problem, not just a visual one.
+*/
+.book {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--gmm-space-3);
+  margin-block-start: var(--gmm-space-5);
+}
+
+.book-channel {
+  /* `flex` not `inline-flex`: as a flex child it must claim its own row. */
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  margin: 0;
+  font-size: var(--text-min);
+  font-weight: 600;
+  color: var(--gmm-ink);
+}
+
+.book-channel-icon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.book-button {
+  inline-size: 100%;
+  justify-content: space-between;
+  position: relative;
+}
+
+.book-note {
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-min);
+  line-height: 1.4;
+  color: var(--gmm-ink-2);
+}
+
+/* --- later trains, fare, first and last ----------------------------------- */
+
+.later,
+.reference,
+.related {
+  padding-block-start: var(--gmm-space-6);
+}
+
+.section-title {
+  margin: 0;
+  font-size: var(--text-arrival);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--gmm-ink);
+}
+
+.later-list {
+  list-style: none;
+  margin: var(--gmm-space-3) 0 0;
+  padding: 0;
+}
+
+.later-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  flex-wrap: wrap;
+  min-block-size: var(--gmm-touch);
+  padding-block: var(--gmm-space-2);
+  border-block-start: 1px solid var(--gmm-rule);
+  font-size: var(--text-body);
+}
+
+.later-clock {
+  font-weight: 600;
+  color: var(--gmm-ink);
+}
+
+.later-arrival {
+  min-inline-size: 0;
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+.later-tomorrow {
+  font-weight: 600;
+}
+
+.later-countdown {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+/* The fare, set large. It is one of the two numbers on this page a reader
+   came for, and it does not move with the clock. */
+.fare-figure {
+  margin: var(--gmm-space-3) 0 0;
+  font-size: var(--text-station);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--tracking-time);
+  color: var(--gmm-ink);
+}
+
+.pattern {
+  margin-block-start: var(--gmm-space-4);
+  padding-block-start: var(--gmm-space-3);
+  border-block-start: 1px solid var(--gmm-rule);
+}
+
+.pattern-days {
+  margin: 0;
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-lane);
+  text-transform: uppercase;
+  color: var(--gmm-ink-2);
+}
+
+:host-context([lang='ml']) .pattern-days {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--gmm-space-4);
+  margin: var(--gmm-space-3) 0 0;
+}
+
+.facts dt {
+  padding-block: var(--gmm-space-2);
+  font-size: var(--text-min);
+  line-height: 1.4;
+  color: var(--gmm-ink-2);
+}
+
+.facts dd {
+  margin: 0;
+  padding-block: var(--gmm-space-2);
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--gmm-ink);
+  text-align: end;
+}
+
+/*
+  The strand, on a route page. The A-to-B filter already removes trains that
+  do not reach the destination, so the hazard here is not a train on the list
+  — it is that the last *useful* train is earlier than the last departure off
+  the platform, and a reader who checks the platform sign is stranded.
+
+  Amber ground, ink prose at 16.17:1, an icon. Same treatment as the station
+  page's, because it is the same fact.
+*/
+.strand {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmm-space-2);
+  margin: var(--gmm-space-3) 0 0;
+  padding: var(--gmm-space-3);
+  border-radius: var(--gmm-radius-alert);
+  background-color: var(--gmm-amber-soft);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink);
+}
+
+.strand-icon {
+  margin-block-start: 3px;
+  color: var(--gmm-amber);
+  stroke-width: 2.25;
+}
+
+/* --- related, and the tail ------------------------------------------------ */
+
+.link-list {
+  margin-block-start: var(--gmm-space-3);
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  min-block-size: var(--gmm-touch-primary);
+  border-block-start: 1px solid var(--gmm-rule);
+  color: var(--gmm-ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link-row:hover {
+  color: var(--gmm-line-text);
+}
+
+.link-chevron {
+  color: var(--gmm-ink-3);
+}
+
+.desktop-hero {
+  display: none;
+}
+
+.mobile-journey {
+  display: block;
+}
+
+.mobile-only {
+  display: block;
+}
+
+.promise {
+  display: none;
+}
+
+.answer-board {
+  display: none;
+}
+
+.network {
+  margin-block-start: var(--gmm-space-6);
+  padding-block-start: var(--gmm-space-5);
+  border-block-start: 1px solid var(--gmm-rule);
+}
+
+.change-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  min-block-size: var(--gmm-touch);
+  padding-inline: var(--gmm-space-3);
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-btn);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-min);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.change-link:hover {
+  background-color: var(--gmm-soft);
+  border-color: var(--gmm-ink-2);
+}
+
+.change-icon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Route quick toolbar for changing From, Swap, and To */
+.route-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  margin-block: var(--gmm-space-3) var(--gmm-space-4);
+  flex-wrap: wrap;
+}
+
+.route-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmm-space-1);
+  min-block-size: var(--gmm-touch);
+  padding: var(--gmm-space-2) var(--gmm-space-3);
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-btn);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-min);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.route-pill:hover {
+  background-color: var(--gmm-soft);
+  border-color: var(--gmm-ink-2);
+}
+
+.pill-prefix {
+  font-weight: 500;
+  color: var(--gmm-ink-2);
+}
+
+.pill-station {
+  font-weight: 600;
+  color: var(--gmm-ink);
+}
+
+.pill-action {
+  margin-inline-start: var(--gmm-space-1);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--gmm-line-text);
+}
+
+.route-swap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--gmm-touch);
+  min-block-size: var(--gmm-touch);
+  padding: var(--gmm-space-2);
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-btn);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.route-swap-btn:hover {
+  background-color: var(--gmm-soft);
+  border-color: var(--gmm-line-text);
+  color: var(--gmm-line-text);
+}
+
+.swap-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Change controls & swap buttons */
+.change-anchor {
+  position: relative;
+}
+
+.change-destination-group {
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+}
+
+.change-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  min-height: 38px;
+  padding: 0 var(--gmm-space-3);
+  font-size: var(--text-min);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.change-icon,
+.swap-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* Mobile route toolbar */
+.route-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  margin-block-start: var(--gmm-space-2);
+  margin-block-end: var(--gmm-space-3);
+}
+
+.route-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  min-height: var(--gmm-touch);
+  padding: var(--gmm-space-2) var(--gmm-space-3);
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-button);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-min);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color var(--gmm-hover) var(--gmm-ease),
+    border-color var(--gmm-hover) var(--gmm-ease);
+}
+
+.route-pill:hover {
+  background-color: var(--gmm-soft);
+  border-color: var(--gmm-ink-2);
+}
+
+.pill-prefix {
+  color: var(--gmm-ink-2);
+  font-weight: 500;
+}
+
+.pill-station {
+  font-weight: 600;
+  color: var(--gmm-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill-action {
+  margin-inline-start: auto;
+  font-size: 13px;
+  color: var(--gmm-line-text);
+  font-weight: 600;
+  padding-inline-start: var(--gmm-space-1);
+}
+
+.route-swap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--gmm-touch);
+  height: var(--gmm-touch);
+  flex-shrink: 0;
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-button);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  cursor: pointer;
+  transition:
+    background-color var(--gmm-hover) var(--gmm-ease),
+    border-color var(--gmm-hover) var(--gmm-ease),
+    transform var(--gmm-press) var(--gmm-ease);
+}
+
+.route-swap-btn:hover {
+  background-color: var(--gmm-soft);
+  border-color: var(--gmm-ink-2);
+}
+
+.route-swap-btn:active {
+  transform: translateY(1px);
+}
+
+/* Station picker dialog modal */
+.picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background-color: rgba(16, 17, 20, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gmm-space-4);
+  animation: pickerFadeIn 150ms ease-out;
+}
+
+@keyframes pickerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.picker-dialog {
+  background: var(--gmm-bg);
+  width: 100%;
+  max-width: 480px;
+  max-height: min(85dvh, 640px);
+  border-radius: var(--gmm-radius-panel);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pickerSlideUp 180ms ease-out;
+}
+
+@keyframes pickerSlideUp {
+  from { transform: translateY(12px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.picker-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  padding: var(--gmm-space-5) var(--gmm-space-5) var(--gmm-space-3);
+  border-bottom: 1px solid var(--gmm-rule);
+}
+
+.picker-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.picker-dialog-title {
+  margin: 0;
+  font-size: var(--text-h2);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--gmm-ink);
+}
+
+.picker-dialog-subtitle {
+  margin: 0;
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+.picker-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--gmm-radius-toggle);
+  background: transparent;
+  color: var(--gmm-ink-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background-color var(--gmm-hover) var(--gmm-ease),
+    color var(--gmm-hover) var(--gmm-ease);
+}
+
+.picker-close-btn:hover {
+  background-color: var(--gmm-soft);
+  color: var(--gmm-ink);
+}
+
+.picker-close-icon {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.picker-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: var(--gmm-space-3) var(--gmm-space-5);
+  border-bottom: 1px solid var(--gmm-rule);
+  background-color: var(--gmm-soft);
+}
+
+.picker-search-icon {
+  position: absolute;
+  left: calc(var(--gmm-space-5) + var(--gmm-space-3));
+  color: var(--gmm-ink-3);
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  pointer-events: none;
+}
+
+.picker-dialog-input {
+  width: 100%;
+  height: var(--gmm-touch);
+  padding: 0 var(--gmm-space-4) 0 36px;
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-input);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-body);
+  outline: none;
+  transition: border-color var(--gmm-hover) var(--gmm-ease);
+}
+
+.picker-dialog-input:focus {
+  border-color: var(--gmm-line-text);
+  box-shadow: 0 0 0 3px var(--gmm-line-soft);
+}
+
+.picker-clear-btn {
+  position: absolute;
+  right: calc(var(--gmm-space-5) + var(--gmm-space-3));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--gmm-ink-3);
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.picker-clear-btn:hover {
+  color: var(--gmm-ink);
+  background-color: var(--gmm-rule);
+}
+
+.picker-clear-btn svg {
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.picker-station-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--gmm-space-2) 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+}
+
+.picker-station-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  padding: var(--gmm-space-2) var(--gmm-space-5);
+  border: 0;
+  background: transparent;
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--gmm-hover) var(--gmm-ease);
+}
+
+.picker-station-item:hover {
+  background-color: var(--gmm-soft);
+}
+
+.picker-station-item.is-active {
+  background-color: var(--gmm-line-soft);
+  color: var(--gmm-line-text);
+  font-weight: 600;
+}
+
+.picker-station-name {
+  flex: 1;
+}
+
+.picker-station-badge {
+  font-size: var(--text-min);
+  font-weight: 600;
+  color: var(--gmm-line-text);
+  background: rgba(0, 112, 124, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.picker-empty {
+  margin: 0;
+  padding: var(--gmm-space-6) var(--gmm-space-5);
+  text-align: center;
+  color: var(--gmm-ink-2);
+  font-size: var(--text-body);
+}
+
+/* The map and reference sections (DESIGN.md screen 07) */
+.map-slot {
+  order: 3;
+  padding-block: var(--gmm-space-6) var(--gmm-space-5);
+}
+
+.map-slot-full {
+  padding-block-start: var(--gmm-space-6);
+  padding-block-end: 0;
+}
+
+.reference-section {
+  display: flex;
+  flex-direction: column;
+  padding-block-start: var(--gmm-space-6);
+  padding-block-end: var(--gmm-space-4);
+}
+
+.later {
+  order: 1;
+}
+
+.fare-section {
+  order: 2;
+}
+
+.first-last-section {
+  order: 4;
+}
+
+.related {
+  order: 5;
+}
+
+.provenance-slot {
+  padding-block: var(--gmm-space-5) var(--gmm-space-7);
+}
+
+/* --- the two refusal branches --------------------------------------------- */
+
+.not-found {
+  padding-block: var(--gmm-space-5);
+}
+
+.page-title {
+  margin: 0;
+  font-size: var(--text-station);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-station);
+}
+
+/* DESIGN.md §3: Malayalam takes no negative tracking and needs line-height
+   1.45 or better for its conjuncts. `.page-title` is a *sentence* ("No station
+   with that name"), not a station name, so it is the one heading on these
+   pages that was set with the station scale and never given the Malayalam
+   treatment the station names all have. At 44px on desktop that was a
+   full-width Malayalam sentence with the letters pulled together. */
+:host-context([lang='ml']) .page-title {
+  font-size: var(--text-station-ml);
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+.prose {
+  margin: var(--gmm-space-3) 0 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+.example {
+  font-weight: 600;
+  color: var(--gmm-ink);
+}
+
+.action-row {
+  margin-block-start: var(--gmm-space-4);
+}
+
+/* -------------------------------------------------------------------------
+   Desktop. DESIGN.md §4 and screen 07.
+   -------------------------------------------------------------------------
+   Columns 1-6: JourneySummary (Pathadipalam -> Edapally)
+   Columns 8-12: DepartureBoard panel
+   Full width across bottom: LineBand network outline
+   Below outline: LineMap
+   ------------------------------------------------------------------------- */
+
+@media (min-width: 1024px) {
+  .desktop-hero {
+    display: block;
+  }
+
+  .mobile-journey {
+    display: none;
+  }
+
+  .mobile-only {
+    display: none;
+  }
+
+  .promise {
+    display: block;
+    margin: 0 0 var(--gmm-space-5);
+    font-size: var(--text-body);
+    line-height: 1.5;
+    color: var(--gmm-ink-2);
+  }
+
+  .answer-board {
+    display: block;
+  }
+
+  .board {
+    border-radius: var(--gmm-radius-panel);
+    overflow: hidden;
+    margin-inline: 0;
+    min-block-size: 26rem;
+  }
+
+  /* The pair of station names. 44px, per DESIGN.md §3 — declared here rather
+     than through a global class, which emulated encapsulation would make
+     unreachable (see the note in `styles.css` §6). */
+  .route-title {
+    font-size: var(--text-station-lg);
+  }
+
+  :host-context([lang='ml']) .route-title {
+    font-size: var(--text-station-ml-lg);
+  }
+
+  .page-title {
+    font-size: var(--text-station-lg);
+  }
+
+  :host-context([lang='ml']) .page-title {
+    font-size: var(--text-station-ml-lg);
+  }
+
+  /* 132px, the same as the home hero's. This is the same number answering the
+     same question and it should be the same size on the same screen. */
+  .countdown {
+    font-size: var(--text-countdown-lg);
+  }
+
+  .countdown.is-word {
+    font-size: 5rem;
+  }
+
+  /* The primary action stops filling a 600px column: at that width a 56px
+     full-bleed button reads as a banner. */
+  .book-button {
+    max-inline-size: 24rem;
+  }
+
+  /* Desktop layout for reference section and map:
+     Columns 1-6: Next trains
+     Columns 8-12: Fare
+     Columns 1-12 (row 2): Map ("Where the trains are now") - above Related and First/Last
+     Columns 1-6 (row 3): Related
+     Columns 8-12 (row 3): First/Last train */
+  .reference-section {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gmm-space-6);
+    padding-block-start: var(--gmm-space-7);
+  }
+
+  .later {
+    grid-column: 1 / span 6;
+    grid-row: 1;
+    order: 1;
+    padding-block-start: 0;
+  }
+
+  .fare-section {
+    grid-column: 8 / span 5;
+    grid-row: 1;
+    order: 2;
+    padding-block-start: 0;
+  }
+
+  .map-slot {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    order: 3;
+    padding-block-start: var(--gmm-space-6);
+    padding-block-end: var(--gmm-space-5);
+  }
+
+  .related {
+    grid-column: 1 / span 6;
+    grid-row: 3;
+    order: 4;
+  }
+
+  .first-last-section {
+    grid-column: 8 / span 5;
+    grid-row: 3;
+    order: 5;
+  }
+
+  /* The caveat runs under both columns, so it needs the measure the grid does
+     not give it. */
+  .provenance-slot {
+    max-inline-size: 46rem;
+  }
 }

@@ -89,50 +89,65 @@ export interface SchematicRow {
       margin-inline: auto;
     }
 
+    /* Migrated off the --gm-* aliases in Phase D, which deleted them.
+
+       The mapping is not one-for-one, because the old palette had one "accent"
+       and DESIGN.md §2 splits it in two: --gmm-line is the line as a *graphic*
+       and is explicitly never text, --gmm-line-text is the text and the primary
+       fill. The old stylesheet used the same value for the track, the dots and
+       the "you are here" tag, which put a 3.04:1 colour on 16px type. */
     .track {
       fill: none;
-      stroke: var(--gm-border);
+      stroke: var(--gmm-grey);
       stroke-width: 6;
       stroke-linecap: round;
     }
 
     .journey {
       fill: none;
-      stroke: var(--gm-accent);
+      stroke: var(--gmm-line);
       stroke-width: 10;
       stroke-linecap: round;
     }
 
     .dot {
-      fill: var(--gm-bg);
-      stroke: var(--gm-outline);
+      fill: var(--gmm-bg);
+      stroke: var(--gmm-ink-3);
       stroke-width: 3;
     }
 
     .dot-journey {
-      fill: var(--gm-accent);
-      stroke: var(--gm-accent);
+      fill: var(--gmm-line);
+      stroke: var(--gmm-line);
     }
 
+    /* The station you are on: an ink disc with a white ring, the same shape
+       JourneyLine and NetworkStrip use for a destination node. It was the
+       accent teal filled against a white ring, which is the same shape in a
+       colour that carries no more meaning here than ink does. */
     .dot-selected {
-      fill: var(--gm-accent);
-      stroke: var(--gm-bg);
+      fill: var(--gmm-ink);
+      stroke: var(--gmm-bg);
       stroke-width: 4;
     }
 
     .name {
       font-size: var(--text-body);
-      fill: var(--gm-text);
+      fill: var(--gmm-ink);
     }
 
+    /* 600, not 700. DESIGN.md §3 sets semi-bold everywhere; 700 was the only
+       bold weight left in the app. */
     .name-strong {
-      font-weight: 700;
+      font-weight: 600;
     }
 
+    /* Text, so --gmm-line-text at 5.84:1 — not --gmm-line at 3.04:1, which §2
+       marks as graphic-only. */
     .tag {
       font-size: var(--text-min);
       font-weight: 600;
-      fill: var(--gm-accent);
+      fill: var(--gmm-line-text);
       text-anchor: end;
     }
 
@@ -141,11 +156,11 @@ export interface SchematicRow {
     }
 
     .stop:hover .hit {
-      fill: var(--gm-surface);
+      fill: var(--gmm-soft);
     }
 
     .stop .hit {
-      transition: fill var(--gm-duration) var(--gm-ease);
+      transition: fill var(--gmm-hover) var(--gmm-ease);
     }
   `,
   template: `

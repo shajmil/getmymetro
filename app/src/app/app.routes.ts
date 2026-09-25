@@ -26,17 +26,37 @@ import { Routes } from '@angular/router';
  * pages set their own title on a client-side navigation instead, through
  * `core/seo/page-title.ts`.
  */
-
+ 
 const home = () => import('./pages/home/home').then((m) => m.Home);
 const station = () => import('./pages/station/station').then((m) => m.StationPage);
 const route = () => import('./pages/route/route').then((m) => m.RoutePage);
+const destination = () =>
+  import('./pages/destination/destination').then((m) => m.DestinationPage);
 
+/**
+ * `/from/:slug` is the one route that is **not** prerendered, on purpose.
+ *
+ * It is the choose-destination screen (DESIGN.md §6, screen 05). Prerendering
+ * it would add 50 documents that `build_pages.py` does not know about, and
+ * `scripts/check-bundle-size.mjs` requires the prerendered set and the sitemap
+ * to be the same set — so the build would fail, correctly, on a page the
+ * sitemap never declared.
+ *
+ * It should not be in the sitemap either. Every one of its 24 rows is a link
+ * to a `/route/:pair` page that *is* prerendered and *is* in the sitemap, so
+ * the destinations are already indexed with better content than a picker. A
+ * crawler has nothing to gain here and the reader arrives by tapping, not by
+ * searching. `public/_redirects` rewrites it to the client shell, which is
+ * what every unmatched path already does.
+ */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', loadComponent: home },
   { path: 'station/:slug', loadComponent: station },
   { path: 'route/:pair', loadComponent: route },
+  { path: 'from/:slug', loadComponent: destination },
 
   { path: 'ml', pathMatch: 'full', loadComponent: home },
   { path: 'ml/station/:slug', loadComponent: station },
   { path: 'ml/route/:pair', loadComponent: route },
+  { path: 'ml/from/:slug', loadComponent: destination },
 ];

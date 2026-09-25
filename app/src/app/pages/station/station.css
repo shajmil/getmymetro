@@ -1,29 +1,383 @@
-/* Station page layout.
+/* Station board. DESIGN.md §6, screen 03.
    -------------------------------------------------------------------------
-   Same rules as everywhere: no @keyframes, no transition over 150ms, and none
-   on anything but colour, opacity and transform. Every length below is either
-   a token or a multiple of one. */
+   The page is one column with two full-bleed bands in it — the network strip
+   and the departure board — and everything else on the 20px gutter. The bands
+   bleed because they are diagrams of the *line*, and a line with 20px of
+   white either side reads as a picture of a line rather than as the line.
 
-/* Reserved height for the departure boards, which arrive a few hundred
-   milliseconds after the HTML paints. Without it, the whole reference block
-   and the fare list drop down the page when they do. 30rem is a measured
-   two-platform board without warnings; a terminus renders one platform and a
-   late evening renders warnings, so it cannot be exact for every screen. What
-   it guarantees is that the departure times sit at the top of the reserved box
-   and therefore never move, which is the shift a once-a-second countdown
-   would otherwise cause. */
-.board-slot {
+   No @keyframes. Nothing animates on load. */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  flex-wrap: wrap;
+}
+
+.search-icon,
+.back-icon,
+.terminal-icon,
+.strand-icon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.heading-block {
+  padding-block: var(--gmm-space-2) var(--gmm-space-4);
+}
+
+.station-name {
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-station);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-station);
+  color: var(--gmm-ink);
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+:host-context([lang='ml']) .station-name {
+  font-size: var(--text-station-ml);
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+/* Full bleed: the strip is the line, so it runs edge to edge. Its own end
+   labels carry the 20px inset internally. */
+.strip {
+  padding-block-end: var(--gmm-space-3);
+}
+
+/* "Station 8 of 25 · Line 1" — orientation left, the line name right. */
+.position {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  flex-wrap: wrap;
+  margin: 0;
+  padding-block-end: var(--gmm-space-4);
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+.line-name {
+  flex-shrink: 0;
+}
+
+.alert-slot {
+  padding-block-end: var(--gmm-space-4);
+}
+
+.alert-action {
+  margin: var(--gmm-space-3) 0 0;
+}
+
+/* Reserved height so the page does not jump when the boards arrive. 30rem is
+   a measured two-lane board with four following trains each, which is what
+   this screen renders. */
+.board {
   min-block-size: 30rem;
 }
 
-/* Label above value rather than beside it. Two columns would put a 22-glyph
-   label ("Last train all the way to Tripunithura") against a clock time at
-   320px, and the label would wrap to four lines while the value sat alone. */
-.fact-list dt {
-  margin-block-start: 0.5rem;
-  color: var(--gm-text-muted);
+/* The live last-train panel. No reserved height: it renders nothing outside
+   the last-train window, and a permanent band would cost every reader all day
+   for a panel that only exists after 21:00. */
+.last-train-slot > app-last-train:not(:empty) {
+  display: block;
+  padding-block-start: var(--gmm-space-4);
 }
 
-.fact-list dt:first-child {
-  margin-block-start: 0;
+/* --- the terminal-station note ------------------------------------------ */
+
+.terminal {
+  padding-block-start: var(--gmm-space-5);
+}
+
+.terminal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--gmm-ink);
+}
+
+.terminal-body {
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+/* --- first and last train ----------------------------------------------- */
+
+.reference,
+.fares {
+  padding-block-start: var(--gmm-space-6);
+}
+
+.section-title {
+  margin: 0;
+  font-size: var(--text-arrival);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--gmm-ink);
+}
+
+.pattern {
+  margin-block-start: var(--gmm-space-4);
+  padding-block-start: var(--gmm-space-3);
+  border-block-start: 1px solid var(--gmm-rule);
+}
+
+.pattern-days {
+  margin: 0;
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-lane);
+  text-transform: uppercase;
+  color: var(--gmm-ink-2);
+}
+
+:host-context([lang='ml']) .pattern-days {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* A definition list, laid out as label-left value-right rows. Not a table:
+   these are facts about one thing, and at 360px a two-column table of
+   sentences wraps into nonsense. */
+.facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--gmm-space-4);
+  margin: var(--gmm-space-3) 0 0;
+}
+
+.facts dt {
+  padding-block: var(--gmm-space-2);
+  font-size: var(--text-min);
+  line-height: 1.4;
+  color: var(--gmm-ink-2);
+}
+
+.facts dd {
+  margin: 0;
+  padding-block: var(--gmm-space-2);
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--gmm-ink);
+  text-align: end;
+}
+
+/*
+  The strand. CLAUDE.md finding 9 and the most dangerous sentence in the
+  product: at 20 weekday platforms the final departure stops at Muttom and a
+  reader who takes it is stranded there.
+
+  Amber (6.26:1 on white), an icon, and body-sized prose. Never small print,
+  never colour alone, and never abbreviated — the whole sentence names both
+  trains and the station the later one stops at.
+*/
+.strand {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gmm-space-2);
+  margin: var(--gmm-space-3) 0 0;
+  padding: var(--gmm-space-3);
+  border-radius: var(--gmm-radius-alert);
+  background-color: var(--gmm-amber-soft);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  /* ink on amber-soft is 16.17:1 — the prose is more legible here than the
+     alert colour would make it, and the icon carries the amber. */
+  color: var(--gmm-ink);
+}
+
+.strand-icon {
+  margin-block-start: 3px;
+  color: var(--gmm-amber);
+  stroke-width: 2.25;
+}
+
+/* The 45-minute gap. Secondary to the strand above it, because the strand is
+   the fact that costs somebody their journey and this one only costs a wait. */
+.cliff {
+  margin: var(--gmm-space-3) 0 0;
+  font-size: var(--text-min);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+/* --- fares --------------------------------------------------------------- */
+
+.fares-body {
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-min);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+.fare-list {
+  list-style: none;
+  margin: var(--gmm-space-3) 0 0;
+  padding: 0;
+}
+
+.fare-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  min-block-size: var(--gmm-touch);
+  padding-block: var(--gmm-space-2);
+  border-block-start: 1px solid var(--gmm-rule);
+  color: var(--gmm-ink);
+  font-size: var(--text-body);
+  text-decoration: none;
+}
+
+.fare-row:hover {
+  color: var(--gmm-line-text);
+}
+
+.fare-name {
+  min-inline-size: 0;
+  overflow-wrap: break-word;
+}
+
+.fare-value {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--gmm-ink-2);
+}
+
+.booking {
+  padding-block-start: var(--gmm-space-6);
+}
+
+.map-slot {
+  padding-block-start: var(--gmm-space-6);
+}
+
+.provenance-slot {
+  padding-block: var(--gmm-space-5) var(--gmm-space-7);
+}
+
+/* --- the "no station with that name" branch ------------------------------ */
+
+.not-found {
+  padding-block: var(--gmm-space-5);
+}
+
+.page-title {
+  margin: 0;
+  font-size: var(--text-station);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-station);
+}
+
+/* DESIGN.md §3: Malayalam takes no negative tracking and needs line-height
+   1.45 or better for its conjuncts. `.page-title` is a *sentence* ("No station
+   with that name"), not a station name, so it is the one heading on these
+   pages that was set with the station scale and never given the Malayalam
+   treatment the station names all have. At 44px on desktop that was a
+   full-width Malayalam sentence with the letters pulled together. */
+:host-context([lang='ml']) .page-title {
+  font-size: var(--text-station-ml);
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+.prose {
+  margin: var(--gmm-space-3) 0 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+.action-row {
+  margin-block-start: var(--gmm-space-4);
+}
+
+/* -------------------------------------------------------------------------
+   Desktop. DESIGN.md §4 and §6 screen 07.
+   -------------------------------------------------------------------------
+   This page is a board, not a journey, so it does not take the home screen's
+   two-column split — there is no journey to put in columns 1-6. It keeps its
+   single column and changes three things: the board becomes a panel instead
+   of a bleeding band, the strip's labels appear (the component's own decision,
+   at its own breakpoint), and the reference prose is held to a readable
+   measure instead of running to 1280px.
+
+   "Spacious, not empty" is the rule this has to satisfy: a 1280px column of
+   16px prose is 140 characters a line and unreadable, and a 1280px column with
+   a 600px block floating in the middle of it is empty. The board takes the
+   full width because it is a two-lane table that uses it; the prose does not.
+   ------------------------------------------------------------------------- */
+
+@media (min-width: 1024px) {
+  /* The board stops bleeding to the window edge and becomes the panel the
+     spec describes: soft ground, 16px radius, inside the page margin. On a
+     phone the bleed is what separates it from the page; here the radius is. */
+  .board {
+    max-inline-size: calc(var(--gmm-grid-max) + 2 * var(--gmm-grid-margin));
+    margin-inline: auto;
+    border-radius: var(--gmm-radius-panel);
+    overflow: hidden;
+    /* Four following trains a lane at this width, not a phone's stack. */
+    min-block-size: 26rem;
+  }
+
+  /* Prose and link lists. Half the grid plus its gutter, which is where the
+     eye already is after the board above. */
+  .reference,
+  .fares,
+  .terminal,
+  .booking {
+    max-inline-size: 46rem;
+  }
+
+  /* The heading block gets the spec's desktop station size. The `lg-*` global
+     classes this used to rely on could never apply — see the note in
+     `styles.css` §6 — so the size is declared where the element lives. */
+  .station-name {
+    font-size: var(--text-station-lg);
+  }
+
+  :host-context([lang='ml']) .station-name {
+    font-size: var(--text-station-ml-lg);
+  }
+
+  .page-title {
+    font-size: var(--text-station-lg);
+  }
+
+  :host-context([lang='ml']) .page-title {
+    font-size: var(--text-station-ml-lg);
+  }
+
+  /* The first/last-train facts are a two-column list of short values. At this
+     width they stop hugging opposite edges of a 1280px page, which reads as
+     two unrelated columns rather than as a label and its value. */
+  .facts {
+    max-inline-size: 34rem;
+  }
 }

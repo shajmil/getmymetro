@@ -56,13 +56,22 @@ import {
   StationDirectoryService,
   stationName,
 } from '../../core/data/station-directory';
-import { stationForSlug } from '../../core/data/slugs';
+import { destinationPath, stationForSlug } from '../../core/data/slugs';
 import { I18nService } from '../../core/i18n/i18n';
 import { MetroEngineService } from '../../core/engine/metro-engine.service';
 import { PageTitleService } from '../../core/seo/page-title';
-import { boardView, type BoardView } from '../../shared/board-view';
-import { Booking } from '../../shared/booking';
-import { DepartureBoardCard } from '../../shared/departure-board';
+import { asSeconds } from '../../core/data/seconds';
+import { istSecondsOfDay } from '../../core/engine/civil-time';
+import { formatClock } from '../../core/engine/clock';
+import { boardView, CLIFF_SECONDS, type BoardView } from '../../shared/board-view';
+import { BoardPanel } from '../../shared/board-panel';
+import { Booking, BOOKING_URL } from '../../shared/booking';
+import { Alert } from '../../shared/controls';
+import { LastTrainPanel } from '../../shared/last-train';
+import type { TrackEnd } from '../../shared/line-track';
+import { LineBand } from '../../shared/line-band';
+import { scrollToElement } from '../../shared/motion';
+import { JourneySkeleton } from '../../shared/skeleton';
 import {
   PAGE_FACTS_KEY,
   stationFactsOf,
@@ -73,21 +82,44 @@ import { LineMap } from '../../shared/map/line-map';
 import { caveatOf, ServiceCaveat, type CaveatView } from '../../shared/service-caveat';
 import { startTicking } from '../../shared/ticker';
 import { platformViews, type PlatformView } from '../../shared/platform-view';
+import { journeyView, type RouteJourneyView } from '../route/route-view';
+import { stationPath } from '../../core/data/slugs';
 
 /**
- * Departures shown per platform.
+ * Following departures shown per lane. DESIGN.md §6, screen 03.
  *
- * Three rather than the home screen's two: this is the page somebody opens
- * when the first answer was not enough, and the third row is what turns "I
- * missed it" into "the one after that is at 6:18".
+ * Four, against the home screen's one — five rows in all per direction. This
+ * is the page somebody opens when the first answer was not enough, and the
+ * rows past the next train are what turn "I missed it" into "the one after
+ * that is at 6:18".
  */
-export const ROWS_PER_PLATFORM = 3;
+export const FOLLOWING_PER_LANE = 4;
+
+/**
+ * Departures fetched per platform.
+ *
+ * One more than the board renders, because the last-train report needs the
+ * departures behind the ones on screen to say anything about the gap before
+ * the final one.
+ */
+export const ROWS_PER_PLATFORM = FOLLOWING_PER_LANE + 2;
 
 type DataState = 'idle' | 'loading' | 'ready' | 'failed';
 
 @Component({
   selector: 'app-station',
-  imports: [RouterLink, Booking, DepartureBoardCard, LineMap, Provenance, ServiceCaveat],
+  imports: [
+    RouterLink,
+    Alert,
+    BoardPanel,
+    Booking,
+    JourneySkeleton,
+    LastTrainPanel,
+    LineMap,
+    LineBand,
+    Provenance,
+    ServiceCaveat,
+  ],
   templateUrl: './station.html',
   styleUrl: './station.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -221,7 +253,7 @@ export class StationPage {
     return platformViews(facts, this.stations(), this.#i18n.locale());
   });
 
-  /** "station 15 of 25" — orientation without a map. */
+  /** "Station 8 of 25" — orientation without a map. */
   readonly position = computed<string | null>(() => {
     const entry = this.entry();
     const count = this.stations().length;
@@ -229,6 +261,188 @@ export class StationPage {
       ? null
       : this.#i18n.t('station.position', { index: entry.index + 1, count });
   });
+
+  /** Read by the template, so the threshold is the board's and not a literal. */
+  protected readonly CLIFF_MINUTES = CLIFF_SECONDS / 60;
+
+  /** Read by the template. */
+  protected readonly FOLLOWING_PER_LANE = FOLLOWING_PER_LANE;
+
+  // ------------------------------------------------- the states of DESIGN.md §6
+
+  /**
+   * "No service tonight": every lane's next departure is tomorrow's.
+   *
+   * The same derivation as the home screen, and for the same reason — the
+   * board searches forward across service days, so a next-day first row is
+   * the only honest definition of the night having ended.
+   */
+  readonly closed = computed(() => {
+    const boards = this.boards();
+    if (boards.length === 0) return false;
+    return boards.every((board) => board.rows.length > 0 && board.rows[0].nextDay);
+  });
+
+  readonly opensAt = computed<string | null>(() => {
+    if (!this.closed()) return null;
+    const clock = this.boards()[0]?.rows[0]?.clock;
+    return clock ?? null;
+  });
+
+  /**
+   * A terminus, so `LineTrack` draws one half of the track only.
+   *
+   * Read off which platform survived rather than off the station's index:
+   * `stationFactsOf` drops the direction that cannot be boarded, so a feed
+   * that extended the line would move the terminus and this would follow it
+   * rather than pointing at whatever station happens to be index 0.
+   */
+  readonly trackEnd = computed<TrackEnd>(() => {
+    const boards = this.boards();
+    if (boards.length !== 1) return null;
+    return boards[0].direction === 0 ? 'aluva' : 'tripunithura';
+  });
+
+  /** The terminal sentence, or null. Names the direction from the feed. */
+  readonly terminal = computed<string | null>(() => {
+    const platforms = this.platforms();
+    if (platforms.length !== 1) return null;
+    const entry = this.entry();
+    if (entry === null) return null;
+    return this.#i18n.t('screen.terminalBody', {
+      name: stationName(entry, this.#i18n.locale()),
+      end: this.#i18n.t(entry.index === 0 ? 'screen.first' : 'screen.last'),
+      towards: platforms[0].towardsName,
+    });
+  });
+
+  /** "Timetable · 6:16 PM", or "Saved …" when the data is a fallback. */
+  readonly provenanceLine = computed<string>(() => {
+    const clock = formatClock(asSeconds(istSecondsOfDay(this.#engineService.now())));
+    return this.data() === 'failed'
+      ? this.#i18n.t('board.savedAt', { clock })
+      : this.#i18n.t('board.timetableAt', { clock });
+  });
+
+  /** The choose-destination screen for this station. */
+  readonly destinationHref = computed<string | null>(() => {
+    const entry = this.entry();
+    return entry === null ? null : this.localPath(destinationPath(entry.name));
+  });
+
+  // ----------------------------------------------------------- destination
+  readonly destinationId = signal<string | null>(null);
+
+  readonly destinationStop = computed<Stop | null>(() => {
+    const engine = this.#engineService.engine();
+    const destId = this.destinationId();
+    if (engine === null || destId === null) return null;
+    try {
+      return engine.stop(destId);
+    } catch {
+      return null;
+    }
+  });
+
+  readonly destinationLabel = computed<string>(() => {
+    const dest = this.destinationStop();
+    return dest === null ? '' : dest.name[this.#i18n.locale()];
+  });
+
+  readonly #journeyOutlook = computed(() => {
+    const engine = this.#engineService.engine();
+    const origin = this.stop();
+    const dest = this.destinationStop();
+    if (engine === null || origin === null || dest === null) return null;
+    if (origin.id === dest.id) return null;
+    try {
+      return engine.journey(origin.id, dest.id, this.#engineService.now(), 3);
+    } catch {
+      return null;
+    }
+  });
+
+  readonly activeJourney = computed<RouteJourneyView | null>(() => {
+    const outlook = this.#journeyOutlook();
+    if (outlook === null) return null;
+    const plan = outlook.certainty === 'unverified' ? outlook.provisional : outlook.result;
+    return journeyView(plan, this.#engineService.now(), 3, this.#i18n.locale());
+  });
+
+  readonly journeyDirection = computed<number | null>(() => {
+    const outlook = this.#journeyOutlook();
+    if (outlook === null) return null;
+    const plan = outlook.certainty === 'unverified' ? outlook.provisional : outlook.result;
+    return plan.direction;
+  });
+
+  readonly userDepartureKey = computed<string | null>(() => {
+    const journey = this.activeJourney();
+    if (journey === null || journey.rows.length === 0) return null;
+    return journey.rows[0].key;
+  });
+
+  readonly bookingUrl = BOOKING_URL;
+
+  readonly pickerOpen = signal(false);
+  readonly filterQuery = signal('');
+
+  openDestinationPicker(): void {
+    this.filterQuery.set('');
+    this.pickerOpen.set(true);
+  }
+
+  togglePicker(open: boolean): void {
+    this.pickerOpen.set(open);
+  }
+
+  onFilterInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.filterQuery.set((target.value ?? '').trim().toLowerCase());
+  }
+
+  stationMatches(station: { readonly name: string; readonly ml?: string }): boolean {
+    const query = this.filterQuery();
+    if (!query) return true;
+    const en = (station.name ?? '').toLowerCase();
+    const ml = (station.ml ?? '').toLowerCase();
+    return en.includes(query) || ml.includes(query);
+  }
+
+  label(station: { readonly name: string; readonly ml?: string }): string {
+    return stationName(station, this.#i18n.locale());
+  }
+
+  chooseDestination(id: string | null): void {
+    if (id === null || id === this.entry()?.id) {
+      this.destinationId.set(null);
+    } else {
+      this.destinationId.set(id);
+    }
+    this.pickerOpen.set(false);
+  }
+
+  clearDestination(): void {
+    this.destinationId.set(null);
+  }
+
+  onDestinationClick(event: MouseEvent, id: string): void {
+    if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      event.preventDefault();
+      this.chooseDestination(id);
+      if (typeof document !== 'undefined') {
+        scrollToElement(document.getElementById('personal-journey-summary'), 'nearest');
+      }
+    }
+  }
+
+  stopWord(hops: number): string {
+    return this.#i18n.t(hops === 1 ? 'common.stop' : 'common.stops');
+  }
+
+  stationUrl(stationName: string): string {
+    return this.localPath(stationPath(stationName));
+  }
 
   retryData(): void {
     this.#loadData();

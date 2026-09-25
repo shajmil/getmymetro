@@ -36,6 +36,11 @@ Concretely:
 
 - **No realtime exists.** No GTFS-RT feed is published. Every position and
   time is derived from the static timetable. **Never label anything "live".**
+  The map says so in body type as its second line - *"Scheduled positions,
+  worked out from KMRL's timetable on your phone. No live tracking is published
+  for this metro, so nothing here is measured."* - not in small print under the
+  frame, which is exactly where keralam.co puts its disclaimer while its title
+  says "Live Map".
 - **The advertised last train strands people.** At 20 weekday platforms the
   final towards-Aluva departure terminates at Muttom, 51–53 minutes after the
   last through train. Always lead with the train that actually arrives.
@@ -44,7 +49,11 @@ Concretely:
 - **Holidays are unknown.** No `calendar_dates.txt` exists; Sunday service
   starts up to 103 minutes later. Say so honestly, without alarm.
 - Attribution is a licence condition: "Contains data provided by Kochi Metro
-  Rail Limited", and never imply KMRL endorses this.
+  Rail Limited", and never imply KMRL endorses this. The basemap carries its
+  own: OpenStreetMap and CARTO, rendered as real 16 px links under the map
+  rather than in Leaflet's 12 px control, because nothing in this app goes
+  below 16 px. **Open before launch:** whether CARTO's free basemap tier
+  permits a commercial product, and what its rate limit is.
 
 ## Competitors
 
@@ -59,11 +68,30 @@ None of them label short-turns. None answer the last-train question correctly.
 ## What we have built
 
 Angular 21 zoneless PWA, 7.2 KB data bundle (whole network), tested engine,
-1,252 prerendered pages in English and Malayalam, full offline support.
+1,252 prerendered pages in English and Malayalam, full offline support, and a
+Leaflet + CARTO map of the line with every train on it, interpolated from the
+timetable.
 
-**The known weakness, and the current brief:** the features exist but are not
-findable. A geographic map showing train positions is wanted as a primary
-surface, using Leaflet + CARTO.
+**Phase 7 answered the standing complaint - "so many features, can't find
+them".** A-to-B journeys, fares and the 600 route pages were three taps deep,
+through the station page. They are one tap from the home screen now, behind
+labels that say what they are. The rules that got them there, and that any
+later phase inherits:
+
+- **The answer stays first.** Next departures at your station, zero taps. The
+  map sits immediately below it and never above it.
+- **Words, not icons alone.** No hamburger-only navigation, no horizontal
+  carousel, no icon-only control. Every way into the app is a 56 px row with
+  a sentence in it.
+- **The schematic is the offline fallback, not a second view.** The map is the
+  default everywhere it appears; `shared/schematic.ts` renders automatically
+  when CARTO's tiles cannot be fetched, so the app stays whole with the network
+  off - which no competitor manages.
+- **A raster map has no crawlable anchor text.** The schematic used to carry 25
+  station links on every page and the search strategy rests on that
+  cross-linking, so the map section ends with a collapsed, always-prerendered
+  index of all 25 stations as plain links. The home page gained 25 it never
+  had.
 
 ## Forbidden
 

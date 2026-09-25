@@ -75,14 +75,21 @@ const LEAFLET_STYLESHEET = '/vendor/leaflet-1.9.4.css';
 /**
  * CARTO's Positron and Dark Matter basemaps.
  *
- * Chosen for the same reason the competitor chose them: they are the quietest
- * basemaps available, which is what a transit line drawn on top of one needs.
- * Both require attribution to OpenStreetMap and to CARTO, which is rendered
- * below the map as ordinary 16 px text rather than in Leaflet's 12 px control.
+ * OpenStreetMap's standard tiles, which need no key and no account.
+ *
+ * CARTO's Positron was the original choice and is quieter under a drawn line,
+ * but `basemaps.cartocdn.com` now answers anonymous requests with an "API KEY
+ * REQUIRED" watermark. Worse, it answers with HTTP 200 — so Leaflet fires
+ * `tileload`, the map looks like it is working, and the reader gets a
+ * watermarked grey rectangle. A basemap that needs an account is not a basemap
+ * this app can ship; see `#watchTiles` for the guard that now catches it.
+ *
+ * Attribution to OpenStreetMap is required and is rendered below the map as
+ * ordinary 16 px text rather than in Leaflet's 12 px control.
  */
-const TILES_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-const TILES_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-const TILE_SUBDOMAINS = 'abcd';
+const TILES_LIGHT = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILES_DARK = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_SUBDOMAINS = '';
 const TILE_MAX_ZOOM = 19;
 
 /** Close enough to read station names. Below this the map hides them. */
@@ -140,10 +147,11 @@ function trainSvg(short: boolean): string {
     .frame {
       block-size: 22rem;
       inline-size: 100%;
+      margin-block-start: var(--gmm-space-3);
       overflow: hidden;
-      border-radius: 0.75rem;
-      border: 2px solid var(--gm-border);
-      background-color: var(--gm-surface);
+      border-radius: var(--gmm-radius-input);
+      border: 1px solid var(--gmm-rule);
+      background-color: var(--gmm-soft);
     }
 
     /* Both controls are full width and the box is tall enough for both,
@@ -156,31 +164,200 @@ function trainSvg(short: boolean): string {
        height is the whole reason this is a grid and not a wrapping row. */
     .controls {
       display: grid;
-      gap: var(--gm-tap-gap);
+      gap: var(--gmm-touch-gap);
       align-content: start;
-      min-block-size: calc(2 * var(--gm-tap-min) + var(--gm-tap-gap));
+      margin-block-start: var(--gmm-space-3);
+      min-block-size: calc(2 * var(--gmm-touch) + var(--gmm-touch-gap));
     }
 
     .controls button {
       inline-size: 100%;
     }
+
+    /* ---------------------------------------------------------------------
+       The section's chrome. Rewritten in Phase D.
+       ---------------------------------------------------------------------
+       This and booking.ts were the two components Phases B and C never
+       reached, so until now the map section carried the outgoing palette's
+       Tailwind utilities, a 20px card radius, dark-mode variants and a
+       hardcoded English "25 Stations" that rendered untranslated on all 626
+       Malayalam pages. Everything below is the same vocabulary the rest of the
+       app uses: a soft ground, a hairline, the label treatment, one measure.
+       --------------------------------------------------------------------- */
+
+    .section {
+      margin-block-start: var(--gmm-space-6);
+      padding: var(--gmm-space-5);
+      border-radius: var(--gmm-radius-panel);
+      background-color: var(--gmm-soft);
+    }
+
+    .head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--gmm-space-3);
+      flex-wrap: wrap;
+      padding-block-end: var(--gmm-space-3);
+      border-block-end: 1px solid var(--gmm-rule);
+    }
+
+    .heading {
+      margin: 0;
+      font-size: var(--text-arrival);
+      font-weight: 600;
+      line-height: 1.25;
+      color: var(--gmm-ink);
+    }
+
+    .count {
+      font-size: var(--text-min);
+      font-weight: 600;
+      letter-spacing: var(--tracking-label);
+      text-transform: uppercase;
+      color: var(--gmm-ink-2);
+    }
+
+    :host-context([lang='ml']) .count {
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    /* The honesty line. Ink and semi-bold, directly under the heading and
+       above the map — not a footnote under it. The whole product position is
+       that these positions are scheduled and the app says so where the reader
+       is looking, which is the claim itself. */
+    .scheduled {
+      margin: var(--gmm-space-3) 0 0;
+      font-size: var(--text-min);
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--gmm-ink);
+    }
+
+    .unavailable {
+      margin: var(--gmm-space-3) 0 0;
+      padding: var(--gmm-space-3);
+      border-radius: var(--gmm-radius-alert);
+      background-color: var(--gmm-amber-soft);
+      font-size: var(--text-min);
+      line-height: 1.5;
+      color: var(--gmm-ink);
+    }
+
+    .diagram-slot {
+      margin-block-start: var(--gmm-space-3);
+    }
+
+    .meta {
+      margin: var(--gmm-space-3) 0 0;
+      font-size: var(--text-min);
+      line-height: 1.5;
+      color: var(--gmm-ink-2);
+    }
+
+    /* A licence condition, not a credit line: CARTO and OpenStreetMap both
+       require it and it is rendered as real 16px text, never as fine print. */
+    .credit {
+      margin: var(--gmm-space-2) 0 0;
+      font-size: var(--text-min);
+      line-height: 1.5;
+      color: var(--gmm-ink-2);
+    }
+
+    .credit a {
+      color: var(--gmm-line-text);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .credit a:hover {
+      color: var(--gmm-line-dark);
+    }
+
+    /* The always-prerendered index of all 25 stations. Search strategy 2 rests
+       on these anchors, so they are in the HTML at every width and behind a
+       details that opens with JavaScript off. */
+    .index {
+      margin-block-start: var(--gmm-space-4);
+      border-block-start: 1px solid var(--gmm-rule);
+    }
+
+    .index-summary {
+      display: flex;
+      align-items: center;
+      min-block-size: var(--gmm-touch-primary);
+      font-size: var(--text-min);
+      font-weight: 600;
+      color: var(--gmm-ink);
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .index-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .index-body {
+      margin: 0 0 var(--gmm-space-2);
+      font-size: var(--text-min);
+      line-height: 1.5;
+      color: var(--gmm-ink-2);
+    }
+
+    .index-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .index-link {
+      display: flex;
+      align-items: center;
+      min-block-size: var(--gmm-touch);
+      border-block-start: 1px solid var(--gmm-rule);
+      color: var(--gmm-ink);
+      font-size: var(--text-min);
+      text-decoration: none;
+    }
+
+    .index-link:hover {
+      color: var(--gmm-line-text);
+    }
+
+    @media (min-width: 1024px) {
+      /* Two columns of station links: 25 rows down a 1280px page is a long
+         scroll of mostly empty line. */
+      .index-list {
+        columns: 2;
+        column-gap: var(--gmm-space-6);
+      }
+
+      .index-link {
+        break-inside: avoid;
+      }
+    }
   `,
   template: `
-    <section class="mt-6">
-      <h2 class="text-station font-bold">{{ t('map.heading') }}</h2>
+    <section class="section" [attr.aria-label]="t('map.heading')">
+      <div class="head">
+        <h2 class="heading">{{ t('map.heading') }}</h2>
+        <span class="count tabular">{{
+          t('screen.stationsCount', { count: stations().length })
+        }}</span>
+      </div>
 
       <!--
-        The honesty line, and it is deliberately the second thing on the
-        section rather than a note under the map. There is no realtime feed
-        (CLAUDE.md finding 2) and the competitor's own site markets "Live Map"
-        while disclaiming it in small grey type beneath. This says it first, at
-        body size, in both languages.
+        The honesty line, and it is deliberately the second thing in the
+        section rather than a note under the map. CLAUDE.md's honesty rules
+        forbid labelling an interpolated position as live, and the place that
+        claim has to be made is where the reader is looking.
       -->
-      <p class="mt-1 font-semibold">{{ t('map.scheduled') }}</p>
+      <p class="scheduled">{{ t('map.scheduled') }}</p>
 
       @if (mode() === 'diagram') {
-        <p class="note mt-3">{{ t('map.unavailable') }}</p>
-        <div class="mt-3">
+        <p class="unavailable">{{ t('map.unavailable') }}</p>
+        <div class="diagram-slot">
           <app-schematic
             [stations]="stations()"
             [selected]="selected()"
@@ -190,76 +367,52 @@ function trainSvg(short: boolean): string {
         </div>
       } @else {
         <!--
-          aria-hidden, and Leaflet's own keyboard handling is off.
-
-          A pannable raster map is not something a screen reader can convey,
-          and a focusable marker inside an aria-hidden region would be worse
-          than either choice made cleanly. Everything the map carries is on the
-          page in text as well: the count below, the departure boards above,
-          and the station links further down. So the map is the visual medium
-          for information that is not only visual.
+          aria-hidden, and Leaflet's own keyboard handling is off. Everything
+          the map shows is also in the text above and the index below, so a
+          keyboard or screen-reader user loses nothing by not entering it.
         -->
-        <div #frame class="frame mt-3" aria-hidden="true"></div>
+        <div #frame class="frame" aria-hidden="true"></div>
 
-        <div class="controls mt-3">
-          <button
-            type="button"
-            class="tap-target rounded-lg border-2 border-outline font-semibold transition-colors hover:bg-surface"
-            (click)="showWholeLine()"
-          >
+        <div class="controls">
+          <button type="button" class="btn-secondary" (click)="showWholeLine()">
             {{ t('map.wholeLine') }}
           </button>
           @if (focusName(); as name) {
-            <button
-              type="button"
-              class="tap-target rounded-lg border-2 border-outline font-semibold transition-colors hover:bg-surface"
-              (click)="showFocus()"
-            >
+            <button type="button" class="btn-secondary" (click)="showFocus()">
               {{ t('map.backTo', { station: name }) }}
             </button>
           }
         </div>
 
-        <p class="mt-3">{{ runningLabel() }}</p>
-        <p class="mt-1">{{ t('map.legend') }}</p>
+        <p class="meta">{{ runningLabel() }}</p>
+        <p class="meta">{{ t('map.legend') }}</p>
 
         <!--
-          A licence condition, not a credit line. CARTO's basemap terms require
-          attribution to OpenStreetMap and to CARTO; Leaflet's own control
-          renders it at 12 px, which this app does not allow anywhere, so it is
-          rendered here at 16 px instead and the control is switched off.
+          A licence condition, not a credit line. The tiles are OpenStreetMap's
+          own, so OSM is the only party to credit - CARTO was dropped when its
+          anonymous tiles started returning an "API KEY REQUIRED" watermark.
+          Rendered as real 16px text, never in Leaflet's 12px control.
         -->
-        <p class="mt-2 text-min">
+        <p class="credit">
           {{ t('map.creditLead') }}
-          <a class="underline" href="https://www.openstreetmap.org/copyright" rel="noopener"
-            >OpenStreetMap</a
-          >
-          ·
-          <a class="underline" href="https://carto.com/attributions" rel="noopener">CARTO</a>
+          <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>
         </p>
       }
 
       <!--
-        Every station, as plain links, in the prerendered HTML.
-
-        This is not a duplicate of the map. It is what the map cannot be: it
-        needs no JavaScript, no tiles and no bundle, so a crawler and a reader
-        with scripting off both get the whole network from every page. That
-        matters because the schematic used to carry those 25 links on the
-        station and route pages and the map does not — a raster map has no
-        crawlable anchor text, and CLAUDE.md's search strategy 2 rests on the
-        cross-linking. Collapsed, so it costs no height and cannot shift the
-        page open.
+        Every station, as plain links, in the prerendered HTML at every width.
+        CLAUDE.md search strategy 2 rests on this cross-linking, and a
+        details opens with JavaScript off.
       -->
-      <details class="mt-4 rounded-xl border-2 border-border">
-        <summary class="disclosure text-lead font-semibold text-accent">
-          {{ t('map.allStations', { count: stations().length }) }}
+      <details class="index">
+        <summary class="index-summary">
+          <span>{{ t('map.allStations', { count: stations().length }) }}</span>
         </summary>
-        <p class="px-3 pb-1">{{ t('map.allStationsBody') }}</p>
-        <ul class="p-2">
+        <p class="index-body">{{ t('map.allStationsBody') }}</p>
+        <ul class="index-list">
           @for (station of index(); track station.id) {
-            <li class="mt-tap-gap first:mt-0">
-              <a class="fare-row" [routerLink]="station.href">{{ station.name }}</a>
+            <li>
+              <a class="index-link" [routerLink]="station.href">{{ station.name }}</a>
             </li>
           }
         </ul>
@@ -493,8 +646,8 @@ export class LineMap {
     this.#watchTiles(this.#tiles);
 
     const styles = getComputedStyle(document.documentElement);
-    const accent = styles.getPropertyValue('--gm-accent').trim() || '#00497f';
-    const casing = styles.getPropertyValue('--gm-bg').trim() || '#ffffff';
+    const accent = styles.getPropertyValue('--gmm-line').trim() || '#00A3B4';
+    const casing = styles.getPropertyValue('--gmm-bg').trim() || '#FFFFFF';
 
     // The alignment. A casing under the line is what keeps it legible over a
     // basemap that changes colour under it.
@@ -645,6 +798,17 @@ export class LineMap {
       failures++;
       if (loaded === 0 && failures >= TILE_FAILURES) this.#fallback();
     });
+    // A host that answers HTTP 200 with a "your key is missing" watermark fires
+    // `tileload`, not `tileerror` - so counting failures alone cannot see it and
+    // the reader gets a grey rectangle that the app believes is a map. Any tile
+    // that loads but carries no image data is that case.
+    layer.on('tileload', (event: { tile?: HTMLImageElement }) => {
+      const tile = event.tile;
+      if (tile !== undefined && tile.naturalWidth === 0) {
+        failures++;
+        if (failures >= TILE_FAILURES) this.#fallback();
+      }
+    });
     const timer = setTimeout(() => {
       if (loaded === 0) this.#fallback();
     }, TILE_TIMEOUT_MS);
@@ -665,8 +829,8 @@ export class LineMap {
     const onChange = (): void => {
       this.#tiles?.setUrl(this.#dark() ? TILES_DARK : TILES_LIGHT);
       const styles = getComputedStyle(document.documentElement);
-      const accent = styles.getPropertyValue('--gm-accent').trim() || '#00497f';
-      const casing = styles.getPropertyValue('--gm-bg').trim() || '#ffffff';
+      const accent = styles.getPropertyValue('--gmm-line').trim() || '#00A3B4';
+      const casing = styles.getPropertyValue('--gmm-bg').trim() || '#FFFFFF';
       this.#lines.forEach((line, i) =>
         line.setStyle({ color: i < this.#lines.length / 2 ? casing : accent }),
       );

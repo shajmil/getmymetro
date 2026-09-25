@@ -27,7 +27,10 @@ No grey-on-grey. No thin weights below 400. No text over photographs.
 - **No animation library.** CSS transitions only, **≤150ms**, and only on
   colour/opacity/transform. Nothing animates on load.
 - Honour `prefers-reduced-motion: reduce` by disabling all transitions.
-- **No MapLibre.** Inline SVG schematic — see finding on the map decision.
+- **No MapLibre.** ~~Inline SVG schematic~~ - **superseded in Phase 7**: the map
+  is Leaflet + CARTO, lazy-loaded so it is not in the initial chunk, with the
+  SVG schematic as the offline fallback. See CLAUDE.md, "Resolved in Phase 7".
+  MapLibre remains rejected; the objection was ~200 KB, and Leaflet is ~42 KB.
 - Zoneless change detection + signals. No `zone.js`.
 - Everything above the fold renders from prerendered HTML with no JS.
 - Budget: **LCP < 1.5s** on simulated Fast 3G, **CLS 0**, main bundle
@@ -119,8 +122,9 @@ and every location failure still lands somewhere useful.
 - [ ] Route view: departures, duration, fare, stops between, booking link
 - [ ] **Book on WhatsApp** → `wa.me/919188957488?text=Book%20Ticket`,
       labelled as KMRL's channel (licence forbids implying endorsement)
-- [ ] SVG schematic: 25 stations, tappable, current position marker,
+- [x] SVG schematic: 25 stations, tappable, current position marker,
       readable at 320px, no pan/zoom needed to use it
+      (Phase 7 demoted it to `<app-line-map>`'s offline fallback; unchanged)
 
 **Done when:** a journey can be planned end to end on a 320px screen.
 
@@ -155,6 +159,49 @@ with the network off.
 hydration (no NG0500 at runtime), the service worker actually installing and
 serving offline, `localStorage`, geolocation, the 56px targets and 7:1
 contrast as rendered, CLS, and LCP.
+
+Phase 7 adds to that list, and its items are the likelier ones to bite:
+Leaflet initialising at all inside an Angular-hydrated container; the tiles
+loading from CARTO and the failure detection firing correctly when they do not;
+the train arrows sitting on the viaduct and pointing the right way on screen;
+the 56 px station pins not overlapping into ambiguity at the opening zoom; and
+the one unavoidable layout shift - when the tiles fail, a 22rem map frame is
+replaced by a ~1600 px schematic, and everything below it moves.
+
+---
+
+## Phase 7 - The map, and finding the features
+
+The standing complaint was "so many features, can't find them". The brief also
+reversed the map decision: Leaflet + CARTO, as the competitor has, with train
+positions on it.
+
+- [x] `core/engine/positions.ts`: every train placed from the timetable,
+      interpolated along `shapes.txt` **chainage**, never along a straight line
+      between stations. 15 tests, against the real feed
+- [x] `shared/map/line-map.ts`: Leaflet + CARTO, lazy-loaded behind an
+      `IntersectionObserver` so no page pays for it until a map is nearly on
+      screen. Two direction polylines, 25 tappable 56 px station pins, ~17 train
+      arrows updated on the page's existing 1 Hz tick
+- [x] "Scheduled positions ... nothing here is measured" in body type directly
+      under the heading, never under the map and never the word "live"
+- [x] OpenStreetMap and CARTO attribution as 16 px links; Leaflet's own 12 px
+      control is switched off
+- [x] Tiles fail -> the Phase 5 schematic renders automatically, with a line
+      saying the map needs a connection and the times do not
+- [x] Home restructured: answer, then map, then a labelled way into every
+      feature. 24 priced destinations one tap from the answer; "First and last
+      train from X" as its own label, landing on its own section
+- [x] All 25 stations as plain prerendered links in the map section, replacing
+      the crawlable links the schematic used to carry
+- [x] Zero animation at-rules after Leaflet's stylesheet joins the output; no
+      font-size below 16 px anywhere in it (five documented edits, see
+      `app/public/vendor/leaflet-1.9.4.css`)
+- [ ] The map itself, as rendered. It needs a browser and this phase had none -
+      see "Still unverified without a browser" below
+
+**Done when:** the answer is still the first thing on screen, the map is the
+second, and every feature has a label a commuter can read.
 
 ---
 

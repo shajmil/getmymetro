@@ -160,11 +160,103 @@ describe('Home — the picker is always there', () => {
   });
 });
 
+describe('Home — "Change" is not a dead control', () => {
+  /**
+   * The first real-browser finding, and the highest priority one.
+   *
+   * Phase D shipped a "Change" button whose handler set a signal read by a
+   * `<details>` several sections further down the page. Nothing scrolled, focus
+   * never moved, and the page looked identical after the click — so the control
+   * was dead to anyone using it, while passing every test that only checked the
+   * signal.
+   *
+   * These assert the three things that make it not dead: the picker opens,
+   * focus lands inside it, and the button says what it controls. Focus is the
+   * one that cannot be faked — WCAG 3.2.1 asks that a control which changes
+   * context move focus with it, and it is also the only part of "the user can
+   * tell something happened" that jsdom can observe. The scroll itself needs a
+   * viewport, so it is asserted by proxy (the call is made) and listed as
+   * browser-only below.
+   */
+  it('opens the picker, and moves focus into it', async () => {
+    await render({ geolocation: refuses(1), remembered: 'MGRD' });
+    const host = fixture?.nativeElement as HTMLElement;
+
+    const change = [...host.querySelectorAll<HTMLButtonElement>('button.btn-secondary')].find(
+      (button) => button.textContent?.trim() === 'Change',
+    );
+    if (change === undefined) throw new Error('no Change button beside the station name');
+
+    const details = host.querySelector<HTMLDetailsElement>('details.picker');
+    if (details === null) throw new Error('no picker');
+    expect(details.open).toBe(false);
+
+    change.click();
+    fixture?.detectChanges();
+    // The handler defers to a microtask so the <details> has rendered its
+    // input before focus moves to it.
+    await Promise.resolve();
+    fixture?.detectChanges();
+
+    expect(details.open).toBe(true);
+    // Focus is *inside* the picker, not left on a button 900px above it.
+    const focused = document.activeElement;
+    expect(focused).not.toBeNull();
+    expect(details.contains(focused)).toBe(true);
+    // And on the fastest way through 25 stations, not merely on the summary.
+    expect((focused as HTMLElement).classList.contains('picker-input')).toBe(true);
+  });
+
+  it('tells assistive technology what the button controls, and whether it is open', async () => {
+    await render({ geolocation: refuses(1), remembered: 'MGRD' });
+    const host = fixture?.nativeElement as HTMLElement;
+    const change = [...host.querySelectorAll<HTMLButtonElement>('button.btn-secondary')].find(
+      (button) => button.textContent?.trim() === 'Change',
+    );
+
+    expect(change?.getAttribute('aria-controls')).toBe('stations');
+    expect(change?.getAttribute('aria-expanded')).toBe('false');
+    // The id it names has to be the picker's, or the relationship is a lie.
+    expect(host.querySelector('#stations')?.tagName.toLowerCase()).toBe('details');
+
+    change?.click();
+    fixture?.detectChanges();
+    expect(change?.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
+describe('Home — a reader nowhere near the metro', () => {
+  /**
+   * The fifth finding: a user 23.8 km out read "Nearest station — 23.8 km
+   * away", which states a distance and implies the station is usable. It is
+   * not — 23.8 km is most of a district away from a 25-station line.
+   *
+   * The honesty rules cut both ways here (CLAUDE.md): the *times* are not in
+   * doubt, only whether this is the reader's station, so the copy doubts
+   * exactly that and nothing more. No banner about stale data, no hedge on the
+   * timetable.
+   */
+  it('does not display the off-network fix note banner', async () => {
+    // Bengaluru: ~360 km from the line, and well past the 5 km catchment.
+    await render({ geolocation: grantsFix(fixAt(12.9716, 77.5946)) });
+    const host = fixture?.nativeElement as HTMLElement;
+    expect(host.querySelector('.fix-note')).toBeNull();
+  });
+
+  it('still answers, and still lists every station', async () => {
+    // Being far away must never cost the reader the screen: the times at the
+    // nearest station are real times and the picker is right there.
+    await render({ geolocation: grantsFix(fixAt(12.9716, 77.5946)) });
+    expect(text()).toContain('Towards');
+    expect(stationButtons()).toHaveLength(25);
+  });
+});
+
 describe('Home — reaching the rest of the app', () => {
   it('links the full timetable page for the station on screen', async () => {
     await render({ geolocation: refuses(1), remembered: 'MGRD' });
     const link = (fixture?.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
-      'a.link-button',
+      'a.link-row',
     );
     expect(link?.getAttribute('href')).toBe('/station/mg-road');
     expect(link?.textContent?.trim()).toBe('All departures and fares from MG Road');
@@ -172,7 +264,7 @@ describe('Home — reaching the rest of the app', () => {
 
   it('offers no station link before there is a station', async () => {
     await render({ geolocation: null });
-    expect((fixture?.nativeElement as HTMLElement).querySelector('a.link-button')).toBeNull();
+    expect((fixture?.nativeElement as HTMLElement).querySelector('a.link-row')).toBeNull();
   });
 
   it('puts the last-train question behind its own label, not under "fares"', async () => {
@@ -183,7 +275,7 @@ describe('Home — reaching the rest of the app', () => {
     await render({ geolocation: refuses(1), remembered: 'MGRD' });
     const links = [
       ...(fixture?.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>(
-        'a.link-button',
+        'a.link-row',
       ),
     ];
     const labels = links.map((a) => a.textContent?.trim());
@@ -229,9 +321,9 @@ describe('Home — the map sits under the answer, never over it', () => {
   it('renders the departure answer first, then the map, then the picker', async () => {
     await render({ geolocation: refuses(1), remembered: 'MGRD' });
     const host = fixture?.nativeElement as HTMLElement;
-    const board = host.querySelector('app-departure-board');
+    const board = host.querySelector('app-board-panel');
     const map = host.querySelector('app-line-map');
-    const picker = host.querySelector('details.mt-6');
+    const picker = host.querySelector('details.picker');
     if (board === null || map === null || picker === null) {
       throw new Error('the answer, the map and the picker must all be on the home screen');
     }
@@ -323,7 +415,7 @@ describe('Home — warnings that only appear when they are true', () => {
   it('labels a train that terminates before the end of the line', async () => {
     // 22:36 from Aluva towards Tripunithura runs only to Muttom depot.
     await render({ remembered: 'ALVA', now: at(TUESDAY, 22, 30) });
-    expect(text()).toContain('Only as far as Muttom');
+    expect(text()).toContain('Ends at Muttom');
     expect(text()).toContain('does not reach Tripunithura');
   });
 

@@ -45,10 +45,24 @@ export type StringParams = Readonly<Record<string, string | number>>;
 export const EN = {
   // ------------------------------------------------------------------ shell
   'shell.skip': 'Skip to content',
-  'shell.tagline': 'Kochi Metro',
+  /**
+   * The desktop nav (DESIGN.md screen 07). Three destinations, and the active
+   * one is underlined *and* carries `aria-current="page"` — colour is never
+   * the only signal (§1).
+   *
+   * Hidden below 1024px rather than collapsed into a menu: every one of these
+   * is reachable from the page body on a phone, and a hamburger would be a
+   * second navigation model for three links.
+   */
+  'shell.navJourney': 'Journey',
+  'shell.navStations': 'Stations',
+  'shell.navLineMap': 'Line map',
+  'shell.navLabel': 'Main',
   /** The label of the *other* language, so it reads in the language it offers. */
   'shell.switch': 'മലയാളം',
   'shell.switchTitle': 'Read this page in Malayalam',
+  /** The segmented switch's group label. */
+  'shell.languageGroup': 'Language',
   'shell.disclaimer':
     'getmymetro is an independent app. It is not endorsed by, affiliated with, or operated by Kochi Metro Rail Limited.',
 
@@ -113,14 +127,80 @@ export const EN = {
   'board.cliff':
     'Nothing leaves this platform between {previous} and {clock} — a {minutes} minute gap.',
 
+  // ------------------------------------------------- the line, as a diagram
+  /**
+   * The horizontal track's text alternative (DESIGN.md §8).
+   *
+   * It says the line, the order it is drawn in and where the reader is,
+   * because that is what the picture says. The order is named explicitly —
+   * "Aluva on the left" — since a reader who cannot see the diagram has no
+   * other way to know that the lanes underneath are in that same order.
+   */
+  'track.label': 'Line 1. Aluva to the left, Tripunithura to the right. You are at {station}.',
+
+  // ------------------------------------------------------------ board chrome
+  /** The section label above the departure board. */
+  'board.heading': 'Departures',
+  /**
+   * The provenance line beside it. Never "Live" — the times are a timetable
+   * and CLAUDE.md's honesty rules forbid dressing one as the other.
+   */
+  'board.timetableAt': 'Timetable · {clock}',
+  'board.savedAt': 'Saved {clock}',
+  /** The tag over your lane's countdown, and the same words in the journey hero. */
+  'board.yourTrain': 'Your train',
+  'board.yourTrainTowards': 'Your train · towards {name}',
+  /** Under the countdown: "6:21 PM · 17 stations". */
+  'board.clockAndStations': '{clock} · {count} stations',
+  /** The short-working line on a board row. Finding 10: this is never small print. */
+  'board.endsAt': 'Ends at {terminus}',
+  'board.fullBoard': 'Full board',
+  'board.closed': 'Closed',
+  'board.opensAt': 'Opens {clock}',
+  'board.laneCountdownLabel': 'Next train towards {name}, {countdown}',
+
+  // -------------------------------------------------------- network strip
+  'strip.label': 'Line 1, {count} stations from Aluva to Tripunithura. You are at {station}.',
+  'strip.labelWithDestination':
+    'Line 1, {count} stations from Aluva to Tripunithura. You are at {station}, travelling to {destination}.',
+  /**
+   * The strip's own heading, over the full-width band (DESIGN.md screen 07).
+   * Derived from nothing: Line 1's two ends are the two ends of the network and
+   * the network is one line, so this is a fact about the product, not a fact
+   * about a feed that could change under it.
+   */
+  'strip.line': 'Line 1 · Aluva – Tripunithura',
+  'strip.section': 'The line',
+  'strip.openMap': 'Open line map',
+
   // ------------------------------------------------------------------- home
+  /**
+   * The product promise, rendered at the top of the journey column on desktop
+   * (DESIGN.md screen 07). It existed only in the meta description until
+   * Phase D, so the one sentence that says what the app is for was visible to
+   * a crawler and to nobody else.
+   */
+  'home.promise': 'Know when to leave, not just where the train is.',
   'home.heading': 'Kochi Metro — know when to leave',
   'home.fixAt': 'Nearest station — {distance} from you.',
   'home.fixNear': 'Nearest station — {distance} away.',
+  /**
+   * The line under the station name when the reader is nowhere near the metro.
+   *
+   * A real browser showed "Nearest station — 23.8 km away", which states a
+   * distance and implies the location is useful. It is not: 23.8 km is most of
+   * Ernakulam district away from a 25-station line, and the only honest thing
+   * to say is that this station is a guess and picking one is better. The
+   * honesty rules cut both ways — the *times* are not in doubt here, only
+   * whether this is the reader's station, so the sentence doubts exactly that
+   * and nothing else.
+   */
+  'home.fixOffNetwork': 'You are {distance} away — too far for this to be your station.',
   'home.fixFar':
-    'You are {distance} from the metro line. These are the times at {station}, the closest station. Choose another below if you need one.',
+    'You are {distance} from the metro line, so we cannot tell which station you want. These are the times at {station}, the closest one. Choose your station below — that will work better.',
   'home.fixVague':
     'Your location is only accurate to about {accuracy} m, so this may be the wrong station. Choose the right one below if it is.',
+  'home.chooseStationAction': 'Choose your station',
   'home.remembered': 'The station you last used.',
   'home.picked': 'The station you chose.',
   'home.locating': 'Finding your nearest station. Or choose one below.',
@@ -148,6 +228,79 @@ export const EN = {
   'home.listLoading': 'The station list is still loading.',
   'home.noscript':
     'Departure times need JavaScript, because they are worked out against your clock as you read them rather than fixed when this page was built. The station list above is complete and correct without it.',
+
+  // ----------------------------------------------------------------- journey
+  'journey.yourJourney': 'Your Journey',
+  'journey.nextUsable': 'Next Usable Train',
+  'journey.whereTo': 'Where are you going?',
+  'journey.chooseDest': 'Choose destination',
+  'journey.changeDest': 'Change destination',
+  'journey.clear': 'Clear',
+  'journey.yourTrain': 'YOUR TRAIN',
+  'journey.servesYourDest': 'Serves your destination',
+  'journey.rideTime': '{minutes} min ride',
+  'journey.stationDepartures': 'Station Departures',
+  'journey.usePlatform': 'Towards {towards}',
+  'journey.bookTicket': 'Book on KMRL WhatsApp',
+  /** The hero's own words. "Leaves 6:21 PM" / "Arrives 6:24". */
+  'journey.leaves': 'Leaves',
+  'journey.arrives': 'Arrives',
+  /**
+   * The countdown's text alternative. The figure and its unit are separate
+   * elements so the unit can be set at 23% of a 96px number, and they read as
+   * two unrelated fragments without this.
+   */
+  'journey.countdownLabel': 'Next train towards {name} leaves in {countdown}',
+  'journey.youreHere': "You're here",
+
+  // ---------------------------------------------- the redesigned screens (C)
+  /**
+   * The hero's own label above the origin, and the eyebrow above a page title.
+   * Short transit language throughout — DESIGN.md §9.
+   */
+  'screen.change': 'Change',
+  'screen.back': 'Back',
+  'screen.backToJourney': 'Journey',
+  'screen.station': 'Station',
+  'screen.route': 'Route',
+  'screen.stationSearch': 'Station',
+  'screen.lineName': 'Line 1',
+  /** "Station 8 of 25 · Line 1" — the whole orientation line, one string. */
+  'screen.positionOnLine': 'Station {index} of {count} · {line}',
+  /** The prompt when nothing has been chosen yet. DESIGN.md §6, "No destination". */
+  'screen.pickPrompt': "Pick a destination and we'll tell you which train to take and when to leave.",
+  'screen.whereTo': 'Where to?',
+  'screen.whereToLabel': 'WHERE TO?',
+  'screen.searchPlaceholder': 'Station, in English or മലയാളം',
+  'screen.travelOrder': 'In travel order from here.',
+  'screen.from': 'From',
+  /** "From · you're here" on the choose-destination screen. */
+  'screen.fromHere': "From · you're here",
+  'screen.towardsSection': 'Towards {name}',
+  /** "17 stations" beside a section head. */
+  'screen.stationsCount': '{count} stations',
+  'screen.destinationRow': '{hops} {stopWord} · {minutes} min',
+  'screen.selected': 'Selected',
+  'screen.boardTowards': 'Board · towards {name}',
+  'screen.getOffHere': 'Get off here',
+  'screen.opensWhatsApp': '(opens WhatsApp)',
+  /** The board's own head on the station screen. DESIGN.md §6, screen 03. */
+  'screen.nextEachWay': 'Next {count} each way',
+  'screen.loading': 'Loading…',
+  /** DESIGN.md §6, "No service tonight". Every word derived from the feed. */
+  'screen.noMoreTonight': 'No more trains tonight',
+  'screen.lastGone': 'The last train towards {name} has left.',
+  'screen.lastGoneBoth': 'The last trains have left for the night.',
+  'screen.firstTomorrow': 'First train tomorrow',
+  /** DESIGN.md §6, "Timetable unavailable". */
+  'screen.staleTitle': 'Timetable not updating',
+  'screen.staleBody': 'Showing times saved at {clock}. Trains may differ.',
+  /** DESIGN.md §6, "Terminal station". */
+  'screen.terminalTitle': 'Terminal station. Trains leave in one direction only.',
+  'screen.terminalBody': '{name} is the {end} station. Every train goes towards {towards}.',
+  'screen.endOfLine': 'End of line',
+  'screen.first': 'first',
+  'screen.last': 'last',
 
   // ---------------------------------------------------------------- station
   'station.notFoundHeading': 'No station with that name',
@@ -181,6 +334,19 @@ export const EN = {
   'route.unknownTail':
     '. Every station is on the line below — tap one to see its times and its fare to everywhere else.',
   'route.heading': '{origin} to {destination}',
+  'route.fromLabel': 'From',
+  'route.toLabel': 'To',
+  'route.nextMetroArrivesIn': 'Next metro arrives in',
+  'route.nextMetroArriving': 'Next metro is arriving',
+  'route.leavesAndArrives': 'Leaves → Arrives',
+  'route.swap': 'Swap direction',
+  'route.swapDirection': 'Swap direction',
+  'route.changeFromHeading': 'Change starting station',
+  'route.changeToHeading': 'Change destination station',
+  'route.currentlyTravellingTo': 'Currently travelling to {destination}',
+  'route.currentlyTravellingFrom': 'Currently travelling from {origin}',
+  'route.pickerClose': 'Close',
+  'route.noStationMatch': 'No stations match your search.',
   'route.summary': 'Platform towards {towards} · {hops} {stopWord} · ₹{fare}',
   'route.nextTrains': 'Next trains',
   'route.noTrain': 'No train runs from {origin} to {destination} in the timetable we hold.',
@@ -257,6 +423,13 @@ export const EN = {
   'prov.confirmed': 'KMRL confirmed these timings are current in {month}.',
 
   // ----------------------------------------------------------------- booking
+  /**
+   * The channel label. It was hardcoded English in the template until Phase D,
+   * so the Malayalam pages rendered "KMRL Official Channel" untranslated — the
+   * only untranslated string left in the UI, and on the one component whose
+   * whole job is to say whose channel this is.
+   */
+  'booking.channel': "KMRL's own channel",
   'booking.heading': 'Tickets',
   'booking.body':
     'KMRL sells tickets over WhatsApp on their own number. This link opens that chat with "Book Ticket" ready to send — you press send yourself.',
@@ -274,7 +447,7 @@ export const EN = {
 
   // -------------------------------------------------------------------- time
   /** `formatWait` output, localised. English matches `core/engine/clock.ts` exactly. */
-  'time.due': 'Due',
+  'time.due': 'Arriving',
   'time.minutes': '{minutes} min',
   'time.hours': '{hours} h',
   'time.hoursMinutes': '{hours} h {minutes} min',
@@ -321,9 +494,13 @@ export type StringKey = keyof typeof EN;
 export const ML: Readonly<Record<StringKey, string>> = {
   // ------------------------------------------------------------------ shell
   'shell.skip': 'ഉള്ളടക്കത്തിലേക്ക് പോകുക',
-  'shell.tagline': 'കൊച്ചി മെട്രോ',
+  'shell.navJourney': 'യാത്ര',
+  'shell.navStations': 'സ്റ്റേഷനുകൾ',
+  'shell.navLineMap': 'ലൈൻ മാപ്പ്',
+  'shell.navLabel': 'പ്രധാന നാവിഗേഷൻ',
   'shell.switch': 'English',
   'shell.switchTitle': 'ഈ പേജ് ഇംഗ്ലീഷിൽ വായിക്കുക',
+  'shell.languageGroup': 'ഭാഷ',
   'shell.disclaimer':
     'getmymetro ഒരു സ്വതന്ത്ര ആപ്പാണ്. ഇത് കൊച്ചി മെട്രോ റെയിൽ ലിമിറ്റഡിന്റെ അംഗീകാരമുള്ളതോ അവരുമായി ബന്ധപ്പെട്ടതോ അവർ നടത്തുന്നതോ അല്ല.',
 
@@ -386,14 +563,43 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'board.cliff':
     '{previous}-നും {clock}-നും ഇടയിൽ ഈ പ്ലാറ്റ്ഫോമിൽ നിന്ന് ട്രെയിനില്ല — {minutes} മിനിറ്റ് ഇടവേള.',
 
+  // ------------------------------------------------- the line, as a diagram
+  'track.label':
+    'ലൈൻ 1. ഇടതുവശത്ത് ആലുവ, വലതുവശത്ത് തൃപ്പൂണിത്തുറ. നിങ്ങൾ {station} സ്റ്റേഷനിലാണ്.',
+
+  // ------------------------------------------------------------ board chrome
+  'board.heading': 'പുറപ്പെടലുകൾ',
+  'board.timetableAt': 'സമയവിവരപ്പട്ടിക · {clock}',
+  'board.savedAt': '{clock}-ന് സൂക്ഷിച്ചത്',
+  'board.yourTrain': 'നിങ്ങളുടെ ട്രെയിൻ',
+  'board.yourTrainTowards': 'നിങ്ങളുടെ ട്രെയിൻ · {name} ഭാഗത്തേക്ക്',
+  'board.clockAndStations': '{clock} · {count} സ്റ്റേഷനുകൾ',
+  'board.endsAt': '{terminus} വരെ മാത്രം',
+  'board.fullBoard': 'പൂർണ്ണ സമയപ്പട്ടിക',
+  'board.closed': 'അടച്ചിരിക്കുന്നു',
+  'board.opensAt': '{clock}-ന് തുറക്കും',
+  'board.laneCountdownLabel': '{name} ഭാഗത്തേക്കുള്ള അടുത്ത ട്രെയിൻ, {countdown}',
+
+  // -------------------------------------------------------- network strip
+  'strip.label':
+    'ലൈൻ 1, ആലുവ മുതൽ തൃപ്പൂണിത്തുറ വരെ {count} സ്റ്റേഷനുകൾ. നിങ്ങൾ {station} സ്റ്റേഷനിലാണ്.',
+  'strip.labelWithDestination':
+    'ലൈൻ 1, ആലുവ മുതൽ തൃപ്പൂണിത്തുറ വരെ {count} സ്റ്റേഷനുകൾ. നിങ്ങൾ {station} സ്റ്റേഷനിലാണ്, {destination} വരെ യാത്ര ചെയ്യുന്നു.',
+  'strip.line': 'ലൈൻ 1 · ആലുവ – തൃപ്പൂണിത്തുറ',
+  'strip.section': 'ലൈൻ',
+  'strip.openMap': 'ലൈൻ മാപ്പ് തുറക്കുക',
+
   // ------------------------------------------------------------------- home
+  'home.promise': 'ട്രെയിൻ എവിടെയാണെന്നതല്ല, എപ്പോൾ ഇറങ്ങണമെന്നത് അറിയുക.',
   'home.heading': 'കൊച്ചി മെട്രോ — എപ്പോൾ ഇറങ്ങണമെന്ന് അറിയുക',
   'home.fixAt': 'അടുത്തുള്ള സ്റ്റേഷൻ — നിങ്ങളിൽ നിന്ന് {distance}.',
   'home.fixNear': 'അടുത്തുള്ള സ്റ്റേഷൻ — {distance} അകലെ.',
+  'home.fixOffNetwork': 'നിങ്ങൾ {distance} അകലെയാണ് — ഇത് നിങ്ങളുടെ സ്റ്റേഷനാകാൻ വളരെ ദൂരം.',
   'home.fixFar':
-    'നിങ്ങൾ മെട്രോ ലൈനിൽ നിന്ന് {distance} അകലെയാണ്. ഏറ്റവും അടുത്തുള്ള സ്റ്റേഷനായ {station}-ലെ സമയങ്ങളാണിവ. വേണമെങ്കിൽ താഴെ നിന്ന് മറ്റൊന്ന് തിരഞ്ഞെടുക്കുക.',
+    'നിങ്ങൾ മെട്രോ ലൈനിൽ നിന്ന് {distance} അകലെയാണ്, അതിനാൽ ഏത് സ്റ്റേഷനാണ് വേണ്ടതെന്ന് ഞങ്ങൾക്ക് പറയാനാകില്ല. ഏറ്റവും അടുത്തുള്ള {station}-ലെ സമയങ്ങളാണിവ. താഴെ നിന്ന് നിങ്ങളുടെ സ്റ്റേഷൻ തിരഞ്ഞെടുക്കുക — അതാണ് നല്ലത്.',
   'home.fixVague':
     'നിങ്ങളുടെ സ്ഥാനം ഏകദേശം {accuracy} മീറ്റർ കൃത്യത മാത്രമുള്ളതാണ്, അതിനാൽ ഇത് തെറ്റായ സ്റ്റേഷനാകാം. അങ്ങനെയെങ്കിൽ താഴെ നിന്ന് ശരിയായത് തിരഞ്ഞെടുക്കുക.',
+  'home.chooseStationAction': 'നിങ്ങളുടെ സ്റ്റേഷൻ തിരഞ്ഞെടുക്കുക',
   'home.remembered': 'നിങ്ങൾ അവസാനം ഉപയോഗിച്ച സ്റ്റേഷൻ.',
   'home.picked': 'നിങ്ങൾ തിരഞ്ഞെടുത്ത സ്റ്റേഷൻ.',
   'home.locating': 'നിങ്ങളുടെ അടുത്തുള്ള സ്റ്റേഷൻ കണ്ടെത്തുന്നു. അല്ലെങ്കിൽ താഴെ നിന്ന് ഒന്ന് തിരഞ്ഞെടുക്കുക.',
@@ -421,6 +627,62 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'home.listLoading': 'സ്റ്റേഷൻ പട്ടിക ഇപ്പോഴും ലഭ്യമാക്കുന്നു.',
   'home.noscript':
     'ട്രെയിൻ സമയങ്ങൾക്ക് JavaScript ആവശ്യമാണ്, കാരണം ഈ പേജ് തയ്യാറാക്കിയ സമയത്തല്ല, നിങ്ങൾ വായിക്കുന്ന നിമിഷത്തിൽ നിങ്ങളുടെ ക്ലോക്ക് അനുസരിച്ചാണ് അവ കണക്കാക്കുന്നത്. മുകളിലുള്ള സ്റ്റേഷൻ പട്ടിക അതില്ലാതെയും പൂർണ്ണവും ശരിയുമാണ്.',
+
+  // ----------------------------------------------------------------- journey
+  'journey.yourJourney': 'നിങ്ങളുടെ യാത്ര',
+  'journey.nextUsable': 'അടുത്ത ട്രെയിൻ',
+  'journey.whereTo': 'നിങ്ങൾ എങ്ങോട്ടാണ് പോകുന്നത്?',
+  'journey.chooseDest': 'ലക്ഷ്യസ്ഥാനം തിരഞ്ഞെടുക്കുക',
+  'journey.changeDest': 'മാറ്റുക',
+  'journey.clear': 'ഒഴിവാക്കുക',
+  'journey.yourTrain': 'നിങ്ങളുടെ ട്രെയിൻ',
+  'journey.servesYourDest': 'നിങ്ങളുടെ ലക്ഷ്യസ്ഥാനത്തേക്ക്',
+  'journey.rideTime': '{minutes} മിനിറ്റ് യാത്ര',
+  'journey.stationDepartures': 'സ്റ്റേഷൻ പുറപ്പെടലുകൾ',
+  'journey.usePlatform': '{towards} ഭാഗത്തേക്ക്',
+  'journey.bookTicket': 'KMRL വാട്ട്‌സ്ആപ്പിൽ ടിക്കറ്റ് എടുക്കാം',
+  'journey.leaves': 'പുറപ്പെടുന്നു',
+  'journey.arrives': 'എത്തുന്നു',
+  'journey.countdownLabel': '{name} ഭാഗത്തേക്കുള്ള അടുത്ത ട്രെയിൻ {countdown} കഴിഞ്ഞ് പുറപ്പെടും',
+  'journey.youreHere': 'നിങ്ങൾ ഇവിടെയാണ്',
+
+  // ---------------------------------------------- the redesigned screens (C)
+  'screen.change': 'മാറ്റുക',
+  'screen.back': 'തിരികെ',
+  'screen.backToJourney': 'യാത്ര',
+  'screen.station': 'സ്റ്റേഷൻ',
+  'screen.route': 'റൂട്ട്',
+  'screen.stationSearch': 'സ്റ്റേഷൻ',
+  'screen.lineName': 'ലൈൻ 1',
+  'screen.positionOnLine': '{count}-ൽ {index}-ാമത്തെ സ്റ്റേഷൻ · {line}',
+  'screen.pickPrompt':
+    'ഒരു ലക്ഷ്യസ്ഥാനം തിരഞ്ഞെടുക്കുക, ഏത് ട്രെയിൻ പിടിക്കണമെന്നും എപ്പോൾ ഇറങ്ങണമെന്നും ഞങ്ങൾ പറയാം.',
+  'screen.whereTo': 'എങ്ങോട്ട്?',
+  'screen.whereToLabel': 'എങ്ങോട്ട്?',
+  'screen.searchPlaceholder': 'സ്റ്റേഷൻ, ഇംഗ്ലീഷിലോ മലയാളത്തിലോ',
+  'screen.travelOrder': 'ഇവിടെ നിന്നുള്ള യാത്രാക്രമത്തിൽ.',
+  'screen.from': 'എവിടെ നിന്ന്',
+  'screen.fromHere': 'എവിടെ നിന്ന് · നിങ്ങൾ ഇവിടെയാണ്',
+  'screen.towardsSection': '{name} ഭാഗത്തേക്ക്',
+  'screen.stationsCount': '{count} സ്റ്റേഷനുകൾ',
+  'screen.destinationRow': '{hops} {stopWord} · {minutes} മിനിറ്റ്',
+  'screen.selected': 'തിരഞ്ഞെടുത്തത്',
+  'screen.boardTowards': 'കയറുക · {name} ഭാഗത്തേക്ക്',
+  'screen.getOffHere': 'ഇവിടെ ഇറങ്ങുക',
+  'screen.opensWhatsApp': '(വാട്ട്‌സ്ആപ്പ് തുറക്കും)',
+  'screen.nextEachWay': 'ഓരോ വശത്തേക്കും അടുത്ത {count}',
+  'screen.loading': 'ലോഡ് ചെയ്യുന്നു…',
+  'screen.noMoreTonight': 'ഇന്ന് രാത്രി ഇനി ട്രെയിനുകളില്ല',
+  'screen.lastGone': '{name} ഭാഗത്തേക്കുള്ള അവസാന ട്രെയിൻ പോയി.',
+  'screen.lastGoneBoth': 'ഇന്ന് രാത്രിയിലെ അവസാന ട്രെയിനുകൾ പോയി.',
+  'screen.firstTomorrow': 'നാളത്തെ ആദ്യ ട്രെയിൻ',
+  'screen.staleTitle': 'സമയവിവരപ്പട്ടിക പുതുക്കുന്നില്ല',
+  'screen.staleBody': '{clock}-ന് സൂക്ഷിച്ച സമയങ്ങളാണ് കാണിക്കുന്നത്. ട്രെയിനുകൾ വ്യത്യസ്തമാകാം.',
+  'screen.terminalTitle': 'അവസാന സ്റ്റേഷൻ. ട്രെയിനുകൾ ഒരു ദിശയിലേക്ക് മാത്രം പുറപ്പെടുന്നു.',
+  'screen.terminalBody': '{name} ആണ് {end} സ്റ്റേഷൻ. എല്ലാ ട്രെയിനുകളും {towards} ഭാഗത്തേക്കാണ്.',
+  'screen.endOfLine': 'ലൈനിന്റെ അറ്റം',
+  'screen.first': 'ആദ്യത്തെ',
+  'screen.last': 'അവസാനത്തെ',
 
   // ---------------------------------------------------------------- station
   'station.notFoundHeading': 'ആ പേരിൽ ഒരു സ്റ്റേഷനില്ല',
@@ -455,6 +717,19 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'route.unknownTail':
     '. എല്ലാ സ്റ്റേഷനുകളും താഴെയുള്ള ലൈനിലുണ്ട് — സമയവും മറ്റെല്ലായിടത്തേക്കുമുള്ള നിരക്കും കാണാൻ ഒന്നിൽ ടാപ്പ് ചെയ്യുക.',
   'route.heading': '{origin} മുതൽ {destination} വരെ',
+  'route.fromLabel': 'തുടങ്ങുന്നത്',
+  'route.toLabel': 'ലക്ഷ്യം',
+  'route.nextMetroArrivesIn': 'അടുത്ത മെട്രോ എത്തുന്നത്',
+  'route.nextMetroArriving': 'അടുത്ത മെട്രോ എത്തുന്നു',
+  'route.leavesAndArrives': 'പുറപ്പെടുന്നത് → എത്തുന്നത്',
+  'route.swap': 'ദിശ മാറ്റുക',
+  'route.swapDirection': 'ദിശ മാറ്റുക',
+  'route.changeFromHeading': 'പുറപ്പെടുന്ന സ്റ്റേഷൻ മാറ്റുക',
+  'route.changeToHeading': 'എത്തേണ്ട സ്റ്റേഷൻ മാറ്റുക',
+  'route.currentlyTravellingTo': 'ഇപ്പോൾ {destination} ഭാഗത്തേക്ക്',
+  'route.currentlyTravellingFrom': 'ഇപ്പോൾ {origin}-ൽ നിന്ന്',
+  'route.pickerClose': 'അടയ്ക്കുക',
+  'route.noStationMatch': 'സ്റ്റേഷനുകൾ കണ്ടെത്തിയില്ല.',
   'route.summary': '{towards} ഭാഗത്തേക്കുള്ള പ്ലാറ്റ്ഫോം · {hops} {stopWord} · ₹{fare}',
   'route.nextTrains': 'അടുത്ത ട്രെയിനുകൾ',
   'route.noTrain':
@@ -515,6 +790,7 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'prov.confirmed': 'ഈ സമയങ്ങൾ നിലവിലുള്ളതാണെന്ന് KMRL {month}-ൽ സ്ഥിരീകരിച്ചു.',
 
   // ----------------------------------------------------------------- booking
+  'booking.channel': 'KMRLന്റെ സ്വന്തം ചാനൽ',
   'booking.heading': 'ടിക്കറ്റുകൾ',
   'booking.body':
     'KMRL അവരുടെ സ്വന്തം നമ്പറിൽ WhatsApp വഴി ടിക്കറ്റ് വിൽക്കുന്നു. ഈ ലിങ്ക് "Book Ticket" എന്ന സന്ദേശവുമായി ആ ചാറ്റ് തുറക്കും — അയയ്ക്കുന്നത് നിങ്ങൾ തന്നെ.',

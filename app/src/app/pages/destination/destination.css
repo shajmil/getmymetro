@@ -1,0 +1,280 @@
+/* Choose destination. DESIGN.md §6, screen 05.
+   -------------------------------------------------------------------------
+   The rows are links wrapping a JourneyRow, which is the one structural
+   decision worth explaining: the anchor is *outside* the row rather than
+   inside its content column, so the whole 56px strip — line, node, name,
+   minutes and chevron — is the target. Putting the anchor inside would make
+   only the words tappable and leave a dead 30px rail beside every row.
+
+   Nothing here has a fixed height. Malayalam station names wrap to two lines
+   at 390px and the rail segment stretches to whatever the row turns out to
+   be, exactly as `journey-line.ts` intends. */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  padding-block-end: var(--gmm-space-7);
+}
+
+.back-row {
+  margin: 0;
+}
+
+/* The origin block. One `only` row: a node with no line running on, because
+   the line proper starts again at the top of the first section. */
+.origin {
+  padding-block: var(--gmm-space-2) var(--gmm-space-5);
+}
+
+.origin-name {
+  margin: 0;
+  font-size: var(--text-station);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-station);
+  color: var(--gmm-ink);
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+:host-context([lang='ml']) .origin-name {
+  font-size: var(--text-station-ml);
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+.origin-meta {
+  margin: 2px 0 0;
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+.search {
+  padding-block-end: var(--gmm-space-3);
+}
+
+.hint {
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+/* The two direction lists. `grid-12` already sets `align-items: start`, which
+   is what keeps the shorter list from stretching to the taller one — at most
+   stations one direction has far more stations than the other. */
+.sections {
+  row-gap: 0;
+}
+
+.section {
+  padding-block-start: var(--gmm-space-5);
+}
+
+/* "TOWARDS TRIPUNITHURA →" and the count beside it. */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  margin: 0 0 var(--gmm-space-3);
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-lane);
+  text-transform: uppercase;
+  color: var(--gmm-ink);
+}
+
+:host-context([lang='ml']) .section-head {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.section-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  min-inline-size: 0;
+}
+
+.section-arrow {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The count is a quantity, not a label: no uppercase, ink-2 at 7.21:1. */
+.section-count {
+  flex-shrink: 0;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--gmm-ink-2);
+}
+
+.choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The link is a block so the JourneyRow inside it keeps its own grid.
+
+   The selected row's background has to reach past the text, which is what
+   makes it read as a selected *row* rather than a floating panel. It used to
+   get that from the link carrying the page gutter; the list is inside the
+   grid's padded track now, so the link bleeds back out by exactly that gutter
+   and pads itself the same amount. Net inset is unchanged and the background
+   still runs to the screen edge — but only on a phone. At desktop the two
+   lists sit in their own columns and a background running to the window edge
+   would cross the other column, so the bleed is dropped below. */
+.choice-link {
+  display: block;
+  margin-inline: calc(-1 * var(--gmm-gutter-mobile));
+  padding-inline: var(--gmm-gutter-mobile);
+  color: inherit;
+  text-decoration: none;
+}
+
+.choice-link:hover {
+  background-color: var(--gmm-soft);
+}
+
+/* DESIGN.md §6: the selected row takes the line-soft ground, an ink node and
+   a check. Three signals, only one of which is colour. */
+.choice.is-selected .choice-link {
+  background-color: var(--gmm-line-soft);
+}
+
+.choice.is-selected .choice-name {
+  font-weight: 600;
+}
+
+/* The row's content: name, minutes, chevron. 56px minimum so the target
+   clears the floor on its own without a declared height — the row grows past
+   it for a wrapped Malayalam name. */
+.choice-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  min-block-size: var(--gmm-touch-primary);
+  padding-block: var(--gmm-space-2);
+}
+
+.choice-name {
+  min-inline-size: 0;
+  font-size: var(--text-body);
+  line-height: 1.4;
+  color: var(--gmm-ink);
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+:host-context([lang='ml']) .choice-name {
+  line-height: 1.45;
+}
+
+/* "1 stop · 3 min". Pushed right, ahead of the chevron. */
+.choice-meta {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+  text-align: end;
+}
+
+.choice-chevron,
+.choice-check {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ink-3 is 5.18:1 — the chevron is decoration, but a decoration nobody can
+   see is not worth drawing. */
+.choice-chevron {
+  color: var(--gmm-ink-3);
+}
+
+.choice-check {
+  color: var(--gmm-line-text);
+  stroke-width: 2.5;
+}
+
+/* The "no station with that name" branch. */
+.page-title {
+  margin: 0;
+  font-size: var(--text-station);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-station);
+}
+
+/* DESIGN.md §3: Malayalam takes no negative tracking and needs line-height
+   1.45 or better for its conjuncts. `.page-title` is a *sentence* ("No station
+   with that name"), not a station name, so it is the one heading on these
+   pages that was set with the station scale and never given the Malayalam
+   treatment the station names all have. At 44px on desktop that was a
+   full-width Malayalam sentence with the letters pulled together. */
+:host-context([lang='ml']) .page-title {
+  font-size: var(--text-station-ml);
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+.prose {
+  margin: var(--gmm-space-3) 0 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+.action-row {
+  margin: var(--gmm-space-4) 0 0;
+}
+
+/* -------------------------------------------------------------------------
+   Desktop. DESIGN.md §4 and screen 07.
+   -------------------------------------------------------------------------
+   The two directions side by side, which is the choice the reader is making:
+   one list per column rather than 24 stations scrolled past another 24.
+   ------------------------------------------------------------------------- */
+
+@media (min-width: 1024px) {
+  /* Each list is in its own column now, so a row background running to the
+     window edge would run under the other column. It stops at the column and
+     takes the panel radius, which is what says "one row of this list". */
+  .choice-link {
+    margin-inline: calc(-1 * var(--gmm-space-3));
+    padding-inline: var(--gmm-space-3);
+    border-radius: var(--gmm-radius-toggle);
+  }
+
+  /* The origin, at the spec's desktop station size. */
+  .origin-name,
+  .page-title {
+    font-size: var(--text-station-lg);
+  }
+
+  :host-context([lang='ml']) .page-title {
+    font-size: var(--text-station-ml-lg);
+  }
+
+  :host-context([lang='ml']) .origin-name {
+    font-size: var(--text-station-ml-lg);
+  }
+
+  /* The search field is an input, not a banner: it stops at the journey
+     column's width rather than running the full 1280px. */
+  .search,
+  .origin {
+    max-inline-size: 34rem;
+  }
+}

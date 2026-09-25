@@ -104,8 +104,8 @@ describe('durations', () => {
   it('renders the 45-minute cliff and the run nudge in words', () => {
     // 2,756 s is the real gap before the last train (see departures.spec.ts).
     expect(formatWait(2756)).toBe('45 min');
-    expect(formatWait(0)).toBe('Due');
-    expect(formatWait(59)).toBe('Due');
+    expect(formatWait(0)).toBe('Arriving');
+    expect(formatWait(59)).toBe('Arriving');
     expect(formatWait(120)).toBe('2 min');
     expect(formatWait(3600)).toBe('1 h');
     expect(formatWait(4320)).toBe('1 h 12 min');

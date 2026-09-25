@@ -39,15 +39,55 @@ export function caveatOf(outlook: ServiceOutlook<unknown> | null): CaveatView | 
 @Component({
   selector: 'app-service-caveat',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    :host {
+      display: block;
+    }
+
+    /* Soft ground, not amber. CLAUDE.md finding 6 and the honesty rules cut
+       both ways here: the timings are confirmed accurate and only the holiday
+       question is open, so a warning colour would overstate the uncertainty as
+       badly as saying nothing would understate it. This is a note, and it is
+       shaped like one. */
+    .caveat {
+      margin-block-start: var(--gmm-space-6);
+      padding: var(--gmm-space-4);
+      border-radius: var(--gmm-radius-alert);
+      background-color: var(--gmm-soft);
+    }
+
+    .heading {
+      margin: 0;
+      font-size: var(--text-body);
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--gmm-ink);
+    }
+
+    .body {
+      margin: var(--gmm-space-2) 0 0;
+      font-size: var(--text-min);
+      line-height: 1.5;
+      color: var(--gmm-ink-2);
+    }
+
+    @media (min-width: 1024px) {
+      /* Prose, so it stops at a readable measure rather than running the width
+         of a 1280px page. */
+      .caveat {
+        max-inline-size: 46rem;
+      }
+    }
+  `,
   template: `
     @if (caveat(); as dayNote) {
-      <section class="note mt-6">
+      <section class="caveat">
         @if (dayNote.kind === 'holiday') {
-          <h2 class="text-lead font-bold">{{ t('caveat.holidayHeading') }}</h2>
-          <p>{{ t('caveat.holidayBody', { names: dayNote.holidays.join(', ') }) }}</p>
+          <h2 class="heading">{{ t('caveat.holidayHeading') }}</h2>
+          <p class="body">{{ t('caveat.holidayBody', { names: dayNote.holidays.join(', ') }) }}</p>
         } @else {
-          <h2 class="text-lead font-bold">{{ t('caveat.unknownHeading') }}</h2>
-          <p>{{ t('caveat.unknownBody') }}</p>
+          <h2 class="heading">{{ t('caveat.unknownHeading') }}</h2>
+          <p class="body">{{ t('caveat.unknownBody') }}</p>
         }
       </section>
     }

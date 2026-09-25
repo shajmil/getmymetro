@@ -72,6 +72,19 @@ export function routePath(originName: string, destinationName: string): string {
   return `/route/${slugify(originName)}${PAIR_SEPARATOR}${slugify(destinationName)}`;
 }
 
+/**
+ * The choose-destination screen for one origin. DESIGN.md §6, screen 05.
+ *
+ * Unlike the two above, this path is **not** in `build/pages.json` and is not
+ * prerendered — see the note in `app.routes.ts`. It is still built here rather
+ * than string-concatenated at the call site so that `slugify` is applied in
+ * exactly one place and a station whose name grows a full stop cannot produce
+ * a working station link and a broken destination one.
+ */
+export function destinationPath(name: string): string {
+  return `/from/${slugify(name)}`;
+}
+
 function normalise(slug: string): string {
   const lowered = slugify(slug);
   return STATION_SLUG_ALIASES[lowered] ?? lowered;

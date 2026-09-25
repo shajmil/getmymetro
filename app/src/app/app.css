@@ -12,20 +12,154 @@
 .skip-link {
   position: absolute;
   z-index: 10;
-  inset-inline-start: var(--gm-gutter);
+  inset-inline-start: var(--gmm-gutter-mobile);
   inset-block-start: 0.5rem;
   display: inline-flex;
   align-items: center;
-  min-block-size: var(--gm-tap-min);
+  min-block-size: var(--gmm-touch);
   padding-inline: 1rem;
-  border-radius: 0.5rem;
-  background-color: var(--gm-accent);
-  color: var(--gm-on-accent);
+  border-radius: var(--gmm-radius-toggle);
+  background-color: var(--gmm-line-text);
+  color: var(--gmm-bg);
   font-weight: 600;
   transform: translateY(calc(-100% - 1rem));
-  transition: transform var(--gm-duration) var(--gm-ease);
+  transition: transform var(--gmm-hover) var(--gmm-ease);
 }
 
 .skip-link:focus-visible {
   transform: translateY(0);
+}
+
+/* -------------------------------------------------------------------------
+   The shell. Phase C.
+   -------------------------------------------------------------------------
+   Rewritten from the outgoing header, which carried a gradient bar, a
+   backdrop blur and two drop shadows — all four forbidden by DESIGN.md §1.
+   What separates the header from the page now is a hairline, which is the
+   only separator the design has.
+   ------------------------------------------------------------------------- */
+
+/* The header is the outer band and `.header-inner` is the grid-page track, so
+   the hairline (if one is ever added) runs edge to edge while the brand and the
+   switch stay on the same margin as every page below. */
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  padding-block: var(--gmm-space-3) var(--gmm-space-4);
+}
+
+/* -------------------------------------------------------------------------
+   The desktop nav. DESIGN.md screen 07.
+   -------------------------------------------------------------------------
+   Hidden below 1024px — not collapsed into a menu. Its three destinations are
+   the home page and two sections of it, all reachable by scrolling on a phone,
+   so a hamburger would be a second navigation model for links that are already
+   on screen.
+
+   Sits between the brand and the language switch, which is what puts it at
+   roughly the grid's columns 4-9 without a second grid: `justify-content:
+   space-between` on the row and `margin-inline: auto` here centre it in the
+   space the two ends leave.
+   ------------------------------------------------------------------------- */
+
+.nav {
+  display: none;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--gmm-touch);
+  border-block-end: 2px solid transparent;
+  color: var(--gmm-ink-2);
+  font-size: var(--text-min);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--gmm-hover) var(--gmm-ease);
+}
+
+.nav-link:hover {
+  color: var(--gmm-ink);
+}
+
+/* The current item: ink, semi-bold, and underlined in the line teal. Three
+   signals, two of which are not colour — the underline is a shape and the
+   weight is a shape, so the state survives a monochrome rendering and
+   `aria-current` carries it to a screen reader (DESIGN.md golden rule 3). */
+.nav-link[aria-current='page'] {
+  color: var(--gmm-ink);
+  font-weight: 600;
+  border-block-end-color: var(--gmm-line);
+}
+
+@media (min-width: 1024px) {
+  .nav {
+    display: flex;
+    gap: var(--gmm-space-6);
+    margin-inline: auto;
+  }
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  min-block-size: var(--gmm-touch);
+  color: var(--gmm-ink);
+  text-decoration: none;
+}
+
+.brand-name {
+  font-size: var(--text-body);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+.brand-line {
+  stroke: var(--gmm-line);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.brand-node {
+  fill: var(--gmm-bg);
+  stroke: var(--gmm-line);
+  stroke-width: 2.5;
+}
+
+.main {
+  flex-grow: 1;
+}
+
+/* The rule runs the full width of the window; its contents keep the page
+   margin. Same split as the header, and the same reason. */
+.footer {
+  margin-block-start: var(--gmm-space-7);
+  border-block-start: 1px solid var(--gmm-rule);
+  font-size: var(--text-min);
+  line-height: 1.5;
+}
+
+.footer-inner {
+  padding-block: var(--gmm-space-5) var(--gmm-space-7);
+}
+
+.footer-line {
+  margin: 0;
+  font-weight: 600;
+  color: var(--gmm-ink);
+}
+
+/* The attribution is a licence condition and is set as ink, not as a muted
+   footnote: it has to be legible, and 18.88:1 is what that means here. */
+.footer-attribution {
+  margin: var(--gmm-space-2) 0 0;
+  color: var(--gmm-ink);
+}
+
+.footer-disclaimer {
+  margin: var(--gmm-space-2) 0 0;
+  color: var(--gmm-ink-2);
 }

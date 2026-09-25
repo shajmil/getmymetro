@@ -14,13 +14,14 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 
+import { LanguageSwitch } from './shared/controls';
 import { I18nService } from './core/i18n/i18n';
 import { HTML_LANG } from './core/i18n/locale';
 import { PageTitleService } from './core/seo/page-title';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterOutlet],
+  imports: [RouterLink, RouterOutlet, LanguageSwitch],
   templateUrl: './app.html',
   styleUrl: './app.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,9 +31,20 @@ export class App {
   readonly #page = inject(PageTitleService);
 
   protected readonly t = this.#i18n.t;
+  protected readonly localPath = this.#i18n.localPath;
 
   /** The same page in the other language. What the header toggle points at. */
   readonly alternate = this.#i18n.alternate;
+
+  /**
+   * True on the home page, in either language.
+   *
+   * The desktop nav's "Journey" item is the home page, so this is what marks
+   * it current. It is derived from the canonical (language-free) path rather
+   * than the raw URL, so `/ml` counts as home exactly as `/` does — otherwise
+   * the Malayalam reader would never see a current item.
+   */
+  protected readonly onHome = computed(() => this.#i18n.canonical() === '/');
 
   /** `'ml'` on an English page and `'en'` on a Malayalam one. */
   readonly otherLang = computed(() =>

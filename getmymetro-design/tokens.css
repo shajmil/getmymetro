@@ -1,0 +1,57 @@
+/* GetMyMetro · "The line" design tokens */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600;700&display=swap');
+
+:root {
+  /* colour */
+  --gmm-line: #00A3B4;        /* the line itself, graphic only, never text */
+  --gmm-line-text: #00707C;   /* your train, your countdown, primary button */
+  --gmm-line-dark: #005C66;   /* primary hover / pressed */
+  --gmm-line-soft: #E2F4F6;   /* selected row */
+  --gmm-ink: #101114;
+  --gmm-ink-2: #55575E;
+  --gmm-ink-3: #6A6D74;
+  --gmm-bg: #FFFFFF;
+  --gmm-soft: #F3F5F4;        /* departure board ground */
+  --gmm-grey: #C4C7CA;        /* track not taken, control borders */
+  --gmm-rule: #E3E5E4;
+  --gmm-amber: #9A4A00;
+  --gmm-amber-soft: #FCEBD5;
+  --gmm-skeleton: #E7EAE9;
+
+  /* type */
+  --gmm-font: 'Geist', 'Noto Sans Malayalam', system-ui, sans-serif;
+  --gmm-font-ml: 'Noto Sans Malayalam', 'Geist', system-ui, sans-serif;
+  --gmm-text-min: 16px;
+  --gmm-countdown: 96px;       /* 132px desktop */
+  --gmm-countdown-board: 52px; /* 60px on station board / desktop */
+  --gmm-station: 30px;         /* 44px desktop, 25px Malayalam */
+  --gmm-time: 30px;
+  --gmm-track-countdown: -0.06em;
+  --gmm-track-station: -0.035em;
+  --gmm-track-label: 0.05em;
+
+  /* geometry */
+  --gmm-space-1: 4px;  --gmm-space-2: 8px;  --gmm-space-3: 12px; --gmm-space-4: 16px;
+  --gmm-space-5: 20px; --gmm-space-6: 28px; --gmm-space-7: 40px;
+  --gmm-radius-toggle: 8px;
+  --gmm-radius-button: 10px;
+  --gmm-radius-primary: 12px;
+  --gmm-radius-panel: 16px;
+  --gmm-line-width: 10px;
+  --gmm-rail: 30px;
+  --gmm-touch: 44px;
+  --gmm-touch-primary: 56px;
+  --gmm-gutter-mobile: 20px;
+  --gmm-focus: 3px solid var(--gmm-line-text);
+
+  /* motion */
+  --gmm-press: 120ms ease;
+  --gmm-refresh: 200ms ease;
+  --gmm-fill: 240ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --gmm-press: 0ms; --gmm-refresh: 0ms; --gmm-fill: 0ms; }
+}
+
+.gmm-tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }

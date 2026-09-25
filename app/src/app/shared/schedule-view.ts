@@ -252,3 +252,53 @@ export function routeTimings(
   }
   return timings;
 }
+
+/**
+ * The typical ride, in minutes, from one station to every other one.
+ *
+ * The choose-destination screen (DESIGN.md §6, screen 05) lists all 24
+ * destinations with "N stops · M min" against each. Asking
+ * {@link routeTimings} 24 times would scan all 450 trips 24 times over; this
+ * scans them **once** and fills every destination on the way, because a single
+ * trip's stop list already contains the ride to every station it calls at
+ * after this one.
+ *
+ * The number returned is the *shortest* observed ride, matching
+ * `RoutePatternTiming.fastestMinutes` — the same figure the route page quotes
+ * as "time on the train". Rides on this line vary by a minute or two between
+ * trips and the fastest is the one that is reproducible: it is what a
+ * timetable would print.
+ *
+ * The result is indexed by `Stop.index`, with `null` where no trip in the feed
+ * runs between the two — which on a single line means the origin itself and
+ * nothing else, but is not assumed.
+ *
+ * **Riding time only.** No walking, no security queue, no ticket line.
+ * CLAUDE.md's leave-by gaps 1 and 2 are still open, and a number that silently
+ * folded a guess at either into this one would be exactly the kind of invented
+ * precision the honesty rules forbid.
+ */
+export function rideMinutesFrom(
+  network: NetworkData,
+  origin: Stop,
+): readonly (number | null)[] {
+  const best: (number | null)[] = network.stops.map(() => null);
+
+  for (const trip of network.trips) {
+    // Where this trip calls at the origin. A trip's final stop is an arrival,
+    // so boarding there is not possible and the loop stops one short.
+    for (let position = 0; position < trip.stops.length - 1; position++) {
+      if (trip.stops[position].stopIndex !== origin.index) continue;
+      const departure = trip.stops[position].departure;
+      for (let i = position + 1; i < trip.stops.length; i++) {
+        const event = trip.stops[i];
+        const minutes = Math.round((event.arrival - departure) / 60);
+        const current = best[event.stopIndex];
+        if (current === null || minutes < current) best[event.stopIndex] = minutes;
+      }
+      break;
+    }
+  }
+
+  return best;
+}

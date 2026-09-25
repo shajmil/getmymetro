@@ -1,62 +1,88 @@
 /* =========================================================================
    getmymetro — global styles and design tokens
    -------------------------------------------------------------------------
-   The constraints encoded here come from docs/build-checklist.md
-   ("Non-negotiable design constraints"). The primary user is elderly and on
-   a mid-range Android phone. Do not soften these values.
+   Phase A of the "The line" redesign. The source of truth is
+   `getmymetro-design/DESIGN.md`; where this file departs from it, the reason
+   is written down at the point of departure rather than left to be
+   rediscovered.
 
-     Body text ............ 18px minimum, never below 16px anywhere
-     Departure times ...... 36-44px, tabular numerals
-     Station names ........ 20-24px
-     Touch targets ........ 56x56px minimum, 8px apart
-     Contrast ............. 7:1 for text (WCAG AAA), 4.5:1 absolute floor
-     Line height .......... 1.5 body, 1.2 large numbers
+   The constraints that survive from docs/build-checklist.md, because the
+   redesign does not relax them:
+
+     Body text ............ 16px floor, everywhere, no exceptions
+     Touch targets ........ 44px minimum, 56px primary, 8px apart
+     Contrast ............. 4.5:1 floor for text; every pair computed below
      Font weight .......... never below 400
-     Motion ............... CSS transitions only, <=150ms, colour/opacity/transform
+     Motion ............... 150-300ms, state changes only, reduced-motion off
 
-   Every colour pair below was computed, not estimated. See the ratios
-   annotated against each token.
+   Every ratio annotated here was computed from these exact hexes with the
+   WCAG 2.1 relative-luminance formula, not estimated and not copied from the
+   spec — four of the spec's seven published figures are wrong. See §2.
    ========================================================================= */
 
 @import 'tailwindcss';
 
 /* -------------------------------------------------------------------------
-   1. Fonts — self-hosted, no CDN (the app must work offline from Phase 6).
+   1. Fonts — self-hosted, no CDN.
    -------------------------------------------------------------------------
-   All three files are genuine variable fonts (verified: fvar/gvar/avar/STAT
-   tables present), so `font-weight: 400 700` yields real weight instances —
-   bold is never synthesized.
+   DESIGN.md §3 says "Geist (Google Fonts)" and `tokens.css` opens with an
+   `@import url('https://fonts.googleapis.com/...')`. That link is not adopted
+   and must not be. This app is precached by a service worker and is required
+   to work fully offline (CLAUDE.md, decision 2), a CDN stylesheet is a
+   render-blocking DNS + TLS round trip on a patchy Kochi connection, and
+   Phase 1 deliberately self-hosted every face. The typeface choice is adopted;
+   the delivery mechanism is not.
 
-   Subsetting: Google's `latin-ext` subset for Noto Sans is 164KB and the only
-   glyph this app needs from it is the rupee sign. It is replaced below by a
-   3.1KB single-glyph subset covering U+20B9 alone — a 165KB saving.
+   Geist is Vercel's, SIL Open Font License 1.1, which permits self-hosting and
+   subsetting. The licence text ships beside the font at
+   `public/fonts/geist-LICENSE.txt` as the OFL requires.
 
-   `unicode-range` means the Malayalam face is only downloaded when Malayalam
-   codepoints are actually on the page, so English views never pay for it.
+   Source: npm `geist@1.7.2`, `dist/fonts/geist-sans/Geist-Variable.woff2`
+   (69,652 bytes, 728 codepoints). Subset here with fontTools to the same
+   unicode-range the outgoing Noto Sans latin face used, plus the arrows and
+   the rupee:
+
+     python -m fontTools.subset Geist-Variable.woff2 \
+       --unicodes="U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,
+                   U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+20B9,
+                   U+2122,U+2190-2193,U+2197,U+2212,U+2215,U+FEFF,U+FFFD" \
+       --layout-features='kern,liga,calt,tnum,lnum,frac,ccmp,locl,mark,mkmk' \
+       --flavor=woff2 --no-hinting --desubroutinize
+
+   Result: 28,216 bytes, against the 35,820-byte Noto Sans latin it replaces.
+   The redesign's headline typeface is a 7.6 kB saving, not a cost.
+
+   Verified on the subset, not assumed: fvar/gvar/HVAR/STAT are all present, so
+   `font-weight: 100 900` yields real weight instances and the 600 the whole
+   type scale is built on is never synthesized. `tnum` survives in GSUB, which
+   matters because DESIGN.md §3 puts tabular numerals on every time, countdown,
+   fare, duration and count, and a subsetter that dropped the feature would
+   leave that requirement silently unmet.
+
+   The separate 3.1 kB rupee face is gone. It existed because Google's
+   `latin-ext` Noto subset was 164 kB for one glyph; Geist carries U+20B9 in
+   its own Latin range, so the workaround has nothing left to work around.
+
+   `unicode-range` still means the 89 kB Malayalam face is only downloaded when
+   Malayalam codepoints are actually on the page, so English views never pay
+   for it.
    ------------------------------------------------------------------------- */
 
 @font-face {
-  font-family: 'Noto Sans';
+  font-family: 'Geist';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/noto-sans-latin.woff2') format('woff2');
+  src: url('/fonts/geist-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-    U+2212, U+2215, U+FEFF, U+FFFD;
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20B9, U+2122,
+    U+2190-2193, U+2197, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Rupee sign only — fares are rendered in ₹ throughout. */
-@font-face {
-  font-family: 'Noto Sans';
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url('/fonts/noto-sans-rupee.woff2') format('woff2');
-  unicode-range: U+20B9;
-}
-
-/* The GTFS feed ships Malayalam station names (translations.txt). */
+/* The GTFS feed ships Malayalam station names (translations.txt), and as of
+   Phase 6 the entire interface catalogue is translated too. Geist has no
+   Malayalam coverage at all, so this is not a stylistic pairing — it is the
+   only face that can render half the product. */
 @font-face {
   font-family: 'Noto Sans Malayalam';
   font-style: normal;
@@ -68,354 +94,867 @@
 }
 
 /* -------------------------------------------------------------------------
-   2. Colour tokens.
+   2. Colour tokens — DESIGN.md §2, adopted verbatim.
    -------------------------------------------------------------------------
-   Light theme is the default. Dark applies when the OS asks for it, unless
-   the document is explicitly forced light. `[data-theme]` on <html> overrides
-   the OS in both directions, so a manual toggle can be wired up later without
-   touching this file.
+   Every ratio below was computed from these exact hexes. The spec publishes
+   seven figures and four of them are wrong — all four understate the real
+   contrast, so nothing the spec calls passing actually fails, but the table
+   should not be quoted as measured:
 
-   Ratios are WCAG 2.1 relative luminance, computed from these exact hexes.
+     token          spec says   actually    verdict
+     --gmm-ink         18.4       18.88     understated
+     --gmm-ink-2        7.3        7.21     overstated, still AAA-body
+     --gmm-ink-3        4.7        5.18     understated
+     --gmm-amber        5.7        6.26     understated
+     --gmm-line-text    5.8        5.82     correct
+     white on line-text 5.8        5.82     correct
+     --gmm-line         3.0        3.04     correct
+
+   The one number that matters in the other direction is not in the spec's
+   table at all: `--gmm-line` on `--gmm-soft` is **2.78:1**, below the 3:1
+   floor WCAG 1.4.11 sets for a meaningful graphic — and the departure board's
+   `LineTrack` is exactly that, a teal line on the soft panel. It is tolerable
+   only because DESIGN.md's own golden rule 14 already requires direction to be
+   carried by the chevrons and the lane-head labels as well as by colour, so
+   the line is decorative reinforcement rather than the sole signal. If a
+   future screen ever makes that teal load-bearing on soft ground, it needs
+   `--gmm-line-text` instead. `--gmm-line-edge` below exists for that case.
+
+   No dark theme. The outgoing palette had one; this one does not, because
+   DESIGN.md specifies a single white-ground system and inventing a dark
+   counterpart would mean inventing a dozen hexes the spec never approved and
+   nobody has contrast-checked. `color-scheme: light` is declared explicitly so
+   form controls and scrollbars do not go dark underneath us.
    ------------------------------------------------------------------------- */
 
 :root {
-  color-scheme: light dark;
-
-  /* --- light palette ----------------------------------------------------
-     text    on bg       17.82:1     text  on surface   15.84:1
-     muted   on bg        8.34:1     muted on surface    7.41:1
-     accent  on bg        9.29:1     accent on surface   8.26:1
-     alert   on bg        8.68:1     alert on surface    7.71:1
-     on-accent on accent  9.29:1     outline on bg       4.89:1 (non-text, 3:1)
-     Lowest text ratio: 7.41:1 — above the 7:1 AAA requirement.
-     --------------------------------------------------------------------- */
-  --gm-bg: #ffffff;
-  --gm-surface: #eef2f6;
-  --gm-text: #14181d;
-  --gm-text-muted: #454f5a;
-  --gm-border: #b9c3cd;
-  --gm-outline: #67727f;
-  --gm-accent: #00497f;
-  --gm-on-accent: #ffffff;
-  --gm-alert: #8a2a12;
-
-  /* --- metrics ---------------------------------------------------------- */
-  --gm-gutter: 1rem; /* 16px side gutters */
-  --gm-tap-min: 3.5rem; /* 56px minimum touch target */
-  --gm-tap-gap: 0.5rem; /* 8px minimum between targets */
-  --gm-measure: 34rem; /* single-column max width */
-
-  /* Motion: the ceiling, not a suggestion. */
-  --gm-duration: 150ms;
-  --gm-ease: cubic-bezier(0.2, 0, 0.38, 1);
-}
-
-/* Dark values are repeated in both blocks below because CSS cannot share a
-   declaration list between an @media rule and an attribute selector. Keep
-   them in sync; the ratios apply to both.
-
-     text    on bg       16.80:1     text  on surface   14.91:1
-     muted   on bg       10.23:1     muted on surface    9.08:1
-     accent  on bg       10.49:1     accent on surface   9.31:1
-     alert   on bg       10.59:1     alert on surface    9.40:1
-     on-accent on accent 10.46:1     outline on bg       6.36:1 (non-text, 3:1)
-     Lowest text ratio: 9.08:1 — above the 7:1 AAA requirement. */
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
-    --gm-bg: #0d1117;
-    --gm-surface: #171e26;
-    --gm-text: #edf2f7;
-    --gm-text-muted: #b4c0cc;
-    --gm-border: #39434f;
-    --gm-outline: #8b97a4;
-    --gm-accent: #8cc6ff;
-    --gm-on-accent: #06121e;
-    --gm-alert: #ffae96;
-  }
-}
-
-:root[data-theme='dark'] {
-  color-scheme: dark;
-  --gm-bg: #0d1117;
-  --gm-surface: #171e26;
-  --gm-text: #edf2f7;
-  --gm-text-muted: #b4c0cc;
-  --gm-border: #39434f;
-  --gm-outline: #8b97a4;
-  --gm-accent: #8cc6ff;
-  --gm-on-accent: #06121e;
-  --gm-alert: #ffae96;
-}
-
-:root[data-theme='light'] {
   color-scheme: light;
+
+  /* --- the line ---------------------------------------------------------- */
+
+  /* GRAPHIC ONLY — never text, on any ground. 3.04:1 on white, 2.78:1 on
+     --gmm-soft. There is no size at which this is an accessible text colour;
+     `--gmm-line-text` is its text-safe counterpart. */
+  --gmm-line: #00a3b4;
+
+  /* The text-safe teal. 5.82:1 on white, and white on it is also 5.82:1, so it
+     works as a foreground and as a button fill without a second token. */
+  --gmm-line-text: #00707c;
+
+  /* Primary button hover / pressed. White on it is 7.71:1 — hovering makes the
+     label more legible, never less, which is the right direction. */
+  --gmm-line-dark: #005c66;
+
+  /* Selected row ground. ink on it is 16.64:1, line-text 5.13:1,
+     ink-3 4.57:1 — every foreground still clears 4.5:1 on a selected row. */
+  --gmm-line-soft: #e2f4f6;
+
+  /* --- ink --------------------------------------------------------------- */
+  --gmm-ink: #101114; /* 18.88:1 on white, 17.24:1 on soft */
+  --gmm-ink-2: #55575e; /* 7.21:1 on white,  6.59:1 on soft */
+  --gmm-ink-3: #6a6d74; /* 5.18:1 on white,  4.73:1 on soft */
+
+  /* --- ground ------------------------------------------------------------ */
+  --gmm-bg: #ffffff;
+  --gmm-soft: #f3f5f4; /* departure board panel */
+
+  /* --- non-text ---------------------------------------------------------- */
+  --gmm-grey: #c4c7ca; /* track not taken; control borders. 1.70:1 — never text */
+  --gmm-rule: #e3e5e4; /* hairline dividers. 1.27:1 — never text */
+  --gmm-skeleton: #e7eae9; /* loading blocks. 1.21:1 — never text */
+
+  /* --- amber ------------------------------------------------------------- */
+  --gmm-amber: #9a4a00; /* 6.26:1 on white, 5.72:1 on soft, 5.36:1 on amber-soft */
+  --gmm-amber-soft: #fcebd5; /* alert ground. ink on it 16.17:1 */
+
+  /* A text-safe edge for the teal line where it sits on --gmm-soft and the
+     2.78:1 above is not good enough. Same hue, drawn as a hairline against the
+     line itself rather than replacing it. Not in DESIGN.md; added because the
+     measurement demanded somewhere for that case to go. */
+  --gmm-line-edge: #00707c;
+
+  /* --- type -------------------------------------------------------------- */
+  --gmm-font: 'Geist', 'Noto Sans Malayalam', ui-sans-serif, system-ui, sans-serif;
+  --gmm-font-ml: 'Noto Sans Malayalam', 'Geist', ui-sans-serif, system-ui, sans-serif;
+
+  /* --- geometry: spacing on a 4px base (DESIGN.md §4) --------------------- */
+  --gmm-space-1: 4px;
+  --gmm-space-2: 8px;
+  --gmm-space-3: 12px;
+  --gmm-space-4: 16px;
+  --gmm-space-5: 20px;
+  --gmm-space-6: 28px;
+  --gmm-space-7: 40px;
+
+  /* --- geometry: radius. No pills, no 24px+ card radii. ------------------- */
+  --gmm-radius-toggle: 8px;
+  --gmm-radius-button: 10px;
+  --gmm-radius-primary: 12px;
+  --gmm-radius-input: 12px;
+  --gmm-radius-alert: 12px;
+  --gmm-radius-node: 14px;
+  --gmm-radius-panel: 16px; /* desktop board panel only */
+
+  /* --- geometry: the line itself ----------------------------------------- */
+  --gmm-line-width: 10px;
+  --gmm-rail: 30px; /* JourneyLine rail column */
+  --gmm-node-origin: 26px;
+  --gmm-node-destination: 28px;
+  --gmm-node-through: 16px;
+  --gmm-node-offset: 22px; /* node centre below row top, aligns to first line */
+
+  /* --- geometry: targets and gutters -------------------------------------- */
+  --gmm-touch: 44px;
+  --gmm-touch-primary: 56px;
+  --gmm-touch-gap: 8px;
+  --gmm-gutter-mobile: 20px;
+
+  /* --- desktop grid (DESIGN.md §4): 12 col, 24px gutters, 80px margins ----- */
+  --gmm-grid-columns: 12;
+  --gmm-grid-gutter: 24px;
+  --gmm-grid-margin: 80px;
+  --gmm-grid-max: 1280px;
+
+  /* --- motion (DESIGN.md §7): 150-300ms, state changes only ---------------- */
+  --gmm-press: 120ms;
+  --gmm-refresh: 200ms;
+  --gmm-fill: 240ms;
+  --gmm-hover: 160ms;
+  --gmm-ease: cubic-bezier(0.2, 0, 0.38, 1);
+
+  /* --- focus (DESIGN.md §8): 3px line-text, 2px offset, everywhere --------- */
+  --gmm-focus-width: 3px;
+  --gmm-focus-offset: 2px;
+  --gmm-focus-color: var(--gmm-line-text);
 }
+
+/* -------------------------------------------------------------------------
+   2b. Deleted in Phase D: the `--gm-*` aliases.
+   -------------------------------------------------------------------------
+   Phase A kept the outgoing palette's token names as aliases onto section 2 so
+   the old class names rendered in the new colours while the migration ran, and
+   said Phase D deletes them once no template references a `gm-*` class.
+
+   It does not any more. The three files that still read them - `schematic.ts`,
+   `map/line-map.ts` and `booking.ts` - were migrated to `--gmm-*` in Phase D,
+   and the mapping was not mechanical: the old palette had one `--gm-accent`
+   and section 2 splits it into `--gmm-line` (the line as a graphic, never
+   text, 3.04:1) and `--gmm-line-text` (text and the primary fill, 5.84:1). The
+   schematic was using the graphic teal for its 16px "you are here" tag, which
+   is a contrast failure the alias was quietly carrying forward.
+
+   `line-map.ts` also read two of them through `getComputedStyle` with
+   hardcoded hex fallbacks (`#00497f`, from the palette section 2 replaced).
+   Those now read `--gmm-line` and `--gmm-bg` and fall back to section 2's own
+   values.
+   ------------------------------------------------------------------------- */
 
 /* -------------------------------------------------------------------------
    3. Tailwind theme.
    -------------------------------------------------------------------------
-   The default font-size, colour and font-weight namespaces are cleared
-   (`--*: initial`) rather than extended. That is deliberate: it deletes
-   `text-xs` (12px), `text-sm` (14px), `font-light` (300), `font-thin` (100)
-   and the 22-hue default palette from the utility surface entirely, so a
-   later phase physically cannot ship 12px text, a 300 weight, or an
-   unverified colour. Every value that remains has been checked against the
-   constraint table.
+   The default font-size, colour and font-weight namespaces stay CLEARED
+   (`--*: initial`), not extended. That is the mechanism that makes the 16px
+   floor structural rather than a rule someone has to remember: `text-xs`
+   (12px), `text-sm` (14px), `font-light` (300) and the 22-hue default palette
+   do not exist as utilities, so no later phase can physically ship them.
 
-   `static` keeps every token in the output even while nothing uses it yet.
-   Tailwind would otherwise tree-shake the unused half of the scale, and a
-   design system you cannot inspect in devtools is not a design system. The
-   whole scale costs a few hundred bytes against 74kB of budget headroom.
+   This matters more in the redesign than it did before. DESIGN.md §3 sets a
+   16px floor, and the reference HTML in `getmymetro-design/html/` breaks it
+   89 times — 25 instances of 14px and 64 of 15px, concentrated in the
+   language-switch segments, the "Full board" footer link and the SVG lane-head
+   labels. The mockups are a visual reference, not a source of sizes, and this
+   namespace being empty is what stops those values being transcribed.
+
+   `static` keeps every token in the output even while nothing uses it yet, so
+   the system is inspectable in devtools before Phases B-D consume it.
    ------------------------------------------------------------------------- */
 
 @theme static {
-  /* -- type ------------------------------------------------------------- */
+  /* -- family ------------------------------------------------------------ */
   --font-*: initial;
-  --font-sans: 'Noto Sans', 'Noto Sans Malayalam', ui-sans-serif, system-ui, sans-serif;
-  --font-malayalam: 'Noto Sans Malayalam', 'Noto Sans', ui-sans-serif, sans-serif;
+  --font-sans: var(--gmm-font);
+  --font-malayalam: var(--gmm-font-ml);
 
+  /* -- type scale (DESIGN.md §3) ----------------------------------------- */
   --text-*: initial;
 
-  /* 16px — the absolute floor. Fine print only, never body copy. */
+  /* 16px — the floor. Lane heads, section labels, "PM", body minimum. */
   --text-min: 1rem;
   --text-min--line-height: 1.5;
 
-  /* 18px — default body text. */
-  --text-body: 1.125rem;
+  /* 17px — body / meta, top of the 16-17px band. */
+  --text-body: 1.0625rem;
   --text-body--line-height: 1.5;
 
-  /* 20px */
-  --text-lead: 1.25rem;
-  --text-lead--line-height: 1.5;
+  /* 22px — arrival time, the quieter half of a departure/arrival pair. */
+  --text-arrival: 1.375rem;
+  --text-arrival--line-height: 1.2;
+  --text-arrival--letter-spacing: -0.03em;
+  --text-arrival--font-weight: 600;
 
-  /* 22px — station names (20-24px band). */
-  --text-station: 1.375rem;
-  --text-station--line-height: 1.3;
+  /* 25px — Malayalam station name. Malayalam sets larger per em than Latin
+     and its conjuncts stack, so the same box needs a smaller size and more
+     leading, not the same size. DESIGN.md §3. */
+  --text-station-ml: 1.5625rem;
+  --text-station-ml--line-height: 1.45;
+  --text-station-ml--font-weight: 600;
 
-  /* 24px — top of the station-name band. */
-  --text-station-lg: 1.5rem;
-  --text-station-lg--line-height: 1.25;
+  /* 30px — station name (mobile) and departure time. Same size by design:
+     the name and the time are the two things read first and they carry equal
+     weight in the hierarchy. */
+  --text-station: 1.875rem;
+  --text-station--line-height: 1.15;
+  --text-station--letter-spacing: -0.035em;
+  --text-station--font-weight: 600;
 
-  /* 28px */
-  --text-title: 1.75rem;
-  --text-title--line-height: 1.25;
+  --text-time: 1.875rem;
+  --text-time--line-height: 1.1;
+  --text-time--letter-spacing: -0.03em;
+  --text-time--font-weight: 600;
 
-  /* 40px — departure times (36-44px band), line-height 1.2. */
-  --text-departure: 2.5rem;
-  --text-departure--line-height: 1.2;
+  /* 44px — station name (desktop). */
+  --text-station-lg: 2.75rem;
+  --text-station-lg--line-height: 1.15;
+  --text-station-lg--letter-spacing: -0.035em;
+  --text-station-lg--font-weight: 600;
 
-  /* 44px — top of the departure band. */
-  --text-departure-lg: 2.75rem;
-  --text-departure-lg--line-height: 1.2;
+  /* 36px — Malayalam station name (desktop). Not 44px: the same ratio the
+     mobile pair uses (25 : 30), because Malayalam sets optically larger per em
+     and DESIGN.md §3 is explicit that it is never forced into English-sized
+     boxes. No negative tracking either — §3 forbids it on this script. */
+  --text-station-ml-lg: 2.25rem;
+  --text-station-ml-lg--line-height: 1.45;
+  --text-station-ml-lg--font-weight: 600;
 
-  /* -- weight ----------------------------------------------------------- */
+  /* 52px / 60px — board countdown. 52 on home, 60 on the station board and
+     desktop (DESIGN.md §5.4, tokens.css). */
+  --text-countdown-board: 3.25rem;
+  --text-countdown-board--line-height: 0.9;
+  --text-countdown-board--letter-spacing: -0.05em;
+  --text-countdown-board--font-weight: 600;
+
+  --text-countdown-board-lg: 3.75rem;
+  --text-countdown-board-lg--line-height: 0.9;
+  --text-countdown-board-lg--letter-spacing: -0.05em;
+  --text-countdown-board-lg--font-weight: 600;
+
+  /* 96px / 132px — the hero countdown. line-height 0.8 is deliberate and only
+     safe because the glyphs are digits with no descenders. Do not reuse this
+     size for anything that can contain a letter. */
+  --text-countdown: 6rem;
+  --text-countdown--line-height: 0.8;
+  --text-countdown--letter-spacing: -0.06em;
+  --text-countdown--font-weight: 600;
+
+  --text-countdown-lg: 8.25rem;
+  --text-countdown-lg--line-height: 0.8;
+  --text-countdown-lg--letter-spacing: -0.06em;
+  --text-countdown-lg--font-weight: 600;
+
+  /* -- weight ------------------------------------------------------------- */
   --font-weight-*: initial;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* -- colour ----------------------------------------------------------- */
+  /* -- tracking ----------------------------------------------------------- */
+  --tracking-*: initial;
+  --tracking-countdown: -0.06em;
+  --tracking-board: -0.05em;
+  --tracking-station: -0.035em;
+  --tracking-time: -0.03em;
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0em;
+  --tracking-lane: 0.04em; /* lane head: ALUVA / TRIPUNITHURA */
+  --tracking-label: 0.05em; /* section label: DEPARTURES */
+
+  /* -- colour ------------------------------------------------------------- */
   --color-*: initial;
   --color-transparent: transparent;
   --color-current: currentColor;
-  --color-bg: var(--gm-bg);
-  --color-surface: var(--gm-surface);
-  --color-text: var(--gm-text);
-  --color-muted: var(--gm-text-muted);
-  --color-border: var(--gm-border);
-  --color-outline: var(--gm-outline);
-  --color-accent: var(--gm-accent);
-  --color-on-accent: var(--gm-on-accent);
-  --color-alert: var(--gm-alert);
 
-  /* -- spacing ---------------------------------------------------------- */
-  --spacing-gutter: var(--gm-gutter);
-  --spacing-tap: var(--gm-tap-min);
-  --spacing-tap-gap: var(--gm-tap-gap);
+  --color-bg: var(--gmm-bg);
+  --color-soft: var(--gmm-soft);
+  --color-ink: var(--gmm-ink);
+  --color-ink-2: var(--gmm-ink-2);
+  --color-ink-3: var(--gmm-ink-3);
+  --color-line: var(--gmm-line);
+  --color-line-text: var(--gmm-line-text);
+  --color-line-dark: var(--gmm-line-dark);
+  --color-line-soft: var(--gmm-line-soft);
+  --color-grey: var(--gmm-grey);
+  --color-rule: var(--gmm-rule);
+  --color-amber: var(--gmm-amber);
+  --color-amber-soft: var(--gmm-amber-soft);
+  --color-skeleton: var(--gmm-skeleton);
 
-  /* -- motion ----------------------------------------------------------- */
-  --default-transition-duration: var(--gm-duration);
-  --default-transition-timing-function: var(--gm-ease);
-}
+  /* Legacy names, aliased to the new palette so `pages/` and `shared/` keep
+     compiling until Phases B-D rewrite them. See §2b. */
+  --color-surface: var(--gmm-bg);
+  --color-surface-muted: var(--gmm-soft);
+  --color-text: var(--gmm-ink);
+  --color-muted: var(--gmm-ink-2);
+  --color-border: var(--gmm-rule);
+  --color-outline: var(--gmm-ink-3);
+  --color-accent: var(--gmm-line-text);
+  --color-accent-muted: var(--gmm-line-soft);
+  --color-on-accent: var(--gmm-bg);
+  --color-alert: var(--gmm-amber);
+  --color-alert-bg: var(--gmm-amber-soft);
+  --color-alert-border: var(--gmm-amber-soft);
 
-/* Make `dark:` follow the same resolution as the tokens above: OS preference
-   unless forced light, plus an explicit [data-theme="dark"] override.
-   Tailwind's built-in `dark:` is media-only and would ignore [data-theme]. */
-@custom-variant dark {
-  @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
-      @slot;
-    }
-  }
-  &:where(:root[data-theme='dark'], :root[data-theme='dark'] *) {
-    @slot;
-  }
+  /* -- spacing (DESIGN.md §4: 4 8 12 16 20 28 40) -------------------------- */
+  --spacing-1: var(--gmm-space-1);
+  --spacing-2: var(--gmm-space-2);
+  --spacing-3: var(--gmm-space-3);
+  --spacing-4: var(--gmm-space-4);
+  --spacing-5: var(--gmm-space-5);
+  --spacing-6: var(--gmm-space-6);
+  --spacing-7: var(--gmm-space-7);
+  --spacing-gutter: var(--gmm-gutter-mobile);
+  --spacing-rail: var(--gmm-rail);
+  --spacing-tap: var(--gmm-touch);
+  --spacing-tap-primary: var(--gmm-touch-primary);
+  --spacing-tap-gap: var(--gmm-touch-gap);
+
+  /* -- radius -------------------------------------------------------------- */
+  --radius-*: initial;
+  --radius-toggle: var(--gmm-radius-toggle);
+  --radius-button: var(--gmm-radius-button);
+  --radius-primary: var(--gmm-radius-primary);
+  --radius-node: var(--gmm-radius-node);
+  --radius-panel: var(--gmm-radius-panel);
+  --radius-full: 9999px; /* nodes are circles; nothing else may use this */
+
+  /* -- motion -------------------------------------------------------------- */
+  --default-transition-duration: var(--gmm-hover);
+  --default-transition-timing-function: var(--gmm-ease);
 }
 
 /* -------------------------------------------------------------------------
-   4. Utilities.
+   4. Numerals.
+   -------------------------------------------------------------------------
+   DESIGN.md §3 puts tabular numerals on EVERY time, countdown, fare, duration
+   and count. That is not a stylistic preference: the hero countdown updates
+   once a second under `shared/ticker.ts`, and proportional digits make the
+   whole line reflow on every tick.
+
+   `font-variant-numeric` is the standard property; `font-feature-settings` is
+   the belt-and-braces for engines that resolve it first. Both are declared
+   together because setting only the latter also switches off the default
+   `kern` and `liga` that the shorthand would have left alone.
    ------------------------------------------------------------------------- */
 
-/* Minimum 56x56px hit area. Apply to every interactive element — the size is
-   a floor, so a visually smaller control still gets a full-size target. */
-@utility tap-target {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-inline-size: var(--gm-tap-min);
-  min-block-size: var(--gm-tap-min);
-  padding-inline: 0.75rem;
-  touch-action: manipulation;
-}
-
-/* A row of touch targets, spaced by the required 8px minimum. */
-@utility tap-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--gm-tap-gap);
-}
-
-/* Departure times. Bundles the size, the 1.2 line-height and — critically —
-   tabular numerals, so a countdown cannot jitter as digits change width. */
-@utility departure-time {
-  font-size: var(--text-departure);
-  line-height: 1.2;
-  font-weight: 700;
+@utility tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
-  letter-spacing: -0.01em;
 }
 
-/* Any figure that updates in place (countdowns, clock times, fares). */
+/* Legacy name for the same thing: 29 template references, Phase B/C rewrites. */
 @utility tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }
 
-/* A link that has to look and behave like a button: full 56px height, a
-   visible border, and no reliance on colour alone to be findable. Used for
-   every navigation affordance outside the picker — including the WhatsApp
-   booking link, which is the one place a control must not be mistaken for a
-   control of ours. */
-@utility link-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-block-size: var(--gm-tap-min);
-  padding-inline: 1rem;
-  border: 2px solid var(--gm-outline);
-  border-radius: 0.5rem;
-  font-weight: 600;
-  touch-action: manipulation;
-  transition:
-    background-color var(--gm-duration) var(--gm-ease),
-    color var(--gm-duration) var(--gm-ease);
-}
-
-/* Single column, 16px side gutters, centred. No horizontal scroll at 320px. */
-@utility page-shell {
-  inline-size: 100%;
-  max-inline-size: var(--gm-measure);
-  margin-inline: auto;
-  padding-inline: var(--gm-gutter);
-}
-
 /* -------------------------------------------------------------------------
-   4b. Shared component classes.
+   5. Primitives (DESIGN.md §5.6).
    -------------------------------------------------------------------------
-   Four rules that every screen uses. They are plain global classes rather
-   than @utility blocks because they are always wanted and because a component
-   with emulated style encapsulation cannot reach a sibling's styles — putting
-   them here is what stops the warning rule being redefined per page and
-   drifting. `.fare-row` joined them in Phase 7, when the home screen grew its
-   own destination list and the station page's copy would otherwise have been
-   the second.
+   Utilities and classes only. Phase A does not build components — these are
+   what Phases B and C compose with, so every value here comes from the spec or
+   from a measurement of the reference HTML, and none of them assume a
+   particular element.
    ------------------------------------------------------------------------- */
 
-/* Warnings read as warnings without relying on colour alone: the rule down
-   the side survives a monochrome screen and a colour-blind reader. */
-.warning {
-  border-inline-start: 4px solid var(--gm-alert);
-  padding-inline-start: 0.75rem;
-}
-
-.note {
-  border-inline-start: 4px solid var(--gm-border);
-  padding-inline-start: 0.75rem;
-}
-
-/* A <details> summary is a real 56px touch target, and the default disclosure
-   triangle is far too small to aim at, so the whole row is the target. */
-.disclosure {
-  display: flex;
+/* --- primary action: teal, white text, 56px, radius 12, one per screen ----
+   White on --gmm-line-text is 5.82:1, and hover to --gmm-line-dark takes it to
+   7.71:1, so the label gets more legible under the pointer, not less. */
+@utility btn-primary {
+  display: inline-flex;
   align-items: center;
-  min-block-size: var(--gm-tap-min);
-  padding-inline: 0.75rem;
+  justify-content: center;
+  gap: var(--gmm-space-2);
+  min-block-size: var(--gmm-touch-primary);
+  padding-inline: var(--gmm-space-5);
+  border: 0;
+  border-radius: var(--gmm-radius-primary);
+  background-color: var(--gmm-line-text);
+  color: var(--gmm-bg);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  text-decoration: none;
   cursor: pointer;
-  border-radius: 0.5rem;
-  transition: background-color var(--gm-duration) var(--gm-ease);
-}
-
-.disclosure:hover {
-  background-color: var(--gm-surface);
-}
-
-/* One destination. Full width so the target is unmissable, 56px tall so it
-   meets the floor on its own, and the fare hard against the right edge so a
-   column of prices can be read down without reading the names.
-
-   Filled rather than outlined. --gm-border is a 1.9:1 hairline against the
-   page, which is under the 3:1 floor for the visual boundary of a control, and
-   --gm-outline at 2px across 24 stacked rows reads as a cage. A surface fill
-   carries the boundary at full strength and keeps every ratio: text on surface
-   is 15.84:1 light and 14.91:1 dark, accent on surface 8.26:1 and 9.31:1. */
-.fare-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  min-block-size: var(--gm-tap-min);
-  padding-inline: 0.75rem;
-  border-radius: 0.5rem;
-  background-color: var(--gm-surface);
   touch-action: manipulation;
-  transition: color var(--gm-duration) var(--gm-ease);
+  transition:
+    background-color var(--gmm-hover) var(--gmm-ease),
+    transform var(--gmm-press) var(--gmm-ease);
 }
 
-.fare-row:hover {
-  color: var(--gm-accent);
+.btn-primary:hover {
+  background-color: var(--gmm-line-dark);
 }
 
+/* DESIGN.md §7: press is a 1px nudge over 120ms. Transform, not margin, so it
+   cannot reflow the page. */
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+/* --- secondary action: white, 1px grey border, 44px, radius 10 ------------- */
+@utility btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gmm-space-2);
+  min-block-size: var(--gmm-touch);
+  padding-inline: var(--gmm-space-4);
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-button);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--gmm-hover) var(--gmm-ease),
+    border-color var(--gmm-hover) var(--gmm-ease),
+    transform var(--gmm-press) var(--gmm-ease);
+}
+
+.btn-secondary:hover {
+  background-color: var(--gmm-soft);
+  border-color: var(--gmm-ink-2);
+}
+
+.btn-secondary:active {
+  transform: translateY(1px);
+}
+
+/* --- language switch: segmented EN / Malayalam on --gmm-soft ---------------
+   The reference HTML sets these segments at 15px. They are 16px here; the
+   floor has no exceptions, and this control is one of the few a first-time
+   Malayalam reader has to find before anything else on the page is readable. */
+@utility lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmm-space-1);
+  padding: var(--gmm-space-1);
+  border-radius: var(--gmm-radius-toggle);
+  background-color: var(--gmm-soft);
+}
+
+@utility lang-segment {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 36px;
+  min-inline-size: var(--gmm-touch);
+  padding-inline: var(--gmm-space-3);
+  border: 0;
+  border-radius: var(--gmm-radius-toggle);
+  background-color: transparent;
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--gmm-hover) var(--gmm-ease),
+    color var(--gmm-hover) var(--gmm-ease);
+}
+
+/* The selected segment is ink with white text — 18.88:1. `aria-pressed` is the
+   selector on purpose: the style cannot be applied without the state also
+   being announced, so a sighted-only selection is not expressible here. */
+.lang-segment[aria-pressed='true'] {
+  background-color: var(--gmm-ink);
+  color: var(--gmm-bg);
+}
+
+/* The segment is 36px tall so the pill reads as one control, but the tap
+   target is the full 44px. The pseudo-element extends the hit area without
+   changing the layout — pointer-events land on it because it is a child of the
+   button. */
+.lang-segment::after {
+  content: '';
+  position: absolute;
+  inset-block: -4px;
+  inset-inline: 0;
+}
+
+/* --- search input: 56px, 2px ink border, radius 12 ------------------------- */
+@utility field {
+  display: block;
+  inline-size: 100%;
+  min-block-size: var(--gmm-touch-primary);
+  padding: var(--gmm-space-3) var(--gmm-space-4);
+  border: 2px solid var(--gmm-ink);
+  border-radius: var(--gmm-radius-input);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  transition: border-color var(--gmm-hover) var(--gmm-ease);
+}
+
+/* ink-3 is 5.18:1, so the placeholder is readable rather than a grey hint. It
+   carries "Station, in English or ..." — instruction, not decoration. */
+.field::placeholder {
+  color: var(--gmm-ink-3);
+  opacity: 1;
+}
+
+/* The visible label above the field: "WHERE TO?". 16px, uppercase, +0.05em. */
+@utility field-label {
+  display: block;
+  margin-block-end: var(--gmm-space-2);
+  color: var(--gmm-ink-2);
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+/* --- alert: amber-soft ground, amber icon, bold title --------------------- */
+@utility alert {
+  display: flex;
+  gap: var(--gmm-space-3);
+  padding: var(--gmm-space-4);
+  border-radius: var(--gmm-radius-alert);
+  background-color: var(--gmm-amber-soft);
+  color: var(--gmm-ink);
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+/* The icon is amber; the explanation is ink. Splitting them is what keeps the
+   alert from being a paragraph of 5.36:1 text when 16.17:1 was available on
+   the same ground. */
+@utility alert-icon {
+  flex-shrink: 0;
+  color: var(--gmm-amber);
+}
+
+@utility alert-title {
+  font-weight: 600;
+}
+
+/* The short-working line inside a board row: "Ends at Muttom". Amber on soft is
+   5.72:1. The icon beside it is not decoration — DESIGN.md's golden rule 14
+   requires the state to have a shape as well as a colour, and this is the one
+   warning in the product that strands somebody (CLAUDE.md finding 9). */
+@utility short-working {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  color: var(--gmm-amber);
+  font-size: var(--text-min);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* --- skeleton: grey blocks in the exact final layout, no spinners ---------- */
+@utility skeleton {
+  display: block;
+  border-radius: var(--gmm-radius-button);
+  background-color: var(--gmm-skeleton);
+}
+
+/* --- panels and rules ------------------------------------------------------ */
+@utility board-panel {
+  border-radius: var(--gmm-radius-panel);
+  background-color: var(--gmm-soft);
+}
+
+@utility hairline {
+  border-block-start: 1px solid var(--gmm-rule);
+}
+
+/* --- labels ---------------------------------------------------------------- */
+
+/* Section label: DEPARTURES. 16px, 600, uppercase, +0.05em. */
+@utility label-section {
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+/* Lane head: ALUVA / TRIPUNITHURA. 16px, 600, uppercase, +0.04em. */
+@utility label-lane {
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-lane);
+  text-transform: uppercase;
+}
 
 /* -------------------------------------------------------------------------
-   4c. The map's markers.
+   6. Geometry.
+   ------------------------------------------------------------------------- */
+
+/* Mobile: 20px side gutters (DESIGN.md §4). Reference 390x844; must work at
+   360, 375, 390 and 412. */
+@utility shell {
+  inline-size: 100%;
+  margin-inline: auto;
+  padding-inline: var(--gmm-gutter-mobile);
+}
+
+/**
+ * The desktop grid: 12 columns, 24px gutters, 80px margins, ~1280px content.
+ *
+ * The app has had no desktop layout at all — two media queries in the entire
+ * stylesheet — so this is built for Phase D to compose with rather than
+ * retrofitted around screens that already exist.
+ *
+ * It is one grid with a span vocabulary, not a set of named slots. The
+ * outgoing stylesheet had `gm-grid-composer`, `gm-grid-journey`,
+ * `gm-grid-board` and nine more: a named global rule per region per page,
+ * which means every new region needs another one. Column spans are what the
+ * spec actually describes ("journey in columns 1-6, board in 8-12"), so spans
+ * are what this expresses.
+ *
+ * 1280px content + 2x80px margins = 1440px, the spec's reference width. Below
+ * the breakpoint the margins collapse to the mobile gutter and every child
+ * spans the full width, so a region added later is readable on a phone by
+ * construction rather than by remembering to add a query.
+ */
+@utility grid-page {
+  inline-size: 100%;
+  max-inline-size: calc(var(--gmm-grid-max) + 2 * var(--gmm-grid-margin));
+  margin-inline: auto;
+  padding-inline: var(--gmm-gutter-mobile);
+}
+
+@utility grid-12 {
+  display: grid;
+  grid-template-columns: repeat(var(--gmm-grid-columns), minmax(0, 1fr));
+  column-gap: var(--gmm-grid-gutter);
+  row-gap: var(--gmm-space-6);
+  align-items: start;
+}
+
+/* Every direct child of the grid spans the full width until the desktop
+   breakpoint says otherwise. */
+.grid-12 > * {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1024px) {
+  .grid-page {
+    padding-inline: var(--gmm-grid-margin);
+  }
+
+  /* The spans Phase D composes with. Column 7 is the empty gutter the spec puts
+     between the journey and the board. */
+  .lg-col-1-6 {
+    grid-column: 1 / span 6;
+  }
+  .lg-col-1-7 {
+    grid-column: 1 / span 7;
+  }
+  .lg-col-1-12 {
+    grid-column: 1 / span 12;
+  }
+  .lg-col-7-12 {
+    grid-column: 7 / span 6;
+  }
+  .lg-col-8-12 {
+    grid-column: 8 / span 5;
+  }
+
+  /* ---------------------------------------------------------------------
+     No `lg-station-lg` / `lg-countdown-lg` / `lg-countdown-board-lg` here.
+     ---------------------------------------------------------------------
+     Phase A shipped those three as global hooks and Phase D deleted them,
+     because emulated view encapsulation makes them unreachable. A component
+     style like `.station-name { font-size: ... }` compiles to
+     `.station-name[_ngcontent-x]`, which is (0,2,0); a bare global class is
+     (0,1,0) and loses. All five call sites carried the class, none of them
+     changed size, and nothing failed: a screenshot would show the wrong size
+     and a passing test would show nothing at all.
+
+     The desktop sizes now live in the component that owns the element, beside
+     the rule they override. `--text-station-lg` and friends are still the
+     tokens; only the global classes are gone.
+     --------------------------------------------------------------------- */
+}
+
+/* The countdown's unit ("min") sits at ~23% of the number's size, on the
+   baseline rather than superscripted (DESIGN.md §3). At the 96px hero that is
+   22px; at 132px, 30px. Expressed as a ratio so it tracks whatever size the
+   parent is set to — including the desktop override above, which would
+   otherwise need a second unit rule. */
+@utility countdown-unit {
+  font-size: 0.23em;
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+/* Every interactive element is at least 44px in both axes, whatever it looks
+   like. Visual size and target size are separate concerns and this is the one
+   that is not negotiable. */
+@utility tap-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gmm-space-2);
+  min-inline-size: var(--gmm-touch);
+  min-block-size: var(--gmm-touch);
+  padding-inline: var(--gmm-space-3);
+  touch-action: manipulation;
+}
+
+/* A row of targets, spaced by the required 8px minimum. */
+@utility tap-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmm-touch-gap);
+}
+
+/* -------------------------------------------------------------------------
+   6b. Screen-level primitives (Phase C).
    -------------------------------------------------------------------------
-   These are global rather than component styles for a mechanical reason:
-   Leaflet builds its markers imperatively, so they never carry Angular's
-   `_ngcontent` attribute and an emulated-encapsulation component style cannot
-   match them. Putting them here also keeps every colour in the map on the same
-   tokens as the rest of the app, so the two themes stay in step by
-   construction.
+   The three things every screen in the redesign needs and none of the Phase B
+   components can supply, because they are properties of the page rather than
+   of any component on it.
+   ------------------------------------------------------------------------- */
+
+/* The 20px side gutter (DESIGN.md §4). Applied per section rather than to the
+   page, because the departure board and the search sections bleed their
+   backgrounds to the screen edge while their *contents* stay on the gutter.
+   A single padded wrapper cannot express that. */
+@utility gutter {
+  padding-inline: var(--gmm-gutter-mobile);
+}
+
+/* Visible to a screen reader, to nothing else. Used where a shape carries the
+   meaning for a sighted reader — the check on a selected destination row, the
+   "(opens WhatsApp)" on the booking button — and the word has to exist anyway.
+   The 1px box with `clip-path` rather than `display: none`, which would take
+   it out of the accessibility tree along with everything else. */
+@utility sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* A back link. 44px, chevron and word, at the top of every screen that is not
+   the home screen. */
+@utility back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gmm-space-1);
+  min-block-size: var(--gmm-touch);
+  padding-inline-end: var(--gmm-space-2);
+  color: var(--gmm-ink);
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--gmm-line-text);
+}
+
+.back-icon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The eyebrow over a page title: "STATION", "ROUTE". 16px, uppercase, ink-2
+   at 7.21:1 — a label, never a heading. */
+@utility eyebrow {
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--gmm-ink-2);
+}
+
+/* Malayalam takes no uppercase and no added tracking. DESIGN.md §3. */
+[lang='ml'] .eyebrow,
+[lang='ml'] .section-head {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* -------------------------------------------------------------------------
+   7b. Deleted in Phase D: the legacy `gm-*` layer.
+   -------------------------------------------------------------------------
+   This is where `.gm-card`, `.gm-pill`, `.gm-your-train-pill`, `.gm-live-dot`,
+   `.gm-boarding-pass`, `.gm-station-board`, `.gm-metric-grid`,
+   `.gm-bento-grid`, `.gm-desktop-container`, the twelve `.gm-grid-*` /
+   `.gm-route-*` named grid slots and the `departure-time` utility lived, along
+   with global copies of `.note`, `.fare-row`, `.station-button`, `.warning`,
+   `.disclosure` and `.link-button`.
+
+   Phase A kept them as aliases onto the new palette so the outgoing templates
+   kept rendering while Phases B, C and D migrated screen by screen, and said
+   Phase D should delete them once no template referenced a `gm-*` class.
+   That condition is met: the last three consumers were `booking.ts`,
+   `service-caveat.ts` and `map/line-map.ts`, all of which Phase D rewrote in
+   the new vocabulary, and the six non-`gm-` names above all have
+   component-scoped rules in the pages that use them.
+
+   The named grid slots are what `grid-12` plus the `lg-col-*` spans replaced:
+   a global rule per region per page means every new region needs another one,
+   and column spans are what DESIGN.md section 4 actually describes.
+
+   **The `gm-` prefix is NOT gone from the app**, and that is correct.
+   `.gm-pin`, `.gm-train` and `.gm-map-*` in section 8 below are Leaflet's DOM,
+   not this palette: Leaflet builds its markers imperatively so they never carry
+   Angular's `_ngcontent` attribute, and a component style cannot reach them.
+   They are a namespace, and they take their colours from `--gmm-*` tokens like
+   everything else.
+   ------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------
+   8. The map's markers.
+   -------------------------------------------------------------------------
+   Global rather than component styles for a mechanical reason: Leaflet builds
+   its markers imperatively, so they never carry Angular's `_ngcontent`
+   attribute and an emulated-encapsulation component style cannot match them.
+   Keeping them here also keeps every colour on the map on the same tokens as
+   the rest of the app.
 
    Leaflet's own stylesheet is NOT here — it is `public/vendor/leaflet-1.9.4.css`,
    fetched at the moment a map initialises. Its header says why.
-
-   Nothing below animates. The only transition is the one that carries a train
-   from one scheduled second to the next, and the reduced-motion block at the
-   end of this file already collapses it to nothing.
    ------------------------------------------------------------------------- */
 
 .leaflet-container {
-  font-family: var(--font-sans);
-  background-color: var(--gm-surface);
+  font-family: var(--gmm-font);
+  background-color: var(--gmm-soft);
 }
 
-/* A station. The dot is 18px; the target around it is the full 56px floor. */
+/* A station. The dot is 18px; the target around it is the full 44px floor. */
 .gm-pin {
   display: block;
   background: none;
@@ -429,30 +968,31 @@
   inline-size: 18px;
   block-size: 18px;
   border-radius: 50%;
-  background-color: var(--gm-bg);
-  border: 4px solid var(--gm-accent);
+  background-color: var(--gmm-bg);
+  border: 4px solid var(--gmm-line);
 }
 
-/* The station this page is about, or the one the answer above is for. */
+/* The station this page is about. An ink disc, matching the JourneyLine's
+   destination node — the same shape means the same thing on both surfaces. */
 .gm-pin-current .gm-pin-dot {
   inset-block-start: 15px;
   inset-inline-start: 15px;
   inline-size: 26px;
   block-size: 26px;
-  background-color: var(--gm-accent);
-  border-color: var(--gm-bg);
+  background-color: var(--gmm-ink);
+  border-color: var(--gmm-bg);
 }
 
-/* The name beside the dot. 16px is the floor and this is the only text the
-   map draws itself, so it never goes below it. */
+/* The name beside the dot. 16px is the floor and this is the only text the map
+   draws itself, so it never goes below it. */
 .gm-pin-name {
   position: absolute;
   inset-block-start: 16px;
   inset-inline-start: 46px;
-  padding-inline: 0.25rem;
-  border-radius: 0.25rem;
-  background-color: var(--gm-bg);
-  color: var(--gm-text);
+  padding-inline: var(--gmm-space-1);
+  border-radius: var(--gmm-space-1);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
   font-size: var(--text-min);
   line-height: 1.5;
   font-weight: 600;
@@ -480,24 +1020,25 @@
 
 .gm-train svg path,
 .gm-train svg rect {
-  fill: var(--gm-text);
-  stroke: var(--gm-bg);
+  fill: var(--gmm-ink);
+  stroke: var(--gmm-bg);
   stroke-width: 2;
   paint-order: stroke;
 }
 
-/* One of the 20 trips that terminate before the end of the line. The bar
-   across the nose is drawn in the icon, so this reads without colour too. */
+/* One of the 20 trips that terminate before the end of the line (CLAUDE.md
+   finding 10). The bar across the nose is drawn in the icon, so this reads
+   without colour too — and it is amber, the token the whole product uses for
+   a short working, not the red the outgoing palette used for an error. */
 .gm-train-short svg path,
 .gm-train-short svg rect {
-  fill: var(--gm-alert);
+  fill: var(--gmm-amber);
 }
 
 /* Trains are repositioned once a second, which at line speed is about two
-   pixels. The transition only smooths that step; the reduced-motion block
-   below removes it, and it is inside the 150ms ceiling either way. */
+   pixels. The transition only smooths that step. */
 .leaflet-marker-icon.gm-train {
-  transition: transform var(--gm-duration) linear;
+  transition: transform var(--gmm-refresh) linear;
 }
 
 /* A zoom repositions every marker at once. Gliding the trains to their new
@@ -508,7 +1049,7 @@
 }
 
 /* -------------------------------------------------------------------------
-   5. Base layer.
+   9. Base layer.
    ------------------------------------------------------------------------- */
 
 @layer base {
@@ -519,65 +1060,186 @@
   }
 
   body {
-    background-color: var(--gm-bg);
-    color: var(--gm-text);
-    font-family: var(--font-sans);
-    font-size: var(--text-body); /* 18px */
+    background-color: var(--gmm-bg);
+    color: var(--gmm-ink);
+    font-family: var(--gmm-font);
+    font-size: var(--text-body);
     line-height: 1.5;
     font-weight: 400;
     min-block-size: 100dvh;
-    /* Guards the 320px requirement against a stray wide child. */
+    -webkit-font-smoothing: antialiased;
+    /* Guards the 360px requirement against a stray wide child. */
     overflow-x: clip;
   }
 
-  /* Malayalam sits slightly small against Latin at the same px value, and its
-     stacked conjuncts need more leading. */
+  /* Malayalam sits slightly small against Latin at the same px value and its
+     stacked conjuncts need more leading. DESIGN.md §3 asks for line-height
+     >= 1.45 and station names at 25px rather than 30px; the size relationship
+     is expressed here as a ratio so it holds at every step of the scale
+     instead of only where a component remembered to override it.
+
+     `1.45` is the floor the spec names, not a comfortable value — 1.6 is what
+     the old stylesheet used and reading the rendered Malayalam at 1.45 is one
+     of the things nobody has checked in a browser yet. */
   :lang(ml) {
-    font-size: 1.05em;
+    font-family: var(--gmm-font-ml);
     line-height: 1.6;
   }
 
-  /* A visible, high-contrast focus ring is load-bearing for the primary user. */
+  /* Malayalam has no case, so `text-transform: uppercase` is a no-op on its
+     letters while still uppercasing any Latin inside the same string, which
+     produces mixed case in a language that has neither. Letter-spacing is
+     worse than a no-op: the script is connected and its conjuncts are single
+     glyphs, so positive tracking prises apart forms that must touch.
+     DESIGN.md §3 says "no uppercase" and stops there; the tracking is the half
+     it leaves out, and it is the half that actually damages the shapes. */
+  :lang(ml) {
+    letter-spacing: normal;
+  }
+
+  /* Never break a Malayalam word across lines. DESIGN.md §3: "wrap at spaces,
+     never mid-word". */
+  :lang(ml) {
+    overflow-wrap: break-word;
+    word-break: normal;
+    line-break: normal;
+  }
+
+  /* DESIGN.md §8: 3px --gmm-line-text outline, 2px offset, on EVERY
+     interactive element. It is declared on `:focus-visible` globally rather
+     than per component so a control added later cannot be missing it — the
+     ring is opt-out, not opt-in.
+
+     5.82:1 against white and 5.31:1 against the soft board panel, so it is
+     visible on both grounds without a second colour. */
   :focus-visible {
-    outline: 3px solid var(--gm-accent);
-    outline-offset: 2px;
+    outline: var(--gmm-focus-width) solid var(--gmm-focus-color);
+    outline-offset: var(--gmm-focus-offset);
     border-radius: 2px;
   }
 
-  /* Headings inherit the family and never drop below 400. */
+  /* A control on the ink ground — the selected language segment — would put a
+     5.82:1 teal ring on an 18.88:1 dark fill, which is legible but muddy. The
+     offset ring sits on the page ground, not on the fill, so this only needs
+     to guarantee the ring is drawn outside the element. */
+  .lang-segment:focus-visible {
+    outline-offset: var(--gmm-focus-offset);
+  }
+
+  /* Headings inherit the family and never drop below 400. `text-wrap: balance`
+     matters more here than usual: station names are set at 30px and a
+     one-word orphan on a 360px screen costs a whole line. */
   h1,
   h2,
   h3,
   h4 {
-    font-weight: 700;
-    line-height: 1.25;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: var(--tracking-station);
     text-wrap: balance;
   }
 
-  /* Interactive elements get the correct cursor and never a <400 weight. */
+  :lang(ml) h1,
+  :lang(ml) h2,
+  :lang(ml) h3,
+  :lang(ml) h4 {
+    line-height: 1.45;
+    letter-spacing: normal;
+  }
+
   button,
   [role='button'],
   a {
     font-weight: inherit;
   }
+
+  /* Controls inherit the type system rather than the UA's 13px Arial. Without
+     this an `<input>` renders below the 16px floor by default, and on iOS
+     Safari anything under 16px in a focused field zooms the viewport. */
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
 }
 
 /* -------------------------------------------------------------------------
-   6. Motion policy.
+   10. Motion (DESIGN.md §7).
    -------------------------------------------------------------------------
-   No animation library, ever. CSS transitions only, capped at 150ms by
-   --default-transition-duration above, and only on colour / opacity /
-   transform. Nothing animates on page load — there are no @keyframes in this
-   stylesheet and none should be added.
+   150-300ms, state changes only. Destination fill 240ms, board cross-fade
+   200ms, press 1px/120ms, hover colour only. Nothing animates on load and
+   nothing loops.
+
+   Two of those are genuinely animations rather than transitions — the
+   destination line filling top-to-bottom and a changed board row crossing
+   fading — and `scripts/check-bundle-size.mjs` previously failed the build on
+   ANY at-rule of that kind, anywhere in the emitted CSS or JS. That check has
+   been narrowed rather than removed: it now allows the two named below and
+   still fails on anything else, which keeps its original purpose (catching a
+   library that injects animation at runtime) while letting the spec's own two
+   state changes exist. The gate greps literal text, so its own rule names are
+   listed there as data, not prose.
+
+   Both are disabled outright under `prefers-reduced-motion: reduce` at the
+   bottom of this file, which is the condition the gate's new allowance is
+   written against.
+   ------------------------------------------------------------------------- */
+
+/* The destination line filling top to bottom when a destination is chosen.
+   A scale on the Y axis rather than a height, so it cannot reflow the rows
+   beside it while it runs. `transform-origin: top` is what makes it read as
+   filling downward rather than growing from the middle. */
+@keyframes gmm-fill-down {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* A board row whose value changed. Opacity only: DESIGN.md §7 is explicit that
+   numbers swap and never count up or roll, so nothing here moves the digits. */
+@keyframes gmm-cross-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility fill-down {
+  transform-origin: top;
+  animation: gmm-fill-down var(--gmm-fill) var(--gmm-ease) 1;
+}
+
+@utility cross-fade {
+  animation: gmm-cross-fade var(--gmm-refresh) var(--gmm-ease) 1;
+}
+
+/* -------------------------------------------------------------------------
+   11. Reduced motion.
+   -------------------------------------------------------------------------
+   DESIGN.md §7: "prefers-reduced-motion: reduce -> all instant". Not "slower",
+   not "subtler". Both animations above are removed outright rather than
+   shortened, because a 0.01ms animation still fires its events and still
+   repaints; `animation: none` is the only version of this that is actually
+   instant.
+
+   The transition collapse stays at 0.01ms rather than `none` for the opposite
+   reason: `transitionend` listeners that never fire are a known way to leave a
+   component stuck mid-state, and nothing in the app should depend on one.
    ------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    animation-delay: 0ms !important;
+    animation: none !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0ms !important;
     scroll-behavior: auto !important;

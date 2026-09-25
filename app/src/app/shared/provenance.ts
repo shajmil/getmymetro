@@ -21,9 +21,45 @@ import { I18nService } from '../core/i18n/i18n';
 @Component({
   selector: 'app-provenance',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    :host {
+      display: block;
+    }
+
+    /* The provenance line, and it is set as ink rather than as a muted
+       footnote.
+
+       CLAUDE.md's honesty rules make this the product's whole position: these
+       are timetable times, confirmed with KMRL on a stated date, and both
+       competitors either claim "live" or bury the disclaimer in small grey
+       text under the map. A provenance line a reader has to look for is the
+       same failure in a different colour. ink-2 is 7.21:1 and the leading
+       sentence is ink at 18.88:1.
+
+       It also does not overstate: no warning colour, no icon, no alarm. The
+       feed's declared window lapsed while the timings stayed accurate
+       (finding 6), so a caution here would itself be dishonest. */
+    .provenance {
+      margin: var(--gmm-space-6) 0 0;
+      font-size: var(--text-min);
+      line-height: 1.5;
+      color: var(--gmm-ink-2);
+    }
+
+    .claim {
+      color: var(--gmm-ink);
+      font-weight: 600;
+    }
+
+    @media (min-width: 1024px) {
+      .provenance {
+        max-inline-size: 46rem;
+      }
+    }
+  `,
   template: `
-    <p class="mt-6 text-min">
-      {{ t('prov.scheduled') }}
+    <p class="provenance">
+      <span class="claim">{{ t('prov.scheduled') }}</span>
       @if (confirmed(); as confirmedOn) {
         <span>{{ t('prov.confirmed', { month: confirmedOn }) }}</span>
       }

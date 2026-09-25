@@ -1,0 +1,134 @@
+<!--
+  Choose destination. DESIGN.md §6, screen 05.
+
+  Back → the origin on its node → search → two sections of station rows, each
+  one a JourneyLine threaded down the left. Every row is a real link to a real
+  prerendered route page; none of them is a click handler.
+-->
+
+<div class="screen">
+  <p class="back-row grid-page">
+    <a class="back" [routerLink]="backPath()">
+      <svg viewBox="0 0 24 24" width="20" height="20" class="back-icon" aria-hidden="true">
+        <path d="M15 6l-6 6 6 6" />
+      </svg>
+      <span>{{ t('screen.back') }}</span>
+    </a>
+  </p>
+
+  @if (notFound()) {
+    <section class="grid-page">
+      <h1 class="page-title">{{ t('station.notFoundHeading') }}</h1>
+      <p class="prose">
+        {{ t('station.notFoundBody', { count: stations().length, slug: slug() }) }}
+      </p>
+      <p class="action-row">
+        <a class="btn-secondary" [routerLink]="localPath('/')">{{ t('station.backHome') }}</a>
+      </p>
+    </section>
+  } @else {
+    <!-- The origin, on the line's first node. "From · you're here". -->
+    <section class="grid-page origin">
+      <app-journey-row node="origin" kind="only">
+        <h1 class="origin-name">{{ originName() }}</h1>
+        <p class="origin-meta">{{ t('screen.fromHere') }}</p>
+      </app-journey-row>
+    </section>
+
+    <div class="grid-page search">
+      <app-search-field
+        inputId="destination-search"
+        [label]="t('screen.whereToLabel')"
+        [placeholder]="t('screen.searchPlaceholder')"
+        (input)="onSearch($event)"
+      />
+      <p class="hint">{{ t('screen.travelOrder') }}</p>
+    </div>
+
+    @if (noMatches()) {
+      <p class="grid-page prose">{{ t('common.noDeparturesHere') }}</p>
+    }
+
+    <!--
+      The two directions. On a phone they stack, because a phone has room for
+      one list. At 1024px they sit side by side in columns 1-6 and 8-12, which
+      is what the reader is actually doing here: choosing between two
+      directions, not scrolling one long list of 24 stations past the other.
+
+      `align-items: start` on the grid, so the shorter list does not stretch to
+      the taller one's height — at most stations one direction has far more
+      stations than the other.
+    -->
+    <div class="sections grid-page grid-12">
+    @for (section of visibleSections(); track section.direction; let i = $index) {
+      <section
+        class="section"
+        [class.lg-col-1-6]="i === 0"
+        [class.lg-col-8-12]="i === 1"
+        [attr.aria-label]="t('screen.towardsSection', { name: section.towardsName })"
+      >
+        <h2 class="section-head">
+          <span class="section-name">
+            @if (section.direction === 1) {
+              <svg viewBox="0 0 24 24" width="18" height="18" class="section-arrow" aria-hidden="true">
+                <path d="M19 12H5" />
+                <path d="M11 6l-6 6 6 6" />
+              </svg>
+            }
+            <span>{{ t('screen.towardsSection', { name: section.towardsName }) }}</span>
+            @if (section.direction === 0) {
+              <svg viewBox="0 0 24 24" width="18" height="18" class="section-arrow" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="M13 6l6 6-6 6" />
+              </svg>
+            }
+          </span>
+          <span class="section-count tabular">
+            {{ t('screen.stationsCount', { count: section.choices.length }) }}
+          </span>
+        </h2>
+
+        <ul class="choices">
+          @for (choice of section.choices; track choice.id; let i = $index, count = $count) {
+            <li class="choice" [class.is-selected]="choice.id === selected()">
+              <a class="choice-link" [routerLink]="choice.path">
+                <app-journey-row
+                  [node]="choice.id === selected() ? 'destination' : 'through'"
+                  [kind]="rowKind(i, count)"
+                >
+                  <span class="choice-body">
+                    <span class="choice-name">{{ choice.name }}</span>
+                    <span class="choice-meta tabular">
+                      @if (choice.minutes !== null) {
+                        {{
+                          t('screen.destinationRow', {
+                            hops: choice.hops,
+                            stopWord: stopWord(choice.hops),
+                            minutes: choice.minutes,
+                          })
+                        }}
+                      } @else {
+                        {{ choice.hops }} {{ stopWord(choice.hops) }}
+                      }
+                    </span>
+                    @if (choice.id === selected()) {
+                      <svg viewBox="0 0 24 24" width="20" height="20" class="choice-check" aria-hidden="true">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      <span class="sr-only">{{ t('screen.selected') }}</span>
+                    } @else {
+                      <svg viewBox="0 0 24 24" width="20" height="20" class="choice-chevron" aria-hidden="true">
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    }
+                  </span>
+                </app-journey-row>
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+    </div>
+  }
+</div>

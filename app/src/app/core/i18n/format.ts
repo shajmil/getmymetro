@@ -22,7 +22,7 @@ import { translate } from './translate';
 import type { StringKey } from './strings';
 
 /**
- * `0` → `'Due'` / `'ഇപ്പോൾ'`, `150` → `'2 min'`, `4320` → `'1 h 12 min'`.
+ * `0` → `'Arriving'` / `'ഇപ്പോൾ'`, `150` → `'2 min'`, `4320` → `'1 h 12 min'`.
  *
  * Minutes round **down**, because that is what `durationParts` does and the
  * reason matters: "3 min" has to mean at least three minutes, and on this

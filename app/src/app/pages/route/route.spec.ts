@@ -23,6 +23,7 @@ import type { NetworkData } from '../../core/data/network.types';
 import { NO_HOLIDAY_DATA, type HolidayCalendar } from '../../core/engine/holiday';
 import { CLOCK, HOLIDAY_CALENDAR } from '../../core/engine/metro-engine.service';
 import { at, loadNetwork } from '../../core/engine/testing/network';
+import { translate } from '../../core/i18n/translate';
 import { LineMap } from '../../shared/map/line-map';
 import { RoutePage } from './route';
 
@@ -83,26 +84,78 @@ describe('Route — the journey', () => {
   it('answers direction, duration, fare and stops for a real pair', async () => {
     await render({ pair: 'aluva-to-edapally' });
     const host = fixture?.nativeElement as HTMLElement;
-    expect(host.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Aluva to Edapally',
-    );
+    // The title is now a JourneyLine composition: origin and destination are
+    // separate rows, so the accessible name is what matters, not one flat string.
+    const heading = host.querySelector('h1')?.textContent?.replace(/\s+/g, '') ?? '';
+    expect(heading).toContain('Aluva');
+    expect(heading).toContain('Edapally');
     const rendered = text();
-    expect(rendered).toContain('Platform towards Tripunithura');
+    // MVP item 2: the platform is named by the end of the line, because
+    // "towards Tripunithura" is the only thing written on the platform and
+    // "Kaloor" is what the reader actually wants. The wording is DESIGN.md
+    // §9's short transit language ("Board · towards Tripunithura"), so this
+    // asserts through the catalogue — the guard is that the end of the line
+    // is named at the origin, not that one particular sentence survives.
+    expect(rendered).toContain(
+      translate('en', 'screen.boardTowards', { name: 'Tripunithura' }),
+    );
     expect(rendered).toContain('8 stops');
     expect(rendered).toContain('₹40');
-    expect(rendered).toContain('7 between Aluva and Edapally, in order');
-    expect(rendered).toContain('minutes on the train');
+
+    // The seven stations between, in order. With the engine loaded the page
+    // renders them as the real stop list with each train's calling time,
+    // which is strictly more than the `route.between` sentence this used to
+    // match — that sentence is the engine-free branch, and the data behind it
+    // is asserted in `page-facts.spec.ts`. What has to hold either way is
+    // that all seven are named and in travel order.
+    const names = [...(fixture?.nativeElement as HTMLElement).querySelectorAll('.stop-name')].map(
+      (el) => el.textContent?.trim(),
+    );
+    expect(names).toEqual([
+      'Aluva',
+      'Pulinchodu',
+      'Companypady',
+      'Ambattukavu',
+      'Muttom',
+      'Kalamassery',
+      'Cochin University',
+      'Pathadipalam',
+      'Edapally',
+    ]);
+
+    // How long it takes, per service pattern, in the reference block.
+    expect(rendered).toContain(translate('en', 'route.timeOnTrain'));
+    expect(rendered).toContain(
+      translate('en', 'route.minutesRange', { fastest: 17, slowest: 19 }),
+    );
   });
 
   it('names the platform by the end of the line, in both directions', async () => {
     await render({ pair: 'edapally-to-aluva' });
-    expect(text()).toContain('Platform towards Aluva');
+    expect(text()).toContain(translate('en', 'screen.boardTowards', { name: 'Aluva' }));
+    // And the string it renders through actually exists in Malayalam. A
+    // missing key would fall back silently, and CLAUDE.md search strategy 4
+    // makes the Malayalam pages half the site.
+    const ml = translate('ml', 'screen.boardTowards', { name: 'ആലുവ' });
+    expect(ml).not.toBe(translate('en', 'screen.boardTowards', { name: 'ആലുവ' }));
+    expect(ml).toContain('ആലുവ');
   });
 
   it('says so plainly when the destination is the very next station', async () => {
     await render({ pair: 'aluva-to-pulinchodu' });
-    expect(text()).toContain('Pulinchodu is the next station. No stops in between.');
+    // With the engine loaded the page renders the real stop list, which for
+    // adjacent stations is origin and destination and nothing between — the
+    // same fact, shown rather than stated. `route.nextStation` is the
+    // prerendered, engine-free wording and is asserted on that branch below,
+    // which is the one a crawler sees.
+    const host = fixture?.nativeElement as HTMLElement;
+    const stops = [...host.querySelectorAll('.stops li')];
+    expect(stops).toHaveLength(2);
+    expect(stops[0].textContent).toContain('Aluva');
+    expect(stops[1].textContent).toContain('Pulinchodu');
+    expect(text()).toContain(translate('en', 'screen.getOffHere'));
   });
+
 });
 
 describe('Route — pairs it refuses', () => {
@@ -140,13 +193,20 @@ describe('Route — origin must precede destination on the train you board', () 
     // 22:36 from Aluva towards Tripunithura terminates at Muttom. It is on the
     // station board (labelled) and it must not be on an Edapally journey.
     await render({ pair: 'aluva-to-edapally', now: at(TUESDAY, 22, 25) });
-    // Scoped to the departures panel: the reference block below it names the
-    // 10:51 PM on purpose, as the later train that does not get you there.
-    const panel =
-      (fixture?.nativeElement as HTMLElement)
-        .querySelector('.journey-slot')
-        ?.textContent?.replace(/\s+/g, ' ') ?? '';
-    expect(panel).toContain('Leaves 10:30 PM');
+    // Scoped to the departures the page offers — the hero's chosen train and
+    // the "Next trains" list behind it — because the reference block below
+    // names the 10:51 PM on purpose, as the later train that does not get you
+    // there. The old `.journey-slot` wrapper went with the redesign; the hero
+    // is `.hero-row` and the rest is `.later`. The assertion is unchanged in
+    // substance: the engine must pick the 10:30 and must not offer either of
+    // the two trains that leave this platform in the right direction and stop
+    // short of Edapally.
+    const host = fixture?.nativeElement as HTMLElement;
+    const panel = [...host.querySelectorAll('.hero-row, .later')]
+      .map((el) => el.textContent ?? '')
+      .join(' ')
+      .replace(/\s+/g, ' ');
+    expect(panel).toContain('10:30 PM');
     expect(panel).not.toContain('10:36 PM');
     expect(panel).not.toContain('10:51 PM');
     // And the strand is stated where it belongs.
@@ -221,7 +281,18 @@ describe('Route — Sunday is not a footnote', () => {
     await render({ pair: 'mg-road-to-aluva', now: at(SUNDAY, 6, 30) });
     const rendered = text();
     // 6:05 AM is the Mon-Sat first train; on a Sunday the next one is 7:34.
-    expect(rendered).toContain('Leaves 7:34 AM');
+    // Scoped to the hero, which is the train the engine actually chose — the
+    // reference block below names both patterns' times, so a page-wide match
+    // on "7:34 AM" would pass even if the hero were showing Monday's service.
+    // (The old "Leaves 7:34 AM" wording came from `route.leaves`, which the
+    // redesigned hero does not use: it sets the clock beside the countdown
+    // rather than labelling it.)
+    const hero =
+      (fixture?.nativeElement as HTMLElement)
+        .querySelector('.hero-row')
+        ?.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(hero).toContain('7:34 AM');
+    expect(hero).not.toContain('6:05 AM');
     expect(rendered).toContain('Monday to Saturday');
     expect(rendered).toContain('Sunday');
   });
@@ -241,6 +312,86 @@ describe('Route — booking, honesty and cross-links', () => {
     expect(rendered).not.toContain('discount');
   });
 
+  it('offers exactly one booking block, not two', async () => {
+    /*
+     * The second real-browser finding. Phase D shipped a `btn-primary` "Book on
+     * KMRL WhatsApp" after the journey *and* an `<app-booking>` panel below the
+     * grid, both linking the same chat — two calls to action for one action,
+     * against DESIGN.md §5.6's one primary action per screen.
+     *
+     * Counted as links rather than as components, because a component could be
+     * renamed and a second raw anchor added; what the reader sees is how many
+     * things on the page offer to book.
+     */
+    await render({ pair: 'aluva-to-edapally' });
+    const host = fixture?.nativeElement as HTMLElement;
+
+    expect(host.querySelectorAll('a[href^="https://wa.me/"]')).toHaveLength(1);
+    expect(host.querySelectorAll('app-booking')).toHaveLength(0);
+    // And it is the primary one, in the flow after the journey.
+    const link = host.querySelector<HTMLAnchorElement>('a[href^="https://wa.me/"]');
+    expect(link?.classList.contains('btn-primary')).toBe(true);
+    expect(host.querySelector('.answer-journey')?.contains(link ?? null)).toBe(true);
+  });
+
+  it('keeps the licence framing on whichever block survived', async () => {
+    /*
+     * The `<app-booking>` panel carried the sentences the open-data licence
+     * needs: whose channel this is, that KMRL runs the booking, and that
+     * getmymetro sells nothing and sees nothing. CLAUDE.md finding 1 ends the
+     * licence automatically if the app implies KMRL endorses it, so deleting
+     * the panel without moving those sentences would have traded a duplicate
+     * for a licence breach. This is the test that would have caught that.
+     */
+    await render({ pair: 'aluva-to-edapally' });
+    const host = fixture?.nativeElement as HTMLElement;
+    const book = host.querySelector('.book');
+    if (book === null) throw new Error('no booking block on the route page');
+    const framing = book.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    expect(framing).toContain("KMRL's own channel");
+    expect(framing).toContain("Booking is KMRL's service");
+    expect(framing).toContain('getmymetro does not sell tickets, take payment');
+    expect(framing).toContain('tell the bot where you are going');
+    // Nothing that would read as an endorsement or an unverified claim.
+    expect(framing).not.toContain('discount');
+  });
+
+  it('puts the map above the reference block, not at the foot of the page', async () => {
+    /*
+     * The third finding, in the user's own priority order: "Where the trains
+     * are now" is the high-priority section and the reference block — first and
+     * last train, fare, related links — is the low-priority one. Phase D had
+     * them the other way round, with the map last on the page.
+     *
+     * Ordering only. Every reference fact stays in the prerendered HTML,
+     * because CLAUDE.md search strategy 1 rests on a crawler reading the fare
+     * and the first and last train from the source, and the assertions below
+     * check they are all still there.
+     */
+    await render({ pair: 'aluva-to-edapally' });
+    const host = fixture?.nativeElement as HTMLElement;
+    const map = host.querySelector('app-line-map');
+    const fare = host.querySelector('section.reference');
+    const firstLast = host.querySelector('#first-last');
+    const related = host.querySelector('section.related');
+    if (map === null || fare === null || firstLast === null || related === null) {
+      throw new Error('the map and all three reference sections must be on the route page');
+    }
+
+    const follows = (a: Element, b: Element): boolean =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(follows(map, fare)).toBe(true);
+    expect(follows(map, firstLast)).toBe(true);
+    expect(follows(map, related)).toBe(true);
+
+    // Reordered, never removed: the reference content is still in the source.
+    const rendered = text();
+    expect(rendered).toContain('Fare');
+    expect(rendered).toContain('First train');
+    expect(rendered).toContain('Aluva to Edapally');
+  });
+
   it('labels the journey time as riding time and nothing more', async () => {
     await render({ pair: 'aluva-to-edapally' });
     expect(text()).toContain(
@@ -249,10 +400,15 @@ describe('Route — booking, honesty and cross-links', () => {
   });
 
   it('links the reverse journey and both station pages', async () => {
+    // CLAUDE.md search strategy 2: internal linking is how the 600 route pages
+    // get discovered and valued, so these are real anchors with real hrefs and
+    // not a widget. Scoped to the "Related" section rather than the whole
+    // page, because the map's station index below it also links /station/*
+    // and would satisfy two of the three assertions on its own.
     await render({ pair: 'aluva-to-edapally' });
     const hrefs = [
       ...(fixture?.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>(
-        'a.link-button',
+        '.link-list a.link-row',
       ),
     ].map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('/route/edapally-to-aluva');

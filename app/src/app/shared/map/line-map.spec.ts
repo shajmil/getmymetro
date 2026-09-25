@@ -88,15 +88,31 @@ function host(): HTMLElement {
 describe('LineMap — saying what it is', () => {
   it('says the positions are scheduled, above the map and not under it', async () => {
     await render();
-    const scheduled = [...host().querySelectorAll('p')].find((p) =>
-      p.textContent?.includes('Scheduled positions'),
-    );
+    const paragraphs = [...host().querySelectorAll('p')];
+    const scheduled = paragraphs.find((p) => p.textContent?.includes('Scheduled positions'));
     expect(scheduled).toBeDefined();
-    // Body weight and body size. The competitor's "not live" note is small
-    // grey text below the map while its title says "Live Map"; this one is
-    // the second line of the section.
-    expect(scheduled?.className).toContain('font-semibold');
-    expect(scheduled?.className).not.toContain('text-min');
+
+    // The competitor's "not live" note is small grey text under the map while
+    // its title says "Live Map". This one is the section's own claim, so it
+    // has to be the first thing after the heading and it has to be set as ink.
+    //
+    // Asserted by *position* and by the class the component's own stylesheet
+    // styles, not by a utility class name. The class-name assertion this
+    // replaced named `font-semibold` and `text-min` from the palette the
+    // redesign deleted, so it went on passing while saying nothing — until
+    // Phase D rewrote the component and it failed for the right reason at
+    // last.
+    expect(scheduled?.className).toContain('scheduled');
+    expect(paragraphs.indexOf(scheduled!)).toBe(0);
+
+    // And it is above the map frame in document order, not below it.
+    const frame = host().querySelector('.frame, app-schematic');
+    if (frame !== null) {
+      expect(
+        scheduled!.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+
     expect(text()).toContain('No live tracking is published for this metro');
   });
 
@@ -108,7 +124,7 @@ describe('LineMap — saying what it is', () => {
     expect(rendered).toContain('scheduled positions');
   });
 
-  it('credits OpenStreetMap and CARTO, which the basemap licence requires', async () => {
+  it('credits OpenStreetMap, which the tile licence requires', async () => {
     await render();
     const hrefs = [...host().querySelectorAll<HTMLAnchorElement>('a')].map((a) =>
       a.getAttribute('href'),

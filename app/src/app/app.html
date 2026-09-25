@@ -1,49 +1,88 @@
 <a class="skip-link" href="#main-content">{{ t('shell.skip') }}</a>
 
-<header class="border-b border-border">
-  <div class="page-shell flex items-center justify-between gap-tap-gap py-2">
-    <div class="min-w-0">
-      <p class="text-station font-bold tracking-tight">getmymetro</p>
-      <p class="text-min text-muted">{{ t('shell.tagline') }}</p>
-    </div>
+<!--
+  The header. DESIGN.md §6: a mark, the product name, and the language switch.
+
+  No accent bar, no sticky positioning, no backdrop blur and no shadow. All
+  four were in the outgoing shell and all four are forbidden by §1 — a
+  gradient, a glass effect and two drop shadows between them. The header is
+  separated from the page by a hairline, which is the whole vocabulary the
+  design has for separating things.
+
+  Not sticky, deliberately. A 64px header pinned to the top of a 844px phone
+  costs 8% of the viewport permanently, and golden rule 2 needs every one of
+  those pixels: both lanes' next train has to be visible in the first screen.
+-->
+<header class="header">
+  <div class="header-inner grid-page">
+    <a class="brand" [routerLink]="localPath('/')">
+      <!--
+        The mark is the line: a teal stroke with a station ring on it. The same
+        two shapes the whole interface is built from, at 20px.
+      -->
+      <svg viewBox="0 0 14 22" width="12" height="20" class="brand-mark" aria-hidden="true">
+        <path d="M7 3 V19" class="brand-line" />
+        <circle cx="7" cy="7" r="4" class="brand-node" />
+      </svg>
+      <span class="brand-name">GetMyMetro</span>
+    </a>
 
     <!--
-      The language toggle. A real anchor with a real href, not a button:
-      /ml/station/aluva is a page in its own right, it is in the sitemap with
-      an hreflang pair, and CLAUDE.md's search strategy 4 rests on those pages
-      being crawlable. A button would hide every Malayalam page behind a click
-      no crawler makes. `routerLink` keeps the in-app navigation instant, and
-      `hreflang` plus `lang` tell a browser and a screen reader that the label
-      itself is in the other language.
+      The desktop nav. DESIGN.md screen 07: Journey / Stations / Line map, the
+      active item underlined.
+
+      Every target is a real, prerendered destination rather than a route that
+      does not exist: "Journey" is the home page, and "Stations" and "Line map"
+      are the two sections of it that a desktop reader would otherwise have to
+      scroll past the whole board to find. Fragment links, so they work with
+      JavaScript off and survive prerendering.
+
+      `aria-current="page"` and the underline together, never the underline
+      alone — golden rule 3: colour, and in this case weight, never carries
+      meaning on its own.
+
+      Hidden below 1024px. All three are reachable from the page body on a
+      phone, so a hamburger would be a second navigation model for three links
+      that are already there.
     -->
-    <a
-      class="tap-target shrink-0 rounded-lg border-2 border-outline font-semibold transition-colors hover:bg-surface"
-      [routerLink]="alternate()"
-      [attr.lang]="otherLang()"
-      [attr.hreflang]="otherLang()"
-      [attr.title]="t('shell.switchTitle')"
-      >{{ t('shell.switch') }}</a
-    >
+    <nav class="nav" [attr.aria-label]="t('shell.navLabel')">
+      <a
+        class="nav-link"
+        [routerLink]="localPath('/')"
+        [attr.aria-current]="onHome() ? 'page' : null"
+        >{{ t('shell.navJourney') }}</a
+      >
+      <a class="nav-link" [routerLink]="localPath('/')" fragment="stations">{{
+        t('shell.navStations')
+      }}</a>
+      <a class="nav-link" [routerLink]="localPath('/')" fragment="line-map">{{
+        t('shell.navLineMap')
+      }}</a>
+    </nav>
+
+    <!--
+      EN / മല. Real links, because the language is a property of the URL:
+      /ml/station/aluva is a prerendered, indexable page in its own right and
+      CLAUDE.md's search strategy 4 rests on those pages being crawlable.
+    -->
+    <app-language-switch />
   </div>
 </header>
 
-<main id="main-content" class="page-shell grow py-6">
+<main id="main-content" class="main">
   <router-outlet />
 </main>
 
-<footer class="mt-8 border-t border-border py-6">
-  <div class="page-shell space-y-2 text-min">
+<footer class="footer">
+  <div class="footer-inner grid-page">
+    <p class="footer-line">Kochi Metro · Line 1</p>
     <!--
       Both lines are licence conditions, not copy. See CLAUDE.md finding 1:
       the attribution string is required verbatim, and the app must not imply
       that KMRL endorses it. Breach terminates the data licence automatically.
       Do not reword, abbreviate or remove either line.
-
-      The attribution is NOT translated, on either page. "Verbatim" is the
-      word the licence uses, and a translation is by definition not verbatim.
-      The disclaimer under it carries no such requirement, so it is.
     -->
-    <p lang="en">Contains data provided by Kochi Metro Rail Limited</p>
-    <p class="text-muted">{{ t('shell.disclaimer') }}</p>
+    <p lang="en" class="footer-attribution">Contains data provided by Kochi Metro Rail Limited</p>
+    <p class="footer-disclaimer">{{ t('shell.disclaimer') }}</p>
   </div>
 </footer>

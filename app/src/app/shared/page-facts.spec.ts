@@ -144,6 +144,21 @@ describe('a route page s slice', () => {
     ]);
   });
 
+  it('reports no stations between two that are adjacent', () => {
+    // The empty case drives the route page's prerendered `route.nextStation`
+    // sentence — "Pulinchodu is the next station. No stops in between." —
+    // which is the branch a crawler and a reader with JavaScript off get.
+    // "1 stop" on its own does not say there is nothing between; an
+    // off-by-one that silently included the destination would read as one.
+    const reference = routeReference(
+      routeFactsOf(network, stop('ALVA'), stop('PNCU')),
+      directory('en'),
+      'en',
+    );
+    expect(reference?.hops).toBe(1);
+    expect(reference?.stopsBetween).toEqual([]);
+  });
+
   it('reverses cleanly, which is what proves the direction is derived', () => {
     const back = routeReference(
       routeFactsOf(network, stop('EDAP'), stop('ALVA')),

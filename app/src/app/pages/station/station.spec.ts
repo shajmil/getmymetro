@@ -162,15 +162,28 @@ describe('Station — the last train that gets you home', () => {
   it('labels a short-turn departure on the live board', async () => {
     // 22:36 from Aluva towards Tripunithura runs only to Muttom depot.
     await render({ slug: 'aluva', now: at(TUESDAY, 22, 30) });
-    expect(text()).toContain('Only as far as Muttom');
+    expect(text()).toContain('Ends at Muttom');
     expect(text()).toContain('does not reach Tripunithura');
   });
 
   it('gives a terminus one platform, not an empty second one', async () => {
+    // Asserted structurally rather than by matching a heading string. The
+    // redesigned board names each platform in a lane head ("← ALUVA") rather
+    // than in the sentence "Towards Aluva" the old card used, so a string
+    // match here would be testing the copy. What has to hold at a terminus is
+    // that there is exactly one lane and it points the only way trains go —
+    // an empty second lane would leave a reader waiting on a platform that
+    // does not exist.
     await render({ slug: 'tripunithura' });
-    const rendered = text();
-    expect(rendered).toContain('Towards Aluva');
-    expect(rendered).not.toContain('Towards Tripunithura');
+    const host = fixture?.nativeElement as HTMLElement;
+    const lanes = [...host.querySelectorAll('app-board-lane')];
+
+    expect(lanes).toHaveLength(1);
+    expect(lanes[0].className).toContain('lane-aluva');
+    expect(lanes[0].querySelector('.head')?.textContent?.trim()).toBe('Aluva');
+    // And the page still says so in words, for a reader who cannot see which
+    // half of the track was drawn.
+    expect(text()).toContain('Every train goes towards Aluva');
   });
 });
 

@@ -3,9 +3,8 @@
  *
  * The product question is not "when is the next train?" — both competitors
  * answer that — it is "am I going to be OK?". So the order of this screen is
- * the order of that question: where you are, what leaves next, whether you
- * should run, and whether the train you can see is the last one that goes
- * where you are going.
+ * the order of that question: where you are, which train, and both directions
+ * at once.
  *
  * Four things here are load-bearing.
  *
@@ -32,32 +31,57 @@
  * bind departure times to this template without having narrowed the union and
  * therefore written the branch that renders the caveat.
  *
- * Phase 5 moved three things out of this folder without changing them, because
- * the station page needs the same ones and the last-train wording is the copy
- * this product can least afford two versions of: the board's view model
- * (`shared/board-view.ts`), the board's markup (`shared/departure-board.ts`)
- * and the caveat itself (`shared/service-caveat.ts`).
+ * ## Phase C: the composition changed, the answers did not
+ *
+ * The screen is now `JourneySummary` → book → `BoardPanel`, in that order and
+ * with nothing between them, because golden rule 2 requires **both lanes' next
+ * train inside the first viewport at 390x844** and the outgoing layout put
+ * three cards and a metrics grid in the way.
+ *
+ * What the component gained is the five states of DESIGN.md §6, and every one
+ * of them is *derived*, never a flag somebody remembers to set:
+ *
+ *   * **Loading** is the engine absent and the directory not yet in hand.
+ *   * **No destination** is `destinationId() === null`, and it renders the
+ *     dotted line because `JourneySummary` takes `variant="dotted"` — a shape
+ *     difference, not a colour one.
+ *   * **No service tonight** is the next departure being a *next-day* one,
+ *     which `boardView` already computes and which is the only honest
+ *     definition: the board looks days ahead, so "closed" means the soonest
+ *     train it found is tomorrow's.
+ *   * **Timetable unavailable** is `data() === 'failed'`.
+ *   * **Terminal station** is a station with one platform, which
+ *     `stationFactsOf` has already reduced for us.
+ *
+ * None of the five is a template flag or a component input the caller sets by
+ * hand. That is the point: a state that has to be remembered is a state that
+ * eventually is not.
  */
 
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   afterNextRender,
   computed,
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import type { Stop, StopId } from '../../core/data/network.types';
-import { stationPath } from '../../core/data/slugs';
+import { destinationPath, stationPath } from '../../core/data/slugs';
 import {
   StationDirectoryService,
   stationName,
 } from '../../core/data/station-directory';
 import { MetroEngineService } from '../../core/engine/metro-engine.service';
+import { asSeconds } from '../../core/data/seconds';
+import { istSecondsOfDay } from '../../core/engine/civil-time';
+import { formatClock } from '../../core/engine/clock';
 import { localDistance } from '../../core/i18n/format';
 import { I18nService } from '../../core/i18n/i18n';
 import { PageTitleService } from '../../core/seo/page-title';
@@ -68,16 +92,32 @@ import {
 import { classifyFix, type StationFix } from '../../core/location/nearest';
 import { StationMemoryService } from '../../core/location/station-memory';
 import { boardView, type BoardView } from '../../shared/board-view';
-import { DepartureBoardCard } from '../../shared/departure-board';
+import { BoardPanel } from '../../shared/board-panel';
+import { BOOKING_URL } from '../../shared/booking';
+import { Alert } from '../../shared/controls';
+import { JourneySummary } from '../../shared/journey-summary';
+import { LastTrainPanel } from '../../shared/last-train';
+import type { TrackEnd } from '../../shared/line-track';
 import { LineMap } from '../../shared/map/line-map';
+import { LineBand } from '../../shared/line-band';
+import { scrollToElement } from '../../shared/motion';
 import { stationFactsOf } from '../../shared/page-facts';
 import { platformViews, type PlatformView } from '../../shared/platform-view';
 import { Provenance } from '../../shared/provenance';
 import { caveatOf, ServiceCaveat, type CaveatView } from '../../shared/service-caveat';
+import { JourneySkeleton } from '../../shared/skeleton';
 import { startTicking } from '../../shared/ticker';
+import { journeyView, type RouteJourneyView } from '../route/route-view';
 
-/** Departures shown per platform. The MVP asks for "the next two". */
-export const ROWS_PER_PLATFORM = 2;
+/**
+ * Departures fetched per platform.
+ *
+ * The board shows one following train per lane on this screen (DESIGN.md
+ * §5.4), so two rows are what it renders — but three are asked for, because
+ * the last-train report needs the trains behind the next one to say anything
+ * about the gap before the final departure.
+ */
+export const ROWS_PER_PLATFORM = 3;
 
 type DataState = 'idle' | 'loading' | 'ready' | 'failed';
 
@@ -92,7 +132,18 @@ export type StationSource = 'picked' | 'located' | 'remembered';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, DepartureBoardCard, LineMap, ServiceCaveat, Provenance],
+  imports: [
+    RouterLink,
+    Alert,
+    BoardPanel,
+    JourneySkeleton,
+    JourneySummary,
+    LastTrainPanel,
+    LineBand,
+    LineMap,
+    Provenance,
+    ServiceCaveat,
+  ],
   templateUrl: './home.html',
   styleUrl: './home.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -212,18 +263,192 @@ export class Home {
   /** `null` when the date is one the calendar vouches for, which today means a Sunday. */
   readonly caveat = computed<CaveatView | null>(() => caveatOf(this.#outlook()));
 
+  // -------------------------------------------------- the five states (§6)
+
+  /**
+   * The skeleton, in the exact final layout.
+   *
+   * Only before there is anything at all to show. Once a station is on screen
+   * the rest fills in around it; replacing a rendered answer with grey blocks
+   * because one more thing is loading would be a worse experience than the
+   * wait it is covering.
+   */
+  readonly showSkeleton = computed(
+    () => this.stop() === null && this.data() !== 'failed' && this.stations().length === 0,
+  );
+
+  /**
+   * "No service tonight". DESIGN.md §6.
+   *
+   * Derived, and derived from the only definition that is honest: the board
+   * searches forward across service days, so if the soonest departure it found
+   * is a *next-day* one then nothing more runs tonight. `boardView` computes
+   * `nextDay` against both the wait and the civil date, so the 12:01 AM train
+   * — tonight's train on tomorrow's date — is correctly not counted as
+   * tomorrow's (CLAUDE.md's `NEXT_DAY_SECONDS` reasoning).
+   *
+   * Requires *every* lane to be closed. One platform still running is not a
+   * closed station, and at a terminus there is only one lane anyway.
+   */
+  readonly closed = computed(() => {
+    const boards = this.boards();
+    if (boards.length === 0) return false;
+    return boards.every((board) => board.rows.length > 0 && board.rows[0].nextDay);
+  });
+
+  /** The first train tomorrow, once the night has closed in. */
+  readonly opensAt = computed<string | null>(() => {
+    if (!this.closed()) return null;
+    const clocks = this.boards()
+      .map((board) => board.rows[0]?.clock)
+      .filter((clock): clock is string => clock !== undefined);
+    return clocks.length === 0 ? null : clocks[0];
+  });
+
+  /**
+   * Which direction has gone for the night, said in words.
+   *
+   * Names the terminus when only one lane is relevant, and says "the last
+   * trains" when both are. Never a bare "closed": a reader standing at
+   * Pathadipalam at 11:50 PM needs to know whether it is *their* train that
+   * has gone.
+   */
+  readonly closedBody = computed<string>(() => {
+    const boards = this.boards();
+    const direction = this.journeyDirection();
+    if (direction !== null) {
+      const lane = boards.find((board) => board.direction === direction);
+      if (lane !== undefined) return this.t('screen.lastGone', { name: lane.towardsName });
+    }
+    return this.t('screen.lastGoneBoth');
+  });
+
+  /**
+   * Set at a terminus, so `LineTrack` draws one half of the track only.
+   *
+   * A terminus has one platform because `stationFactsOf` drops the direction
+   * that cannot be boarded, so the end is read off which lane survived rather
+   * than off the station's index — a feed that extended the line would move
+   * the terminus and this would follow it.
+   */
+  readonly trackEnd = computed<TrackEnd>(() => {
+    const boards = this.boards();
+    if (boards.length !== 1) return null;
+    // The only platform runs towards Tripunithura, so this *is* Aluva.
+    return boards[0].direction === 0 ? 'aluva' : 'tripunithura';
+  });
+
+  /** "Timetable · 6:16 PM", or "Saved …" when the data is a fallback. */
+  readonly provenanceLine = computed<string>(() => {
+    const now = this.#engineService.now();
+    const clock = this.#clockOf(now);
+    return this.data() === 'failed'
+      ? this.t('board.savedAt', { clock })
+      : this.t('board.timetableAt', { clock });
+  });
+
+  // -------------------------------------------------------------- the hero
+
+  /** "You're here", and how confident we are of it. */
+  readonly hereLabel = computed<string>(() => {
+    switch (this.source()) {
+      case 'located': {
+        const fix = this.fix();
+        const distance = this.distanceLabel() ?? '';
+        if (fix === null) return this.t('journey.youreHere');
+        switch (fix.kind) {
+          case 'at':
+            return this.t('home.fixAt', { distance });
+          // A reader 23.8 km from Aluva was being told "Nearest station — 23.8
+          // km away", which reads as a fact about a station they can use. It
+          // is not one. `far` gets its own line saying the distance is the
+          // problem, and {@link fixNote} follows it with what to do instead.
+          case 'far':
+            return this.t('home.fixOffNetwork', { distance });
+          default:
+            return this.t('home.fixNear', { distance });
+        }
+      }
+      case 'remembered':
+        return this.t('home.remembered');
+      case 'picked':
+        return this.t('home.picked');
+      default:
+        return this.t('journey.youreHere');
+    }
+  });
+
+  /**
+   * A fix that is too coarse or too far to state as fact.
+   *
+   * Kept out of {@link hereLabel} deliberately: those two cases need a whole
+   * sentence saying *why* the station on screen may be the wrong one, and a
+   * sentence does not belong in the 16px line under a 30px heading.
+   */
+  readonly fixNote = computed<string | null>(() => {
+    const fix = this.fix();
+    if (fix === null) return null;
+    if (fix.kind === 'far') {
+      return this.t('home.fixFar', {
+        distance: this.distanceLabel() ?? '',
+        station: this.stationLabel(),
+      });
+    }
+    if (fix.kind === 'vague') return this.t('home.fixVague', { accuracy: fix.accuracyM });
+    return null;
+  });
+
+  /** Dotted before a destination, muted once service has ended, solid otherwise. */
+  readonly heroVariant = computed<'solid' | 'dotted' | 'muted'>(() => {
+    if (this.closed()) return 'muted';
+    return this.destinationStop() === null ? 'dotted' : 'solid';
+  });
+
+  readonly #heroRow = computed(() => {
+    if (this.closed()) return null;
+    const journey = this.activeJourney();
+    return journey === null || journey.rows.length === 0 ? null : journey.rows[0];
+  });
+
+  readonly heroCountdown = computed<string | null>(() => this.#heroRow()?.countdown ?? null);
+
+  /** The departure clock without its meridiem, which is set smaller beside it. */
+  readonly heroClock = computed<string>(() => {
+    const clock = this.#heroRow()?.clock;
+    return clock === undefined ? '' : clock.replace(/\s+(AM|PM)$/i, '');
+  });
+
+  readonly heroMeridiem = computed<string | null>(() => {
+    const match = /\s+(AM|PM)$/i.exec(this.#heroRow()?.clock ?? '');
+    return match === null ? null : match[1];
+  });
+
+  readonly heroArrivalClock = computed<string | null>(() => {
+    const clock = this.#heroRow()?.arrivalClock;
+    return clock === undefined ? null : clock.replace(/\s+(AM|PM)$/i, '');
+  });
+
+  /** "3 min ride · 1 stop · ₹40" — every part of it from the feed. */
+  readonly heroMeta = computed<string | null>(() => {
+    const journey = this.activeJourney();
+    const row = this.#heroRow();
+    if (journey === null || row === null) return null;
+    return [
+      this.t('journey.rideTime', { minutes: row.durationMinutes }),
+      `${journey.hops} ${this.stopWord(journey.hops)}`,
+      `₹${journey.fare}`,
+    ].join(' · ');
+  });
+
+  readonly journeyTowardsName = computed<string>(() => this.activeJourney()?.towardsName ?? '');
+
   /**
    * Every destination from here, with its fare and how many stops away it is.
    *
-   * This is Phase 7's answer to "we have so many features but you cannot find
-   * them". A→B journeys, fares and the 600 prerendered route pages were all
-   * three taps away — home, station page, fare list — and a daily commuter was
-   * never going to find them. They are now one tap, and the rows are the same
-   * `platformViews` rows the station page renders, not a second implementation
-   * of the fare list.
-   *
    * Grouped by platform on purpose: that is also the plain-language answer to
-   * "which side do I stand on" (MVP scope item 2).
+   * "which side do I stand on" (MVP scope item 2). Each row links a
+   * prerendered `/route/:pair` page, which is what CLAUDE.md's search strategy
+   * 2 — cross-linking — actually consists of.
    */
   readonly platforms = computed<readonly PlatformView[]>(() => {
     const engine = this.#engineService.engine();
@@ -239,6 +464,159 @@ export class Home {
   /** "stop" or "stops". The feed counts hops; English counts differently at one. */
   stopWord(hops: number): string {
     return this.#i18n.t(hops === 1 ? 'common.stop' : 'common.stops');
+  }
+
+  // ----------------------------------------------------------- destination
+  readonly destinationId = signal<StopId | null>(null);
+
+  readonly destinationStop = computed<Stop | null>(() => {
+    const engine = this.#engineService.engine();
+    const destId = this.destinationId();
+    if (engine === null || destId === null) return null;
+    try {
+      return engine.stop(destId);
+    } catch {
+      return null;
+    }
+  });
+
+  readonly destinationLabel = computed<string>(() => {
+    const dest = this.destinationStop();
+    return dest === null ? '' : dest.name[this.#i18n.locale()];
+  });
+
+  /** The choose-destination screen for the station on screen. */
+  readonly destinationPath = computed<string | null>(() => {
+    const station = this.stop();
+    return station === null ? null : this.localPath(destinationPath(station.name.en));
+  });
+
+  readonly #journeyOutlook = computed(() => {
+    const engine = this.#engineService.engine();
+    const origin = this.stop();
+    const dest = this.destinationStop();
+    if (engine === null || origin === null || dest === null) return null;
+    if (origin.id === dest.id) return null;
+    try {
+      return engine.journey(origin.id, dest.id, this.#engineService.now(), 3);
+    } catch {
+      return null;
+    }
+  });
+
+  readonly activeJourney = computed<RouteJourneyView | null>(() => {
+    const outlook = this.#journeyOutlook();
+    if (outlook === null) return null;
+    const plan = outlook.certainty === 'unverified' ? outlook.provisional : outlook.result;
+    return journeyView(plan, this.#engineService.now(), 3, this.#i18n.locale());
+  });
+
+  readonly journeyDirection = computed<number | null>(() => {
+    const outlook = this.#journeyOutlook();
+    if (outlook === null) return null;
+    const plan = outlook.certainty === 'unverified' ? outlook.provisional : outlook.result;
+    return plan.direction;
+  });
+
+  readonly bookingUrl = BOOKING_URL;
+
+  /**
+   * The picker's `<details>`, so "Change" can actually reach it.
+   *
+   * Phase D shipped the button and the picker and nothing joining them: the
+   * click set `pickerOpen` on a `<details>` several screens further down and
+   * neither the viewport nor focus moved, so to a reader the control was dead.
+   * A signal-based `viewChild` rather than an id lookup — the element is the
+   * component's own and `document.getElementById` would find whichever copy a
+   * test rendered last.
+   */
+  // `private readonly`, not `#private`: NG1053 forbids an ES private field here.
+  private readonly pickerEl = viewChild<ElementRef<HTMLDetailsElement>>('pickerEl');
+
+  /**
+   * Open the picker, scroll to it and put the caret in its search box.
+   *
+   * All three, and none of them is optional. WCAG 3.2.1 asks that a control
+   * which changes context move focus with it, and a reader on a phone who
+   * never sees the thing that opened has been shown nothing at all. The scroll
+   * honours `prefers-reduced-motion` because DESIGN.md §7 is "all instant",
+   * not "slower" — and a smooth scroll across a long page is exactly the
+   * motion that setting exists to stop.
+   *
+   * The focus target is the filter input rather than the summary: the reader
+   * asked to change station, and typing two letters is the fastest way
+   * through 25 of them. The summary is the fallback for the render where the
+   * input does not exist.
+   */
+  openOriginPicker(): void {
+    this.filterQuery.set('');
+    this.pickerOpen.set(true);
+    this.#revealPicker();
+  }
+
+  /**
+   * Scroll and focus, after the `<details>` has actually opened.
+   *
+   * `pickerOpen` is a signal the template reads, so the input inside is not in
+   * the DOM until Angular has rendered the change. A microtask is enough —
+   * this is a click handler, so change detection has already been scheduled.
+   */
+  #revealPicker(): void {
+    if (typeof document === 'undefined') return;
+    const details = this.pickerEl()?.nativeElement;
+    if (details === undefined) return;
+
+    // Open the element directly. `open` is deliberately NOT bound in the
+    // template: a <details> owns its own state and fires `toggle` after the
+    // browser has changed it, so a two-way arrangement has the binding and the
+    // element writing the same value at each other.
+    details.open = true;
+
+    // No scrolling. The picker is now a dropdown anchored under the button
+    // that opens it, so it is already on screen — scrolling to it would move
+    // the page for no reason. Focus alone tells a keyboard or screen-reader
+    // user where they have arrived.
+    requestAnimationFrame(() => {
+      const input = details.querySelector<HTMLInputElement>('input.picker-input');
+      (input ?? details.querySelector<HTMLElement>('summary'))?.focus();
+    });
+  }
+
+
+  chooseDestination(id: StopId | null): void {
+    if (id === null || id === this.stationId()) {
+      this.destinationId.set(null);
+    } else {
+      this.destinationId.set(id);
+    }
+  }
+
+  clearDestination(): void {
+    this.destinationId.set(null);
+  }
+
+  /**
+   * A fare row is a link to a route page *and* a way to set the destination.
+   *
+   * Plain click sets the destination in place, which is what a reader on the
+   * home screen almost always wants; a modified click falls through to the
+   * link, so the route page still opens in a new tab like any other anchor.
+   * The `href` is real either way, which is the half that matters to a
+   * crawler.
+   */
+  onDestinationClick(event: MouseEvent, id: StopId): void {
+    if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      event.preventDefault();
+      this.chooseDestination(id);
+      if (typeof document !== 'undefined') {
+        scrollToElement(document.getElementById('main-content'), 'start');
+      }
+    }
+  }
+
+  onStationSelect(id: StopId): void {
+    this.choose(id);
+    if (this.destinationId() === id) this.destinationId.set(null);
   }
 
   // ---------------------------------------------------------------- chrome
@@ -272,9 +650,34 @@ export class Home {
   choose(id: StopId): void {
     this.#picked.set(id);
     this.#memory.write(id);
-    this.pickerOpen.set(false);
+    // Close the element itself. `open` is not bound (see the template), so
+    // setting the signal alone would leave the picker standing open over the
+    // answer the reader just asked for. `toggle` mirrors it back to the signal.
+    const details = this.pickerEl()?.nativeElement;
+    if (details !== undefined) details.open = false;
+    else this.pickerOpen.set(false);
   }
 
+  readonly filterQuery = signal('');
+
+  onFilterInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.filterQuery.set((target.value ?? '').trim().toLowerCase());
+  }
+
+  stationMatches(station: { readonly name: string; readonly ml?: string }): boolean {
+    const query = this.filterQuery();
+    if (!query) return true;
+    const en = (station.name ?? '').toLowerCase();
+    const ml = (station.ml ?? '').toLowerCase();
+    return en.includes(query) || ml.includes(query);
+  }
+
+  /**
+   * The element is the source of truth; this only mirrors it into a signal so
+   * the Change button's `aria-expanded` stays honest. Never write `open` from
+   * here — see the note on the <details> in the template.
+   */
   togglePicker(open: boolean): void {
     this.pickerOpen.set(open);
   }
@@ -289,6 +692,21 @@ export class Home {
   }
 
   // --------------------------------------------------------------- plumbing
+
+  /**
+   * The wall clock, for the provenance line.
+   *
+   * `istSecondsOfDay` rather than `Date#getHours`, and `formatClock` rather
+   * than any locale formatter: this is the same clock face the departure times
+   * beside it are rendered with, and the two disagreeing by a minute on the
+   * same panel is exactly the defect CLAUDE.md finding 8 catches KMRL's own
+   * site in. It is a wall clock and not a service-day offset, so it can never
+   * exceed 24:00 — but it goes through the same formatter anyway so that "12:05
+   * AM" means the same thing in both places.
+   */
+  #clockOf(now: number): string {
+    return formatClock(asSeconds(istSecondsOfDay(now)));
+  }
 
   #loadData(): void {
     if (this.#data() === 'loading') return;

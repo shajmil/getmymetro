@@ -1,58 +1,641 @@
-/* Home screen layout.
+/* Home screen layout. DESIGN.md §6, screen 01.
    -------------------------------------------------------------------------
-   Everything here exists to hold the page still. CLS must be 0 and a live
-   countdown reflows once a second, so the two elements that change — the
-   countdown and the clock time beside it — are given reserved width, and the
-   region the boards arrive into is given reserved height.
+   The one constraint the layout has to satisfy is golden rule 2: **both
+   lanes' next train inside the first viewport at 390x844**. Measured against
+   the reference mockup that leaves the board starting at about 470px, which
+   is why the hero's padding is tight, why the "Book" button is 56px and not a
+   card, and why nothing sits between the two.
 
-   No @keyframes. No transition longer than --gm-duration (150ms), and none on
-   anything but colour, opacity and transform. Nothing animates on load. */
+   Everything below the board — the map, the picker, the fare list — is
+   scrolled to deliberately, so none of it competes for that first screen.
 
-/* Reserved height for the answer.
-   The boards arrive a few hundred milliseconds after the HTML paints, and
-   without a reservation everything below them drops down the page when they
-   do. 30rem is a measured two-platform board without warnings, which is the
-   overwhelmingly common case; a terminus renders one platform and a late
-   evening renders warnings, so this cannot be exact for every screen.
-   What it does guarantee is that the departure times themselves sit at the
-   top of the reserved box and therefore never move, which is the shift a
-   once-a-second countdown would otherwise cause. */
-.board-slot {
-  min-block-size: 30rem;
+   No @keyframes. Nothing animates on load. */
+
+.screen {
+  display: flex;
+  flex-direction: column;
 }
 
-/* The same reservation, for the block that only exists once a station does.
-   The destination list and the two links appear when the bundle lands; without
-   a reservation the picker and the provenance line below them would drop down
-   the page at that moment. 14rem is the collapsed height: a heading, a
-   56px disclosure row and two 56px links, plus the gaps between them. */
-.journey-slot {
-  min-block-size: 14rem;
+/* -------------------------------------------------------------------------
+   The composition. DESIGN.md §4 and screen 07.
+   -------------------------------------------------------------------------
+   One grid, two regions. Below 1024px `grid-12`'s own rule spans every child
+   full width, so the phone layout is unchanged — the journey, the book button,
+   the board and the last-train panel stack in the order they always did.
+
+   At 1024px the journey takes columns 1-6 and the board 8-12, with column 7
+   the empty gutter the spec asks for. Nothing about the phone layout is a
+   special case of the desktop one or the other way round; they are the same
+   markup read by two sets of spans.
+
+   `row-gap: 0` overrides `grid-12`'s default here: on a phone the two regions
+   are a continuous scroll and the board's own padding already separates them,
+   so a 40px row gap would open a white band between the journey and a board
+   whose whole job is to sit directly under it (golden rule 2). Desktop puts
+   the gap back where it belongs, on the band below.
+   ------------------------------------------------------------------------- */
+
+.answer {
+  row-gap: 0;
 }
 
-/* One station in the picker. Full width so the target is unmissable, and
-   56px tall so it meets the floor on its own. */
+.answer-journey {
+  /* The journey column keeps the mobile gutter on a phone because the grid's
+     padding is on `.answer`, not on this; at desktop the grid supplies the
+     margin and this adds nothing. */
+  min-inline-size: 0;
+}
+
+.answer-board {
+  min-inline-size: 0;
+}
+
+/* The product promise, above the station name.
+
+   Hidden below 1024px, and `display: none` rather than visually hidden is
+   correct here: the same sentence is the page's meta description and is read
+   out by the document title, so a screen-reader user on a phone has it
+   already. What it must not do is cost the phone the first viewport — golden
+   rule 2 puts both lanes' next train there and this line is 27px of the 844
+   that has to fit. */
+.promise {
+  display: none;
+}
+
+/* The hero. Top padding is small because the header already supplies the
+   optical space above the station name. */
+.hero {
+  padding-block: var(--gmm-space-2) var(--gmm-space-4);
+}
+
+.alert-slot {
+  padding-block-end: var(--gmm-space-4);
+}
+
+.alert-action {
+  margin: var(--gmm-space-3) 0 0;
+}
+
+.retry-icon,
+.change-icon,
+.book-icon,
+.where-to-chevron,
+.link-chevron,
+.closed-icon {
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.change-icon,
+.book-icon {
+  stroke-width: 2.25;
+}
+
+/* --- the "no destination" prompt, on the line ---------------------------- */
+
+.prompt {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+  /* The reference mockup runs this to about 32 characters a line, which keeps
+     it beside the dotted line rather than under it. */
+  max-inline-size: 30ch;
+}
+
+.prompt-action {
+  margin: var(--gmm-space-4) 0 0;
+}
+
+/* "Where to? ›". A secondary button that fills the content column, because it
+   is the only thing to do on this screen when there is no destination. */
+.where-to {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  inline-size: 100%;
+  min-block-size: var(--gmm-touch-primary);
+  padding-inline: var(--gmm-space-4);
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-input);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+  transition:
+    background-color var(--gmm-hover) var(--gmm-ease),
+    border-color var(--gmm-hover) var(--gmm-ease);
+}
+
+.where-to:hover {
+  background-color: var(--gmm-soft);
+  border-color: var(--gmm-ink-2);
+}
+
+.where-to-chevron {
+  color: var(--gmm-ink-3);
+}
+
+/* The destination row's placeholder text, beside the dashed node. */
+.destination-empty {
+  font-size: var(--text-body);
+  color: var(--gmm-ink-3);
+}
+
+/* --- "No service tonight" ------------------------------------------------ */
+
+/* Ink, not amber: the night ending is not a fault and does not need a
+   warning colour. The moon carries the state as a shape. */
+.closed-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gmm-space-2);
+  margin: 0;
+  font-size: var(--text-arrival);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--gmm-ink);
+}
+
+.closed-body {
+  margin: var(--gmm-space-3) 0 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+/* "First train tomorrow 6:00 AM" — the label and the time on one row, the
+   time set large because it is the answer. */
+.closed-first {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  flex-wrap: wrap;
+  margin: var(--gmm-space-4) 0 0;
+  padding-block-start: var(--gmm-space-3);
+  border-block-start: 1px solid var(--gmm-rule);
+}
+
+.closed-first-label {
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+.closed-first-time {
+  font-size: var(--text-station);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--tracking-time);
+  color: var(--gmm-ink);
+}
+
+/* --- the primary action -------------------------------------------------- */
+
+.book {
+  padding-block-end: var(--gmm-space-5);
+}
+
+.book-button {
+  /* The label sits left and the arrow right, rather than both centred: the
+     arrow is a direction indicator, not decoration beside the words. */
+  inline-size: 100%;
+  justify-content: space-between;
+  position: relative;
+}
+
+.book-note {
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-min);
+  line-height: 1.4;
+  color: var(--gmm-ink-2);
+}
+
+/* --- the board ----------------------------------------------------------- */
+
+/* The board bleeds to the screen edge — its soft ground is what separates the
+   journey from the timetable, and a 20px white margin either side would make
+   it read as a card. Its contents keep the gutter, inside the component.
+
+   The bleed is now a negative margin rather than the absence of one, because
+   the board sits inside the padded `grid-page` track. Exactly the page's own
+   gutter, so it lands flush with the window edge and not a pixel past it —
+   a wider value would open a horizontal scrollbar at 360px, which is the
+   spec's floor.
+
+   Reserved height so the page does not jump when the boards arrive a few
+   hundred milliseconds after the HTML paints. 22rem is a measured two-lane
+   board with one following train each, which is what this screen renders. */
+.board {
+  min-block-size: 22rem;
+  margin-inline: calc(-1 * var(--gmm-gutter-mobile));
+}
+
+/* "No departures here", when the board has nothing. Keeps the board column's
+   own inset rather than the board's bleed. */
+.board-prose {
+  margin-block: var(--gmm-space-4) 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+/* The last-train panel, when there is one. No fixed height and no top
+   padding of its own: outside the last-train window the component renders
+   nothing at all, and a reserved band would cost the first viewport all day
+   for a panel that appears after 21:00 (DESIGN.md golden rule 2). The margin
+   lives on the panel inside, so an empty slot is genuinely zero-height. */
+.last-train-slot > app-last-train:not(:empty) {
+  display: block;
+  padding-block-start: var(--gmm-space-4);
+}
+
+.map-slot {
+  padding-block-start: var(--gmm-space-6);
+}
+
+/* The location caveat, in the journey column under the station it doubts.
+
+   Amber-soft ground rather than plain prose: it is the one line on the screen
+   that says the answer above may be about the wrong place, and it has to be
+   found by a reader who is not looking for it. Not a colour alone — the
+   sentence says what is wrong and the button beside it says what to do,
+   because DESIGN.md §1 rule 3 is that colour never carries meaning by
+   itself. */
+.fix-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmm-space-3);
+  margin-block: var(--gmm-space-4) 0;
+  padding: var(--gmm-space-4);
+  border-radius: var(--gmm-radius-alert);
+  background-color: var(--gmm-amber-soft);
+  font-size: var(--text-min);
+  line-height: 1.5;
+  color: var(--gmm-ink);
+}
+
+/* On its own row once the sentence wraps, which it does at 360px. */
+.fix-note-action {
+  flex: 0 0 auto;
+  background-color: var(--gmm-bg);
+}
+
+.location-note,
+.note {
+  margin-block: var(--gmm-space-4) 0;
+  font-size: var(--text-min);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+.location-note .note {
+  margin-block-start: 0;
+}
+
+.prose {
+  margin-block: var(--gmm-space-4) 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+/* --- the picker ---------------------------------------------------------- */
+
+/*
+  The picker is a dropdown anchored to the Change button, not a page section.
+
+  It sits inside the origin row, so `.origin-meta` is the positioning context.
+  Floating it means opening the picker does not push the answer — the
+  countdown, the board — down the page underneath it. On a phone there is not
+  enough width to float without covering the name it belongs to, so below
+  640px it stays in flow and simply expands.
+*/
+.picker {
+  margin-block-start: var(--gmm-space-2);
+}
+
+.picker[open] {
+  position: relative;
+  z-index: 20;
+}
+
+@media (min-width: 640px) {
+  .picker[open] {
+    position: absolute;
+    /* Right-aligned: the button sits at the end of the origin row, so a panel
+       growing leftwards stays on screen where one growing rightwards would not. */
+    inset-inline-end: 0;
+    inset-block-start: calc(100% + var(--gmm-space-2));
+    inline-size: min(22rem, calc(100vw - 2 * var(--gmm-space-5)));
+    background: var(--gmm-bg);
+    border: 1px solid var(--gmm-grey);
+    border-radius: var(--gmm-radius-input);
+    padding: var(--gmm-space-3);
+  }
+}
+
+/*
+  Cap the list so 25 stations cannot run off the screen. `dvh` because a mobile
+  browser's toolbars change the viewport as it scrolls.
+*/
+.picker[open] .picker-list {
+  max-block-size: min(22rem, 50dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.picker-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  min-block-size: var(--gmm-touch-primary);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--gmm-ink);
+  cursor: pointer;
+  list-style: none;
+}
+
+.picker-summary::-webkit-details-marker {
+  display: none;
+}
+
+.picker-count {
+  font-weight: 400;
+  font-size: var(--text-min);
+  color: var(--gmm-ink-2);
+}
+
+.picker-search {
+  padding-block-end: var(--gmm-space-3);
+}
+
+.picker-input {
+  display: block;
+  inline-size: 100%;
+  min-block-size: var(--gmm-touch-primary);
+  padding: var(--gmm-space-3) var(--gmm-space-4);
+  border: 1px solid var(--gmm-grey);
+  border-radius: var(--gmm-radius-input);
+  background-color: var(--gmm-bg);
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+.picker-input::placeholder {
+  color: var(--gmm-ink-3);
+  opacity: 1;
+}
+
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-block-size: 26rem;
+  overflow-y: auto;
+}
+
+/* One station. Full width so the target is unmissable, and 56px tall so it
+   meets the floor on its own without a declared height. */
 .station-button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--gmm-space-3);
   inline-size: 100%;
-  min-block-size: var(--gm-tap-min);
-  padding-inline: 0.75rem;
-  border-radius: 0.5rem;
+  min-block-size: var(--gmm-touch-primary);
+  padding-inline: var(--gmm-space-3);
+  border: 0;
+  border-block-start: 1px solid var(--gmm-rule);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--gmm-ink);
+  font-family: inherit;
+  font-size: var(--text-body);
   text-align: start;
-  transition:
-    background-color var(--gm-duration) var(--gm-ease),
-    color var(--gm-duration) var(--gm-ease);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color var(--gmm-hover) var(--gmm-ease);
 }
 
 .station-button:hover {
-  background-color: var(--gm-surface);
+  background-color: var(--gmm-soft);
 }
 
+/* Selected: line-soft ground and a bold name. Two signals, one of them not a
+   colour, and the word "Showing" beside it makes three. */
 .station-button[aria-current='true'] {
-  background-color: var(--gm-accent);
-  color: var(--gm-on-accent);
+  background-color: var(--gmm-line-soft);
   font-weight: 600;
+}
+
+.station-button-name {
+  min-inline-size: 0;
+  overflow-wrap: break-word;
+}
+
+.station-button-state {
+  flex-shrink: 0;
+  font-size: var(--text-min);
+  font-weight: 600;
+  color: var(--gmm-line-text);
+}
+
+/* --- fares, and the links out -------------------------------------------- */
+
+.fares {
+  padding-block-start: var(--gmm-space-6);
+}
+
+.fares-heading {
+  margin: 0;
+  font-size: var(--text-arrival);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--gmm-ink);
+}
+
+.fares-body {
+  margin: var(--gmm-space-2) 0 0;
+  font-size: var(--text-min);
+  line-height: 1.5;
+  color: var(--gmm-ink-2);
+}
+
+/* "Towards Tripunithura". A section head inside the fare list, not a page
+   heading — 16px, uppercase, and the same weight as the board's lane heads so
+   the two read as the same kind of label. */
+.fares-platform {
+  margin: var(--gmm-space-5) 0 var(--gmm-space-2);
+  font-size: var(--text-min);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-lane);
+  text-transform: uppercase;
+  color: var(--gmm-ink);
+}
+
+:host-context([lang='ml']) .fares-platform {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.fare-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fare-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  min-block-size: var(--gmm-touch);
+  padding-block: var(--gmm-space-2);
+  border-block-start: 1px solid var(--gmm-rule);
+  color: var(--gmm-ink);
+  font-size: var(--text-body);
+  text-decoration: none;
+}
+
+.fare-row:hover {
+  color: var(--gmm-line-text);
+}
+
+.fare-name {
+  min-inline-size: 0;
+  overflow-wrap: break-word;
+}
+
+.fare-value {
+  flex-shrink: 0;
+  font-size: var(--text-min);
+  font-weight: 600;
+  color: var(--gmm-ink-2);
+}
+
+.links {
+  padding-block-start: var(--gmm-space-5);
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gmm-space-3);
+  min-block-size: var(--gmm-touch-primary);
+  border-block-start: 1px solid var(--gmm-rule);
+  color: var(--gmm-ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link-row:hover {
+  color: var(--gmm-line-text);
+}
+
+.link-chevron {
+  color: var(--gmm-ink-3);
+}
+
+.provenance-slot {
+  padding-block: var(--gmm-space-5) var(--gmm-space-7);
+}
+
+/* -------------------------------------------------------------------------
+   The line, across the bottom. DESIGN.md screen 07, §5.5.
+   -------------------------------------------------------------------------
+   Full width on every screen, not desktop-only: the strip is useful on a phone
+   too, where it draws the two ends and where the reader is between them. What
+   changes at 1024px is the component's own decision to label all 25 stations,
+   which it makes at its own breakpoint.
+
+   Separated from the answer above by a hairline rather than by a card, which
+   is the only separator this design has.
+   ------------------------------------------------------------------------- */
+
+.network {
+  margin-block-start: var(--gmm-space-6);
+  padding-block-start: var(--gmm-space-5);
+  border-block-start: 1px solid var(--gmm-rule);
+}
+
+/* -------------------------------------------------------------------------
+   Desktop. DESIGN.md §4: 12 columns, 24px gutters, 80px margins, 1280px.
+   ------------------------------------------------------------------------- */
+
+@media (min-width: 1024px) {
+  .promise {
+    display: block;
+    margin: 0 0 var(--gmm-space-5);
+    font-size: var(--text-body);
+    line-height: 1.5;
+    color: var(--gmm-ink-2);
+  }
+
+  /* The board stops bleeding and becomes the panel the spec describes: soft
+     ground, 16px radius, in columns 8-12. On a phone the bleed *is* the
+     separation; at this width there is a 24px grid gutter and a white column
+     either side, so the radius is what says "this is one object". */
+  .board {
+    border-radius: var(--gmm-radius-panel);
+    overflow: hidden;
+    margin-inline: 0;
+    /* The board no longer reserves a mobile board's height — at this width it
+       renders three following trains a lane, not one. */
+    min-block-size: 26rem;
+  }
+
+  /* The journey column gets the space the spec gives it. The hero's own
+     padding is tight on a phone to protect the first viewport; here there is
+     no competition for it. */
+  .hero {
+    padding-block: var(--gmm-space-4) var(--gmm-space-5);
+  }
+
+  /* The primary action stops filling the column. At 600px wide a 56px button
+     reads as a banner rather than a button; the reference screen sets it to
+     380px and that is about 60% of the column. */
+  .book-button {
+    max-inline-size: 24rem;
+  }
+
+  .network {
+    margin-block-start: var(--gmm-space-7);
+  }
+
+  /* The reference content below is prose and links: full width at 1280px is
+     a 140-character measure, which is unreadable. Held to the journey's half
+     plus the gutter, which is where the eye already is. */
+  .fares,
+  .links,
+  .picker {
+    max-inline-size: 46rem;
+  }
+}
+
+/*
+  The anchor is OUR element, projected into JourneySummary's origin row. It has
+  to be ours: .origin-meta belongs to that component and emulated encapsulation
+  puts its own _ngcontent attribute on it, so no rule here can select it.
+*/
+.change-anchor {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
 }

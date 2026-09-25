@@ -1,175 +1,450 @@
 <!--
-  One journey. The order is the order of the question: where to where, when
-  does the next one leave, how long, how much, which stations, what about
-  Sunday, and how do I buy a ticket.
+  Route. DESIGN.md §6, screen 04.
 
-  Everything except the "Next trains" panel is in the prerendered HTML — the
-  fare, the stops, the service patterns and the strand warning are properties
-  of the timetable, so they are the same at any hour and the server computes
-  them. The panel is not: every departure time in it is computed in the
-  reader's browser against their own clock, because a time baked into a static
-  page served from a CDN edge is wrong for as long as that cache lives.
+  Back → "ROUTE / X to Y" → countdown + departure→arrival → meta → a
+  JourneyLine of every stop with its time, the destination saying "Get off
+  here" → Book.
+
+  The split along the clock is Phase 6's and stands: the fare, the stations
+  between, and the first and last train per service pattern are properties of
+  the timetable and are in the prerendered HTML, so a crawler reads them
+  without running anything. The countdown, the departure and the stop times
+  are properties of *now*, so they are computed in the reader's browser at the
+  moment they read them.
 -->
 
-@switch (problem()) {
-  @case ('same-station') {
-    <section>
-      <h1 class="text-station-lg font-bold">{{ t('route.sameHeading', { name: originName() }) }}</h1>
-      <!--
-        The feed prices every self-pair at ₹10 — KMRL's published minimum — and
-        the licence forbids modifying the data, so the number stays in the
-        table. Quoting it here would be selling a ticket for a journey that
-        does not exist (CLAUDE.md finding 5).
-      -->
-      <p class="warning mt-3">{{ t('route.sameBody') }}</p>
-      @if (originPath(); as here) {
-        <p class="tap-row mt-4">
-          <a class="link-button hover:bg-surface" [routerLink]="here">
+<div class="screen">
+  @if (problem() === 'same-station') {
+    <section class="grid-page not-found">
+      <h1 class="page-title">{{ t('route.sameHeading', { name: originName() }) }}</h1>
+      <p class="prose">{{ t('route.sameBody') }}</p>
+      @if (originPath(); as href) {
+        <p class="tap-row action-row">
+          <a class="btn-secondary" [routerLink]="href">
             {{ t('route.timesAt', { name: originName() }) }}
           </a>
         </p>
       }
     </section>
-  }
-  @case ('unknown') {
-    <section>
-      <h1 class="text-station-lg font-bold">{{ t('route.unknownHeading') }}</h1>
-      <p class="mt-2">
+    <!-- Same reason as the branch below: a refusal still links all 25. -->
+    <div class="map-slot map-slot-full grid-page" id="line-map">
+      <app-line-map [stations]="stations()" [from]="null" [to]="null" />
+    </div>
+  } @else if (problem() === 'unknown') {
+    <section class="grid-page not-found">
+      <h1 class="page-title">{{ t('route.unknownHeading') }}</h1>
+      <p class="prose">
         {{ t('route.unknownLead', { pair: pair() }) }}
-        <span class="font-semibold">aluva-to-edapally</span>{{ t('route.unknownTail') }}
+        <span class="example">aluva-to-edapally</span>{{ t('route.unknownTail') }}
       </p>
-      <p class="tap-row mt-4">
-        <a class="link-button hover:bg-surface" [routerLink]="localPath('/')">{{
-          t('station.backHome')
-        }}</a>
+      <p class="tap-row action-row">
+        <a class="btn-secondary" [routerLink]="localPath('/')">{{ t('station.backHome') }}</a>
       </p>
     </section>
-  }
-  @default {
-    <section>
-      <h1 class="text-station-lg font-bold">
-        {{ t('route.heading', { origin: originName(), destination: destinationName() }) }}
-      </h1>
-      @if (reference(); as facts) {
-        <p class="text-muted">
-          {{
-            t('route.summary', {
-              towards: facts.towardsName,
-              hops: facts.hops,
-              stopWord: facts.hops === 1 ? t('common.stop') : t('common.stops'),
-              fare: facts.fare,
-            })
-          }}
-        </p>
-      }
+    <!--
+      A refusal is still not a dead end. The map section carries the index of
+      all 25 stations as plain links, so a reader who typed a pair we cannot
+      answer lands on one that links every station on the line — and a crawler
+      that follows a bad URL still finds the 1,250 good ones (search strategy
+      2). On a valid pair this same section sits at the head of the reference
+      column instead; here there is no column to head.
+    -->
+    <div class="map-slot map-slot-full grid-page" id="line-map">
+      <app-line-map [stations]="stations()" [from]="null" [to]="null" />
+    </div>
+  } @else {
+    <p class="grid-page back-row mobile-only">
+      <a class="back" [routerLink]="localPath('/')">
+        <svg viewBox="0 0 24 24" width="20" height="20" class="back-icon" aria-hidden="true">
+          <path d="M15 6l-6 6 6 6" />
+        </svg>
+        <span>{{ t('screen.backToJourney') }}</span>
+      </a>
+    </p>
 
-      @if (data() === 'failed') {
-        <p class="warning mt-3">{{ t('common.dataFailed') }}</p>
-        <p class="tap-row mt-2">
-          <button
-            type="button"
-            class="tap-target rounded-lg border-2 border-outline font-semibold"
-            (click)="retryData()"
+    <!--
+      The journey, composed. DESIGN.md §4 and screen 07.
+
+      One grid: the journey itself in columns 1-6, and the departure board
+      in columns 8-12.
+    -->
+    <div class="answer grid-page grid-12">
+      <div class="answer-journey lg-col-1-6">
+        <p class="promise">{{ t('home.promise') }}</p>
+
+        @if (data() === 'failed') {
+          <div class="alert-slot">
+            <app-alert [title]="t('screen.staleTitle')" [message]="t('common.dataFailed')">
+              <p class="alert-action">
+                <button type="button" class="btn-secondary" (click)="retryData()">
+                  {{ t('common.tryAgain') }}
+                </button>
+              </p>
+            </app-alert>
+          </div>
+        }
+
+        <!-- Desktop layout: JourneySummary matching 07-desktop-1440.html -->
+        <section class="desktop-hero" aria-live="polite">
+          <app-journey-summary
+            [originName]="originName()"
+            [hereLabel]="t('journey.youreHere')"
+            [destinationName]="destinationName()"
+            [towardsName]="journey()?.towardsName ?? ''"
+            [countdown]="heroCountdown()"
+            [departureClock]="heroClock()"
+            [departureMeridiem]="heroMeridiem()"
+            [arrivalClock]="heroArrivalClock()"
+            [meta]="heroMeta()"
+            [variant]="'solid'"
+            [ariaLabel]="t('journey.yourJourney')"
           >
-            {{ t('common.tryAgain') }}
-          </button>
-        </p>
-      }
-    </section>
+            <!-- Change Origin (From) -->
+            <div slot="change" class="change-anchor">
+              <button
+                type="button"
+                class="btn-secondary change-link"
+                (click)="openPicker('origin')"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" class="change-icon" aria-hidden="true">
+                  <path d="M7 4v16" />
+                  <path d="M4 7l3-3 3 3" />
+                  <path d="M17 20V4" />
+                  <path d="M20 17l-3 3-3-3" />
+                </svg>
+                <span>{{ t('screen.change') }}</span>
+              </button>
+            </div>
 
-    <!-- 1. The next trains that actually get you there. Browser-side only. -->
-    <div class="journey-slot mt-6">
-      @if (journey(); as plan) {
-        <section class="rounded-xl border-2 border-border p-4">
-          <h2 class="text-station font-bold">{{ t('route.nextTrains') }}</h2>
+            <!-- Change Destination (To) and Swap -->
+            <div slot="change-destination" class="change-destination-group">
+              <button
+                type="button"
+                class="btn-secondary change-link change-swap-desktop"
+                [attr.aria-label]="t('route.swap')"
+                [attr.title]="t('route.swap')"
+                (click)="swapRoute()"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" class="swap-icon">
+                  <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+                <span>{{ t('route.swapDirection') }}</span>
+              </button>
 
-          @if (plan.rows.length === 0) {
-            <p class="warning mt-3">
-              {{
-                t('route.noTrain', {
-                  origin: plan.originName,
-                  destination: plan.destinationName,
-                })
-              }}
-            </p>
-          }
+              <button
+                type="button"
+                class="btn-secondary change-link"
+                (click)="openPicker('destination')"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" class="change-icon" aria-hidden="true">
+                  <path d="M7 4v16" />
+                  <path d="M4 7l3-3 3 3" />
+                  <path d="M17 20V4" />
+                  <path d="M20 17l-3 3-3-3" />
+                </svg>
+                <span>{{ t('screen.change') }}</span>
+              </button>
+            </div>
+          </app-journey-summary>
+        </section>
 
-          @for (row of plan.rows; track row.key; let first = $first) {
-            @if (first) {
-              <div class="mt-3">
-                <p class="departure-time countdown">{{ row.countdown }}</p>
-                <p class="text-lead tabular">
-                  {{ t('route.leaves', { clock: row.clock }) }}@if (row.nextDay) {
-                    <span>{{ t('common.tomorrow') }}</span>
-                  }{{ t('route.arrives', { clock: row.arrivalClock }) }}
+        <!-- Mobile layout: Heading block and stop-by-stop list from screen 04 -->
+        <div class="mobile-journey">
+          <header class="heading-block">
+            <p class="eyebrow">{{ t('screen.route') }}</p>
+            <h1 class="route-title">
+              <button
+                type="button"
+                class="route-title-station"
+                (click)="openPicker('origin')"
+                [attr.title]="t('route.changeFromHeading')"
+              >
+                <span>{{ originName() }}</span>
+              </button>
+              <button
+                type="button"
+                class="route-title-swap"
+                (click)="swapRoute()"
+                [attr.title]="t('route.swap')"
+              >
+                <span class="route-joiner">{{ t('line.to') }}</span>
+              </button>
+              <button
+                type="button"
+                class="route-title-station"
+                (click)="openPicker('destination')"
+                [attr.title]="t('route.changeToHeading')"
+              >
+                <span>{{ destinationName() }}</span>
+              </button>
+            </h1>
+
+            <!-- Quick toolbar for Changing From, Swap direction, and Changing To -->
+            <div class="route-toolbar">
+              <button
+                type="button"
+                class="route-pill"
+                (click)="openPicker('origin')"
+              >
+                <span class="pill-prefix">{{ t('route.fromLabel') }}:</span>
+                <span class="pill-station">{{ originName() }}</span>
+                <span class="pill-action">{{ t('screen.change') }}</span>
+              </button>
+
+              <button
+                type="button"
+                class="route-swap-btn"
+                [attr.aria-label]="t('route.swap')"
+                [attr.title]="t('route.swap')"
+                (click)="swapRoute()"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" class="swap-icon">
+                  <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                class="route-pill"
+                (click)="openPicker('destination')"
+              >
+                <span class="pill-prefix">{{ t('route.toLabel') }}:</span>
+                <span class="pill-station">{{ destinationName() }}</span>
+                <span class="pill-action">{{ t('screen.change') }}</span>
+              </button>
+            </div>
+
+            @if (journey(); as plan) {
+              @if (plan.rows.length > 0) {
+                <div class="hero-row">
+                  <div class="hero-arrival-group">
+                    <p class="hero-arrival-label">
+                      <svg viewBox="0 0 10 10" width="10" height="10" class="hero-train-mark" aria-hidden="true">
+                        <rect width="10" height="10" rx="2" />
+                      </svg>
+                      <span>{{ countdownKicker() }}</span>
+                    </p>
+                    <p
+                      class="countdown tabular"
+                      [class.is-word]="countdownUnit() === null"
+                      [attr.aria-label]="
+                        t('journey.countdownLabel', {
+                          countdown: plan.rows[0].countdown,
+                          name: plan.towardsName,
+                        })
+                      "
+                    >
+                      <span aria-hidden="true">{{ countdownNumber() }}</span>
+                      @if (countdownUnit(); as unit) {
+                        <span class="countdown-unit" aria-hidden="true">{{ unit }}</span>
+                      }
+                    </p>
+                  </div>
+
+                  <div class="hero-times-group tabular">
+                    <p class="times-label">{{ t('route.leavesAndArrives') }}</p>
+                    <p class="times">
+                      <span>{{ plan.rows[0].clock }}</span>
+                      <span class="times-arrow" aria-hidden="true">→</span>
+                      <span>{{ plan.rows[0].arrivalClock }}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div class="trip-meta-bar" aria-label="Trip summary">
+                  <span class="meta-chip meta-chip-duration">
+                    <svg viewBox="0 0 24 24" width="16" height="16" class="chip-icon" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 7v5l3 3" />
+                    </svg>
+                    <span class="chip-text">{{ t('journey.rideTime', { minutes: plan.rows[0].durationMinutes }) }}</span>
+                  </span>
+
+                  <span class="meta-chip meta-chip-stops">
+                    <span class="chip-dot" aria-hidden="true"></span>
+                    <span class="chip-text">{{ plan.hops }} {{ stopWord(plan.hops) }}</span>
+                  </span>
+
+                  <span class="meta-chip meta-chip-fare">
+                    <span class="fare-currency">₹</span>
+                    <span class="fare-amount">{{ plan.fare }}</span>
+                  </span>
+                </div>
+                <p class="meta-note">{{ t('route.ridingNote') }}</p>
+              } @else {
+                <p class="prose">
+                  {{ t('route.noTrain', { origin: originName(), destination: destinationName() }) }}
                 </p>
-                <p class="text-muted tabular">
-                  {{ t('route.minutesOnTrain', { minutes: row.durationMinutes }) }}
-                </p>
-              </div>
-            } @else {
-              <div class="following mt-3">
-                <p class="text-station-lg font-bold tabular">{{ row.countdown }}</p>
-                <p class="tabular">
-                  {{ t('board.then', { clock: row.clock }) }}@if (row.nextDay) {
-                    <span>{{ t('common.tomorrow') }}</span>
-                  }{{ t('route.arriving', { clock: row.arrivalClock }) }}
-                </p>
+              }
+            } @else if (reference(); as ref) {
+              <div class="trip-meta-bar" aria-label="Trip summary">
+                <span class="meta-chip meta-chip-stops">
+                  <span class="chip-text">{{ ref.hops }} {{ stopWord(ref.hops) }}</span>
+                </span>
+                <span class="meta-chip meta-chip-fare">
+                  <span class="fare-currency">₹</span>
+                  <span class="fare-amount">{{ ref.fare }}</span>
+                </span>
               </div>
             }
-          }
+          </header>
 
-          <p class="note mt-4 text-min">{{ t('route.ridingNote') }}</p>
-        </section>
-      } @else if (data() !== 'failed') {
-        <p class="text-muted">{{ t('common.loading') }}</p>
-      }
+          @if (stops().length > 0) {
+            <ol class="stops" [attr.aria-label]="t('route.onTheWayHeading')">
+              @for (row of stops(); track row.id; let i = $index, count = $count) {
+                <li>
+                  <app-journey-row
+                    [node]="row.isOrigin ? 'origin' : row.isDestination ? 'destination' : 'through'"
+                    [kind]="rowKind(i, count)"
+                  >
+                    <div class="stop" [class.is-end]="row.isOrigin || row.isDestination">
+                      <div class="stop-name-block">
+                        <p class="stop-name">{{ row.name }}</p>
+                        @if (row.isOrigin) {
+                          <p class="stop-note">
+                            {{ t('screen.boardTowards', { name: journey()?.towardsName ?? '' }) }}
+                          </p>
+                        } @else if (row.isDestination) {
+                          <p class="stop-note is-destination">{{ t('screen.getOffHere') }}</p>
+                        }
+                      </div>
+                      <p class="stop-clock tabular">{{ row.clock }}</p>
+                    </div>
+                  </app-journey-row>
+                </li>
+              }
+            </ol>
+          } @else if (reference(); as ref) {
+            <section class="on-the-way">
+              <h2 class="section-title">{{ t('route.onTheWayHeading') }}</h2>
+              @if (ref.stopsBetween.length === 0) {
+                <p class="prose">{{ t('route.nextStation', { destination: ref.destinationName }) }}</p>
+              } @else {
+                <p class="prose">
+                  {{
+                    t('route.between', {
+                      count: ref.stopsBetween.length,
+                      origin: ref.originName,
+                      destination: ref.destinationName,
+                    })
+                  }}
+                </p>
+                <ol class="between">
+                  @for (name of ref.stopsBetween; track name) {
+                    <li>{{ name }}</li>
+                  }
+                </ol>
+              }
+            </section>
+          }
+        </div>
+
+        <div class="book">
+          <p class="book-channel">
+            <svg viewBox="0 0 24 24" width="18" height="18" class="book-channel-icon" aria-hidden="true">
+              <path
+                d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+              />
+            </svg>
+            <span>{{ t('booking.channel') }}</span>
+          </p>
+          <a class="btn-primary book-button" [href]="bookingUrl" rel="noopener nofollow">
+            <span>{{ t('journey.bookTicket') }}</span>
+            <svg viewBox="0 0 24 24" width="20" height="20" class="book-icon" aria-hidden="true">
+              <path d="M7 17L17 7" />
+              <path d="M8 7h9v9" />
+            </svg>
+            <span class="sr-only">{{ t('screen.opensWhatsApp') }}</span>
+          </a>
+          <p class="book-note">{{ t('booking.note') }}</p>
+        </div>
+      </div>
+
+      <!-- Departure Board in columns 8-12 on desktop (DESIGN.md screen 07) -->
+      <div class="answer-board lg-col-8-12">
+        @if (boards().length > 0) {
+          <app-board-panel
+            class="board"
+            [stationName]="originName()"
+            [boards]="boards()"
+            [yourDirection]="journeyDirection()"
+            [provenance]="provenanceLine()"
+            [trackEnd]="trackEnd()"
+            [fullBoardPath]="originHref()"
+            [opensAt]="opensAt()"
+            [followingCount]="1"
+            [followingCountWide]="3"
+          />
+        }
+      </div>
     </div>
 
-    @if (reference(); as facts) {
-      <!-- 2. Fare. A lookup in KMRL's 625-pair table, never a calculation. -->
-      <section class="mt-6">
-        <h2 class="text-station font-bold">{{ t('route.fareHeading') }}</h2>
-        <p class="fare-figure tabular font-bold">₹{{ facts.fare }}</p>
-        <p class="mt-1">
-          {{
-            t('route.fareBody', {
-              origin: facts.originName,
-              destination: facts.destinationName,
-            })
-          }}
-        </p>
-      </section>
+    <!-- The line outline strip across the bottom (DESIGN.md screen 07) -->
+    <app-line-band
+      class="network grid-page"
+      [stations]="stations()"
+      [you]="origin()?.id ?? null"
+      [destination]="destination()?.id ?? null"
+    />
 
-      <!--
-        3. Both service patterns. Not a footnote: Sunday service starts about 90
-        minutes later than Monday-to-Saturday across the network, and 103 minutes
-        later at the worst platform. Somebody planning an early Sunday trip on
-        the weekday first train misses it by an hour and a half.
+    <!-- Reference section (Next trains, Fare, First/Last train, Related links) - on top of map -->
+    <div class="reference-section grid-page">
+      @if (journey(); as plan) {
+        @if (plan.rows.length > 1) {
+          <section class="later">
+            <h2 class="section-title">{{ t('route.nextTrains') }}</h2>
+            <ul class="later-list">
+              @for (row of plan.rows.slice(1); track row.key) {
+                <li class="later-row tabular">
+                  <span class="later-clock">{{ row.clock }}</span>
+                  <span class="later-arrival"
+                    >{{ t('route.arriving', { clock: row.arrivalClock }) }}
+                    @if (row.nextDay) {
+                      <span class="later-tomorrow">{{ t('common.tomorrow') }}</span>
+                    }
+                  </span>
+                  <span class="later-countdown">{{ row.countdown }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
 
-        `lastClock` is the last train that *reaches the destination*, because the
-        engine only counts trips calling at it after the origin. Where a later
-        train leaves the same platform and stops short, that is said plainly
-        rather than advertised or hidden (CLAUDE.md finding 9).
-      -->
-      @if (facts.patterns.length > 0) {
-        <section class="mt-6">
-          <h2 class="text-station font-bold">{{ t('route.firstLastHeading') }}</h2>
-          @for (pattern of facts.patterns; track pattern.serviceId) {
-            <div class="mt-3 rounded-xl border-2 border-border p-4">
-              <h3 class="text-lead font-bold">{{ pattern.dayLabel }}</h3>
-              <dl class="mt-2 fact-list">
+      @if (reference(); as ref) {
+        <section class="reference fare-section">
+          <h2 class="section-title">{{ t('route.fareHeading') }}</h2>
+          <p class="fare-figure tabular">₹{{ ref.fare }}</p>
+          <p class="prose">
+            {{ t('route.fareBody', { origin: ref.originName, destination: ref.destinationName }) }}
+          </p>
+        </section>
+      }
+
+      <!-- The map (Where the trains are now): on mobile sits between Next trains/Fare and First/Last train; on desktop spans cols 1-12 at bottom -->
+      <div class="map-slot" id="line-map">
+        <app-line-map
+          [stations]="stations()"
+          [from]="origin()?.id ?? null"
+          [to]="destination()?.id ?? null"
+        />
+      </div>
+
+      @if (reference(); as ref) {
+        <section class="reference first-last-section" id="first-last">
+          <h2 class="section-title">{{ t('route.firstLastHeading') }}</h2>
+          @for (pattern of ref.patterns; track pattern.serviceId) {
+            <div class="pattern">
+              <h3 class="pattern-days">{{ pattern.dayLabel }}</h3>
+              <dl class="facts">
                 <dt>{{ t('station.firstTrain') }}</dt>
-                <dd class="tabular font-semibold">{{ pattern.firstClock }}</dd>
+                <dd class="tabular">{{ pattern.firstClock }}</dd>
 
-                <dt>{{ t('route.lastReaches', { name: facts.destinationName }) }}</dt>
-                <dd class="tabular font-semibold">{{ pattern.lastClock }}</dd>
-
-                <dt>{{ t('station.trainsADay') }}</dt>
-                <dd class="tabular font-semibold">{{ pattern.trains }}</dd>
+                <dt>{{ t('route.lastReaches', { name: ref.destinationName }) }}</dt>
+                <dd class="tabular">{{ pattern.lastClock }}</dd>
 
                 <dt>{{ t('route.timeOnTrain') }}</dt>
-                <dd class="tabular font-semibold">
+                <dd class="tabular">
                   @if (pattern.fastestMinutes === pattern.slowestMinutes) {
                     {{ t('route.minutesExact', { minutes: pattern.fastestMinutes }) }}
                   } @else {
@@ -181,18 +456,25 @@
                     }}
                   }
                 </dd>
+
+                <dt>{{ t('station.trainsADay') }}</dt>
+                <dd class="tabular">{{ pattern.trains }}</dd>
               </dl>
 
               @if (pattern.strandMinutes > 0) {
-                <p class="warning mt-3 font-semibold text-alert">
-                  {{
+                <p class="strand">
+                  <svg viewBox="0 0 24 24" width="18" height="18" class="strand-icon" aria-hidden="true">
+                    <path d="M5 12h11" />
+                    <path d="M19 6v12" />
+                  </svg>
+                  <span>{{
                     t('route.strand', {
                       clock: pattern.lastFromPlatformClock,
                       minutes: pattern.strandMinutes,
-                      destination: facts.destinationName,
+                      destination: ref.destinationName,
                       last: pattern.lastClock,
                     })
-                  }}
+                  }}</span>
                 </p>
               }
             </div>
@@ -200,79 +482,127 @@
         </section>
       }
 
-      <!-- 4. What you pass through. The plain-language check that this is the right train. -->
-      <section class="mt-6">
-        <h2 class="text-station font-bold">{{ t('route.onTheWayHeading') }}</h2>
-        @if (facts.stopsBetween.length === 0) {
-          <p class="mt-1">{{ t('route.nextStation', { destination: facts.destinationName }) }}</p>
-        } @else {
-          <p class="mt-1">
-            {{
-              t('route.between', {
-                count: facts.stopsBetween.length,
-                origin: facts.originName,
-                destination: facts.destinationName,
-              })
-            }}
-          </p>
-          <ol class="mt-1 ps-6 list-decimal">
-            @for (name of facts.stopsBetween; track name) {
-              <li>{{ name }}</li>
-            }
-          </ol>
-        }
+      <section class="related">
+        <h2 class="section-title">{{ t('route.relatedHeading') }}</h2>
+        <div class="link-list">
+          @if (reversePath(); as href) {
+            <a class="link-row" [routerLink]="href">
+              <span>{{ t('route.heading', { origin: destinationName(), destination: originName() }) }}</span>
+              <svg viewBox="0 0 24 24" width="20" height="20" class="link-chevron" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </a>
+          }
+          @if (originPath(); as href) {
+            <a class="link-row" [routerLink]="href">
+              <span>{{ t('route.allTimesAt', { name: originName() }) }}</span>
+              <svg viewBox="0 0 24 24" width="20" height="20" class="link-chevron" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </a>
+          }
+          @if (destinationPath(); as href) {
+            <a class="link-row" [routerLink]="href">
+              <span>{{ t('route.allTimesAt', { name: destinationName() }) }}</span>
+              <svg viewBox="0 0 24 24" width="20" height="20" class="link-chevron" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </a>
+          }
+        </div>
       </section>
-    }
+    </div>
 
-    <app-booking />
-
-    <app-service-caveat [caveat]="caveat()" />
-
-    <section class="mt-6">
-      <h2 class="text-station font-bold">{{ t('route.relatedHeading') }}</h2>
-      <p class="tap-row mt-2">
-        @if (reversePath(); as back) {
-          <a class="link-button hover:bg-surface" [routerLink]="back">
-            {{ t('route.heading', { origin: destinationName(), destination: originName() }) }}
-          </a>
-        }
-        @if (originPath(); as from) {
-          <a class="link-button hover:bg-surface" [routerLink]="from">
-            {{ t('route.allTimesAt', { name: originName() }) }}
-          </a>
-        }
-        @if (destinationPath(); as to) {
-          <a class="link-button hover:bg-surface" [routerLink]="to">
-            {{ t('route.allTimesAt', { name: destinationName() }) }}
-          </a>
-        }
-      </p>
-    </section>
+    <div class="grid-page">
+      <app-service-caveat [caveat]="caveat()" />
+    </div>
   }
-}
 
-<!--
-  The line, with this journey on it. The map opens on the origin, so the first
-  thing on screen is where the reader is starting from rather than the whole
-  28 km. When the tiles cannot be reached <app-line-map> draws the schematic
-  instead, with "From" at the top of the marked run and "To" at the bottom —
-  which is what makes the direction readable at 320px without an arrow too
-  small to see.
--->
-<app-line-map
-  [stations]="stations()"
-  [selected]="origin()?.id ?? null"
-  [from]="origin()?.id ?? null"
-  [to]="destination()?.id ?? null"
-/>
+  <div class="grid-page provenance-slot">
+    <app-provenance />
+  </div>
 
-<app-provenance />
+  @if (activePicker(); as mode) {
+    <div class="picker-backdrop" (click)="closePicker()">
+      <div
+        class="picker-dialog"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="mode === 'origin' ? t('route.changeFromHeading') : t('route.changeToHeading')"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="picker-dialog-header">
+          <div class="picker-title-group">
+            <h2 class="picker-dialog-title">
+              {{ mode === 'origin' ? t('route.changeFromHeading') : t('route.changeToHeading') }}
+            </h2>
+            <p class="picker-dialog-subtitle">
+              {{ mode === 'origin'
+                ? t('route.currentlyTravellingTo', { destination: destinationName() })
+                : t('route.currentlyTravellingFrom', { origin: originName() })
+              }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="picker-close-btn"
+            [attr.aria-label]="t('route.pickerClose')"
+            (click)="closePicker()"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class="picker-close-icon">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-<!-- Plain text only, and it must stay that way. With JavaScript ENABLED the
-     browser parses noscript contents as one raw text node and never builds
-     DOM from it, while the server renders it as real elements — so any child
-     element here is an automatic NG0500 hydration mismatch. Do not style the
-     noscript element either: author CSS beats the UA `display:none` and would show
-     this to everyone. `scripts/check-bundle-size.mjs` greps every prerendered
-     document for an element inside a noscript and fails the build. -->
+        <div class="picker-search-box">
+          <label class="sr-only" for="route-station-search">{{ t('home.choosePicker') }}</label>
+          <svg viewBox="0 0 24 24" width="18" height="18" class="picker-search-icon" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input
+            id="route-station-search"
+            type="search"
+            class="picker-dialog-input"
+            [attr.placeholder]="t('screen.searchPlaceholder')"
+            [value]="filterQuery()"
+            (input)="onFilterInput($event)"
+          />
+          @if (filterQuery().length > 0) {
+            <button type="button" class="picker-clear-btn" (click)="clearFilter()">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          }
+        </div>
+
+        <ul class="picker-station-list" role="listbox">
+          @for (station of filteredStations(); track station.id) {
+            <li role="option" [attr.aria-selected]="isCurrentStation(station.id, mode)">
+              <button
+                type="button"
+                class="picker-station-item"
+                [class.is-active]="isCurrentStation(station.id, mode)"
+                (click)="selectStation(station, mode)"
+              >
+                <span class="picker-station-name">{{ label(station) }}</span>
+                @if (isCurrentStation(station.id, mode)) {
+                  <span class="picker-station-badge">{{ t('home.showing') }}</span>
+                }
+              </button>
+            </li>
+          }
+        </ul>
+
+        @if (filteredStations().length === 0) {
+          <p class="picker-empty">{{ t('route.noStationMatch') }}</p>
+        }
+      </div>
+    </div>
+  }
+</div>
+
+<!-- TEXT ONLY. An element inside a noscript is an NG0500 hydration mismatch. -->
 <noscript>{{ t('route.noscript') }}</noscript>

@@ -121,14 +121,14 @@ export function waitMinutes(seconds: number): number {
 }
 
 /**
- * `0` → `'Due'`, `150` → `'2 min'`, `4320` → `'1 h 12 min'`.
+ * `0` → `'Arriving'`, `150` → `'2 min'`, `4320` → `'1 h 12 min'`.
  *
  * English. Same reasoning as {@link formatClock}: the parts are the API, this
  * is the convenience.
  */
 export function formatWait(seconds: number): string {
   const p = durationParts(seconds);
-  if (p.hours === 0 && p.minutes === 0) return 'Due';
+  if (p.hours === 0 && p.minutes === 0) return 'Arriving';
   if (p.hours === 0) return `${p.minutes} min`;
   if (p.minutes === 0) return `${p.hours} h`;
   return `${p.hours} h ${p.minutes} min`;

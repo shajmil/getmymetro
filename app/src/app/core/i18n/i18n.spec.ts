@@ -65,7 +65,7 @@ describe('the catalogue', () => {
 
 describe('numbers in the reader s language', () => {
   it('says a wait the same way core/engine/clock.ts does, in English', () => {
-    expect(localWait(0, 'en')).toBe('Due');
+    expect(localWait(0, 'en')).toBe('Arriving');
     expect(localWait(150, 'en')).toBe('2 min');
     expect(localWait(3600, 'en')).toBe('1 h');
     expect(localWait(4320, 'en')).toBe('1 h 12 min');

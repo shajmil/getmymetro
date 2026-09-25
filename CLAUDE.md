@@ -602,6 +602,31 @@ interactive app to display a timetable — that is how the LCP advantage over a
   caps a deployment at 20,000 files and 25 MiB a file; this is 1,274 files with
   a 590 kB maximum, so there is an order of magnitude of headroom on both.
 
+- **The no-animation gate greps text, so do not name the at-rule in a comment.**
+  `check-bundle-size.mjs` scans every emitted `.css`, `.js` and `.mjs` for the
+  literal string. The vendored Leaflet stylesheet carried a header saying
+  "verified: contains no @keyframes" and the build failed on its own
+  documentation. That is the gate working, not a false positive — reword the
+  comment, do not weaken the check.
+
+- **Leaflet's CSS must not be a component style, an `angular.json` entry, or a
+  string in a `.ts` file.** All three were tried. `angular.json` "styles" puts
+  15 kB into the render-blocking initial CSS of all 1,252 pages. A component
+  style with `ViewEncapsulation.None` — which it needs, because Leaflet builds
+  its DOM imperatively and Angular's `_ngcontent` attribute never reaches it —
+  gets inlined by SSR into every prerendered document's `<head>`, 15 kB x 1,252.
+  A CSS-in-TS string gets scanned by Tailwind v4, which mints utilities from
+  English words in source files, and Leaflet's stylesheet is full of them.
+  It is `app/public/vendor/leaflet-1.9.4.css`, a static asset, `<link>`ed at
+  the moment a map initialises. Our own marker styles are the opposite case and
+  live in `styles.css`, because they must reach Leaflet's DOM and they must use
+  the same tokens as everything else.
+
+- **Leaflet 1.9.4 ships no `module` entry**, so the builder resolves its
+  CommonJS bundle and `await import('leaflet')` hands the namespace back under
+  `default`. Handle both shapes (`bundle.default ?? module`) rather than
+  guessing, and list it in `allowedCommonJsDependencies` or the build warns.
+
 - **The bundle gate must strip comments before it looks for `pages.json`.**
   It matches the filename inside quotes so that prose cannot trip it — but
   JSDoc marks up code with backticks and backticks are also template-literal
@@ -735,12 +760,55 @@ lat = lat1 + (lat2 - lat1) * t
 lon = lon1 + (lon2 - lon1) * t
 ```
 
-Run it every second in the browser; snap to `shapes.txt` instead of a straight
-line to follow the viaduct.
+**The last two lines of that sketch are wrong for this line and have been
+superseded.** Interpolating latitude and longitude between two stations cuts
+the corner at Edapally and again south of Vyttila, visibly enough to put the
+train on a different road. The shipped engine interpolates **chainage** —
+`stop_dist`, the feed's own `shape_dist_traveled` — and then resolves that
+chainage against `shapes.txt`:
 
-`gtfs_inspect.py` (repo root) implements this and is verified against synthetic feeds,
-including the case most implementations get wrong: at 00:10 it correctly finds
-trains that departed 23:40 on the *previous* service day, via `24:00+` times.
+```
+metres  = chain[k] + (chain[k+1] - chain[k]) * fraction   # time -> distance
+lat/lon = point on shapes.txt at `metres`                 # distance -> place
+```
+
+Both inputs come from the feed, so no geometry is invented. The note "snap to
+`shapes.txt`" below was always the real instruction; the code above it was
+shorthand that reads as an alternative. It is not one.
+
+`gtfs_inspect.py` (repo root) implements the straight-line sketch and is
+verified against synthetic feeds, including the case most implementations get
+wrong: at 00:10 it correctly finds trains that departed 23:40 on the *previous*
+service day, via `24:00+` times.
+
+**The browser's copy is `app/src/app/core/engine/positions.ts`** (Phase 7), and
+it is the one that ships. Differences that matter:
+
+- **Chainage, per the correction above.** Simplification error is 4.99 m, under
+  a pixel at any zoom a phone shows.
+- **Which shape belongs to which direction is derived, not named.** Matching
+  `R1_0` / `R1_1` by string would break on a rename. Each shape carries every
+  station's chainage indexed by `Stop.index`, so the shape whose chainage
+  *rises* with the stop index is `direction_id = 0`.
+- **A trip is `shortTurn` only if it terminates early**, never if it merely
+  starts late. 38 of 450 trips are partial and the split is 20/20 (finding 10);
+  flagging a train that joined at Muttom and runs through to Aluva would be
+  noise, and flagging one that stops at Muttom is the point.
+- **Cost is proportional to the trains running, not to the feed.** Every trip
+  is flattened once into a `Float64Array` of event times and a matching array of
+  chainages, grouped by service, sorted by start, with a running maximum end
+  time. Finding the ~17 active trains out of 450 is a binary search and a short
+  walk backwards. The competitor re-parses ~27,000 time strings a second and
+  then scans 549 shape points per train (finding 7).
+- **It rides the page's existing 1 Hz tick** (`shared/ticker.ts`), so the map
+  and the countdowns advance together and there is one timer per screen, not
+  one per marker.
+- **It returns `ServiceOutlook`, like the boards.** On a date the calendar
+  cannot vouch for, these are the positions the day-of-week timetable implies,
+  and the screen already renders `<app-service-caveat>` saying so. Attribution
+  is per service window: at 00:02 on a Monday every running train belongs to
+  Sunday's service day, which *is* vouched for, and caveating it because Monday
+  is unverified would overstate the uncertainty.
 
 ### Transit semantics that bite
 
