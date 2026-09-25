@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd .. && python3 build_pages.py KMRLOpenData --base-url https://getmymetro.com && cd app && npm run build",
+  "outputDirectory": "dist/getmymetro/browser",
+  "trailingSlash": false,
+  "redirects": [
+    { "source": "/station/petta", "destination": "/station/pettah", "statusCode": 301 },
+    { "source": "/ml/station/petta", "destination": "/ml/station/pettah", "statusCode": 301 },
+    { "source": "/station/thaikoodam", "destination": "/station/thykoodam", "statusCode": 301 },
+    { "source": "/ml/station/thaikoodam", "destination": "/ml/station/thykoodam", "statusCode": 301 },
+    { "source": "/station/thrippunithura", "destination": "/station/tripunithura", "statusCode": 301 },
+    { "source": "/ml/station/thrippunithura", "destination": "/ml/station/tripunithura", "statusCode": 301 },
+    { "source": "/station/thripunithura", "destination": "/station/tripunithura", "statusCode": 301 },
+    { "source": "/ml/station/thripunithura", "destination": "/ml/station/tripunithura", "statusCode": 301 },
+    { "source": "/station/edappally", "destination": "/station/edapally", "statusCode": 301 },
+    { "source": "/ml/station/edappally", "destination": "/ml/station/edapally", "statusCode": 301 },
+    { "source": "/station/m-g-road", "destination": "/station/mg-road", "statusCode": 301 },
+    { "source": "/ml/station/m-g-road", "destination": "/ml/station/mg-road", "statusCode": 301 }
+  ],
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.csr.html" }]
+}

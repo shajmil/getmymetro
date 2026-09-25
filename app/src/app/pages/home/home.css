@@ -221,22 +221,16 @@
 
 /* --- the board ----------------------------------------------------------- */
 
-/* The board bleeds to the screen edge — its soft ground is what separates the
-   journey from the timetable, and a 20px white margin either side would make
-   it read as a card. Its contents keep the gutter, inside the component.
+/* The board is a card on the page gutter: a hairline border and the panel
+   radius, clipped so your lane's ground and the footer's pressed state follow
+   the corners.
 
-   The bleed is now a negative margin rather than the absence of one, because
-   the board sits inside the padded `grid-page` track. Exactly the page's own
-   gutter, so it lands flush with the window edge and not a pixel past it —
-   a wider value would open a horizontal scrollbar at 360px, which is the
-   spec's floor.
-
-   Reserved height so the page does not jump when the boards arrive a few
-   hundred milliseconds after the HTML paints. 22rem is a measured two-lane
-   board with one following train each, which is what this screen renders. */
+   No reserved height. The panel is only rendered once the boards exist, so a
+   minimum could never stop the page jumping on arrival — the skeleton does
+   that — and all it did was pad a terminus's one-lane card with a blank band
+   under "Full board". */
 .board {
   display: block;
-  min-block-size: 20rem;
   margin-inline: 0;
   border-radius: var(--gmm-radius-panel);
   border: 1px solid var(--gmm-rule);

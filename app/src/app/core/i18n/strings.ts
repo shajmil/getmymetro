@@ -150,8 +150,17 @@ export const EN = {
   /** The tag over your lane's countdown, and the same words in the journey hero. */
   'board.yourTrain': 'Your train',
   'board.yourTrainTowards': 'Your train · towards {name}',
-  /** Under the countdown: "6:21 PM · 17 stations". */
-  'board.clockAndStations': '{clock} · {count} stations',
+  /** Beside the next train's clock: how far this platform goes. */
+  'board.stations': '{count} stations',
+  'board.stationsOne': '{count} station',
+  /**
+   * In place of the clock once a wait is an hour or more (`DISTANT_SECONDS`
+   * in `board-view.ts`). The clock time becomes the big figure and this says
+   * how far off it is.
+   */
+  'board.inWait': 'in {wait}',
+  /** The same place, when that train is on tomorrow's date. */
+  'board.tomorrow': 'Tomorrow',
   /** The short-working line on a board row. Finding 10: this is never small print. */
   'board.endsAt': 'Ends at {terminus}',
   'board.fullBoard': 'Full board',
@@ -573,7 +582,10 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'board.savedAt': '{clock}-ന് സൂക്ഷിച്ചത്',
   'board.yourTrain': 'നിങ്ങളുടെ ട്രെയിൻ',
   'board.yourTrainTowards': 'നിങ്ങളുടെ ട്രെയിൻ · {name} ഭാഗത്തേക്ക്',
-  'board.clockAndStations': '{clock} · {count} സ്റ്റേഷനുകൾ',
+  'board.stations': '{count} സ്റ്റേഷനുകൾ',
+  'board.stationsOne': '{count} സ്റ്റേഷൻ',
+  'board.inWait': '{wait} കഴിഞ്ഞ്',
+  'board.tomorrow': 'നാളെ',
   'board.endsAt': '{terminus} വരെ മാത്രം',
   'board.fullBoard': 'പൂർണ്ണ സമയപ്പട്ടിക',
   'board.closed': 'അടച്ചിരിക്കുന്നു',

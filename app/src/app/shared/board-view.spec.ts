@@ -200,3 +200,39 @@ describe('countdowns', () => {
     expect(board.rows[0].nextDay).toBe(true);
   });
 });
+
+/**
+ * When the board stops counting down and names the clock instead.
+ *
+ * The threshold is an hour because the longest gap inside service is the
+ * 45m56s cliff: nothing a passenger waits for during the day ever reaches it,
+ * and everything across the night is hours past it. These pin both sides.
+ */
+describe('distant departures', () => {
+  it('leads with the clock after midnight, when the wait is hours but the date is today', () => {
+    // 00:45 at Aluva: the 6:00 AM is this morning's train, so not "tomorrow"
+    // — but a 5 h 14 min countdown is still the wrong thing to lead with.
+    const board = view('ALVA', 0, at(TUESDAY, 0, 45));
+    expect(board.rows[0].clock).toBe('6:00 AM');
+    expect(board.rows[0].nextDay).toBe(false);
+    expect(board.rows[0].distant).toBe(true);
+  });
+
+  it('keeps counting down across the 45-minute cliff, the longest gap in service', () => {
+    // MG Road towards Aluva, weekday: 10:58 PM, then nothing until 11:44 PM.
+    // At 22:59 that is a 45-minute wait, and it is still a countdown.
+    const board = view('MGRD', 1, at(TUESDAY, 22, 59));
+    expect(board.rows[0].clock).toBe('11:44 PM');
+    expect(board.rows[0].distant).toBe(false);
+  });
+
+  it('flips exactly where the countdown gains an hours part', () => {
+    // 6:00 AM from Aluva. 59 minutes out is "59 min"; 60 minutes out is "1 h".
+    const before = view('ALVA', 0, at(TUESDAY, 5, 1)).rows[0];
+    const onTheHour = view('ALVA', 0, at(TUESDAY, 5, 0)).rows[0];
+    expect(before.countdown).toBe('59 min');
+    expect(before.distant).toBe(false);
+    expect(onTheHour.countdown).toBe('1 h');
+    expect(onTheHour.distant).toBe(true);
+  });
+});

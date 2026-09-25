@@ -1,5 +1,8 @@
 # Cloudflare Pages routing. First match wins; a real file always wins first.
 #
+# Vercel ignores this file. `app/vercel.json` carries the same redirects and
+# the same fallback — change both together.
+#
 # 1. Spelling aliases -> the canonical station URL.
 #
 #    KMRL and the GTFS feed disagree on five station names and passengers

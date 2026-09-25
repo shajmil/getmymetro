@@ -98,6 +98,9 @@ Soft-grey panel. Header: "DEPARTURES" + "Timetable · 6:16 PM" (or status). Then
 - Following trains: rows with hairline top border — time (600) left, "13 min" right. Short workings add an amber line "⊣ Ends at Muttom" (icon + text). When one lane has that extra line, the other lane reserves the same height.
 - Footer link: "Full board ›" (48px).
 - Home shows 1 following train per lane; Station screen shows 4; desktop 3.
+- **Below 1024px the lanes stack** as full-width rows, Aluva first: head + "Your train" on one line, then the countdown with "6:21 PM / 17 stations" beside it. Two columns on a 360px phone left each lane ~150px and broke times and "Ends at …" mid-phrase. The `LineTrack` is drawn only when the lanes are side by side (its halves are the two columns; stacked, it read as a slider handle), and the alignment spacers likewise.
+- The **next** train carries the "⊣ Ends at Muttom" line too, not only the following ones — it is the train being boarded (CLAUDE.md finding 9).
+- A wait of an hour or more shows the **clock** as the big figure ("6:00 AM", then "in 5 h 14 min" or "Tomorrow"): nothing inside service waits that long, so it only happens overnight.
 
 ### 5.5 `NetworkStrip`
 All 25 Line 1 stations on a horizontal teal line; small white dots for stations; ink ring = you, ink disc = destination. Mobile: end labels only (ALUVA / TRIPUNITHURA). Desktop: every station labelled at −50°.

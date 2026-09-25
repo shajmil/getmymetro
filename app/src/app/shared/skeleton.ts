@@ -86,52 +86,95 @@ import { JourneyRow } from './journey-line';
       padding-block: var(--gmm-space-5) 22px;
     }
 
-    /* The board panel's own skeleton: the header, the track and two lanes. */
+    /* The board panel's own skeleton, in the board's own two layouts: lanes
+       stacked as rows on a phone, side by side under the track from 1024px
+       (see BoardPanel). */
     .board {
       margin-block-start: var(--gmm-space-5);
-      padding-block: var(--gmm-space-4);
       background-color: var(--gmm-soft);
     }
 
-    .board-inner {
-      padding-inline: var(--gmm-gutter-mobile);
+    .board-header {
+      padding: var(--gmm-space-4) var(--gmm-space-4) var(--gmm-space-1);
     }
 
     .board-heading {
-      block-size: 20px;
+      block-size: 21px;
       inline-size: 40%;
     }
 
     .board-track {
+      display: none;
       block-size: 10px;
-      inline-size: 100%;
-      margin-block-start: var(--gmm-space-4);
+      margin: var(--gmm-space-4) var(--gmm-space-3) 0;
       border-radius: var(--radius-full);
     }
 
     .lanes {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      column-gap: var(--gmm-space-6);
-      margin-block-start: var(--gmm-space-4);
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .lane {
+      padding: var(--gmm-space-3) var(--gmm-space-4) var(--gmm-space-4);
+    }
+
+    .lane + .lane {
+      border-block-start: 1px solid var(--gmm-rule);
     }
 
     .lane-head {
-      block-size: 20px;
-      inline-size: 70%;
+      block-size: 21px;
+      inline-size: 35%;
     }
 
-    /* 52px at line-height 0.8 = 42px, the board countdown's real box. */
+    /* The next train: the countdown on the left, the clock on the right. */
+    .lane-hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-block-start: var(--gmm-space-2);
+    }
+
+    /* 52px at line-height 0.9 = 47px, the board countdown's real box. */
     .lane-countdown {
-      block-size: 42px;
-      inline-size: 60%;
-      margin-block-start: var(--gmm-space-3);
+      block-size: 47px;
+      inline-size: 30%;
     }
 
     .lane-clock {
-      block-size: 22px;
-      inline-size: 90%;
-      margin-block-start: var(--gmm-space-3);
+      block-size: 26px;
+      inline-size: 28%;
+    }
+
+    @media (min-width: 1024px) {
+      .board-track {
+        display: block;
+      }
+
+      .lanes {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .lane + .lane {
+        border-block-start: 0;
+        border-inline-start: 1px solid var(--gmm-rule);
+      }
+
+      .lane-hero {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--gmm-space-2);
+      }
+
+      .lane-countdown {
+        block-size: 54px;
+        inline-size: 45%;
+      }
+
+      .lane-clock {
+        inline-size: 80%;
+      }
     }
 
     /* The status message is visible text, not a visually-hidden one: a reader
@@ -165,21 +208,20 @@ import { JourneyRow } from './journey-line';
 
       @if (board()) {
         <div class="board">
-          <div class="board-inner">
+          <div class="board-header">
             <span class="block board-heading"></span>
-            <span class="block board-track"></span>
-            <div class="lanes">
-              <div>
+          </div>
+          <span class="block board-track"></span>
+          <div class="lanes">
+            @for (lane of LANES; track lane) {
+              <div class="lane">
                 <span class="block lane-head"></span>
-                <span class="block lane-countdown"></span>
-                <span class="block lane-clock"></span>
+                <div class="lane-hero">
+                  <span class="block lane-countdown"></span>
+                  <span class="block lane-clock"></span>
+                </div>
               </div>
-              <div>
-                <span class="block lane-head"></span>
-                <span class="block lane-countdown"></span>
-                <span class="block lane-clock"></span>
-              </div>
-            </div>
+            }
           </div>
         </div>
       }
@@ -196,4 +238,7 @@ export class JourneySkeleton {
 
   /** Draw the departure board's skeleton under the journey's. */
   readonly board = input<boolean>(true);
+
+  /** Two lanes: the board draws both directions before it knows the station. */
+  protected readonly LANES = ['aluva', 'tripunithura'] as const;
 }

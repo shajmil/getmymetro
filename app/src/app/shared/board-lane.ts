@@ -1,44 +1,59 @@
 /**
  * One lane of the departure board. DESIGN.md §5.4.
  *
- * A lane is one direction's column: a head naming the terminus, an optional
- * "Your train" tag, the big countdown, the clock-and-stations line, and then
- * the following departures.
+ * A lane is one direction: a head naming the terminus, an optional "Your
+ * train" tag, the next train, and then the following departures.
  *
- * ## The alignment rule, which is the whole reason this is a component
+ * ## Two layouts, one DOM
  *
- * Two lanes sit side by side in a 2-column grid and the reader compares them
- * across. That only works if the countdowns are on the same baseline and the
- * following rows line up — otherwise "2 min" and "5 min" are at different
- * heights and the eye has to work out which is which before it can compare
- * them at all.
+ * **Below 1024px the lanes stack.** Each is a full-width row of the board: the
+ * head and the tag share a line, and the next train is the countdown on the
+ * left with its clock and the platform's reach on the right. Side by side, a
+ * 360px phone gives each lane about 150px, which is too narrow for "6:30 AM"
+ * at the 16px floor, for "Ends at Kadavanthra" on one line, or for any of it in
+ * Malayalam — the phrases broke mid-way and the reservations below stopped
+ * lining anything up. Stacked, every line has the whole width and nothing
+ * needs reserving, because nothing sits beside anything.
  *
- * Two things break that alignment, and both are conditional on one lane only:
+ * **At 1024px and above the lanes sit side by side** (DESIGN.md §5.4), under
+ * the horizontal `LineTrack` whose halves they correspond to, and the
+ * alignment rule below applies.
  *
- *   * **the "Your train" tag**, which appears over the countdown of the lane
- *     serving the reader's destination and nowhere else; and
- *   * **the "Ends at Muttom" short-working line**, which CLAUDE.md finding 10
- *     requires on the 20 trips that terminate early — and which, per finding 9,
- *     appears on the *towards-Aluva* lane at 20 of 24 weekday platforms and
- *     almost never on the other one. So the asymmetric case is the common one
- *     here, not an edge case.
+ * The switch is CSS only. A `matchMedia` signal would build every one of the
+ * 1,252 prerendered documents at one layout and swap to the other on
+ * hydration; see `followingCountWide` for the same argument about rows.
  *
- * Both are solved the same way: the lane that does not have the thing renders
- * an `aria-hidden` spacer of exactly the same height. That is why
- * `reserveTag` and `reserveShortWorking` are inputs rather than being derived
- * from this lane's own data — a lane cannot know what the other lane is doing,
- * so the board tells it.
+ * ## The alignment rule, side by side only
  *
- * The heights are shared constants rather than magic numbers in two places,
- * and `board-lane.spec.ts` asserts that a lane with the line and a lane with
- * only the reservation come out the same height.
+ * Two lanes side by side are compared across, which only works if the
+ * countdowns share a baseline and the following rows line up. Three things
+ * break that, and each is conditional on one lane only:
+ *
+ *   * **the "Your train" tag**, over the lane serving the reader's destination;
+ *   * **the "Ends at Muttom" line on the next train**; and
+ *   * **the same line on a following row**. CLAUDE.md finding 10 requires it on
+ *     the 20 trips that terminate early, and per finding 9 it lands on the
+ *     *towards-Aluva* lane at 20 of 24 weekday platforms and almost never on
+ *     the other one, so the asymmetric case is the common one here.
+ *
+ * All three are solved the same way: the lane without the thing renders an
+ * `aria-hidden` spacer of the same height. The board decides when, because a
+ * lane cannot see the other lane. The spacers are `display: none` below
+ * 1024px — a stacked lane has nothing beside it to line up with, and a blank
+ * band there would be unexplained.
  *
  * ## What is not negotiable in here
  *
  * The short-working line is body-sized, in `--gmm-amber` (5.72:1 on the soft
- * panel), and carries an icon as well as a colour. It is the label that keeps
- * an Aluva passenger off a train that stops at Muttom depot, and it has never
- * been allowed to be small print.
+ * panel, 5.52:1 on the line-soft ground of your lane), and carries an icon as
+ * well as a colour. It is the label that keeps an Aluva passenger off a train
+ * that stops at Muttom depot, and it has never been allowed to be small print.
+ * It is on the **next** train as well as the following ones: at MG Road after
+ * 10:58 PM the next train towards Aluva is the 11:44 PM, which terminates at
+ * Muttom, and a board that labels every train except the one being boarded
+ * has missed the one that matters.
+ *
+ * Nothing in here is under 16px (DESIGN.md §3), and every colour is a token.
  */
 
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
@@ -65,7 +80,7 @@ export const TAG_HEIGHT = 22;
  */
 export const SHORT_WORKING_HEIGHT = 22;
 
-/** Which end of the line this lane points at. Decides the head's arrow and alignment. */
+/** Which end of the line this lane points at. Decides the head's arrow. */
 export type LaneSide = 'aluva' | 'tripunithura';
 
 @Component({
@@ -77,229 +92,210 @@ export type LaneSide = 'aluva' | 'tripunithura';
       flex-direction: column;
       gap: var(--gmm-space-2);
       min-inline-size: 0;
+      padding: var(--gmm-space-3) var(--gmm-space-4) var(--gmm-space-4);
     }
 
-    /* The lane head: "← ALUVA" / "TRIPUNITHURA →". Pill badge for clear directional framing. */
-    .head {
-      display: inline-flex;
+    /* Your lane. DESIGN.md §2's selected-row ground, so the reader's train is
+       the first thing found; the tag says so in words as well, because colour
+       never carries meaning alone. Every foreground here clears 4.5:1 on it:
+       ink 16.64, line-text 5.13, ink-2 6.36, amber 5.52. */
+    :host(.is-yours) {
+      background-color: var(--gmm-line-soft);
+    }
+
+    p {
+      margin: 0;
+    }
+
+    /* --- head: "← ALUVA", and "■ Your train" beside it on a phone -------- */
+
+    .head-row {
+      display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 6px;
-      font-size: 0.8125rem;
-      font-weight: 700;
-      line-height: 1.25;
+      justify-content: space-between;
+      gap: var(--gmm-space-1) var(--gmm-space-3);
+    }
+
+    /* 16px, 600, uppercase, +0.04em (DESIGN.md §3). An h3 under the board's
+       h2, so a screen reader can move lane to lane; it overrides the global
+       heading tracking and balance, which are for station names. */
+    .head {
+      display: flex;
+      align-items: center;
+      gap: var(--gmm-space-2);
+      margin: 0;
+      font-size: var(--text-min);
+      font-weight: 600;
+      line-height: 1.3;
       letter-spacing: var(--tracking-lane);
       text-transform: uppercase;
+      text-wrap: wrap;
       color: var(--gmm-ink);
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: rgba(0, 0, 0, 0.05);
-      width: fit-content;
-      margin-block-end: 2px;
     }
 
-    :host(.is-yours) .head {
-      background: var(--gmm-line-soft);
-      color: var(--gmm-line-text);
-    }
-
-    /* Malayalam is never uppercased and takes no added tracking — DESIGN.md §3. */
+    /* Malayalam is never uppercased, takes no added tracking and needs the
+       taller line — DESIGN.md §3. */
     :host-context([lang='ml']) .head {
       text-transform: none;
       letter-spacing: normal;
+      line-height: 1.45;
     }
 
-    .lane-aluva:not(.is-single) .head,
-    .lane-aluva:not(.is-single) .tag,
-    .lane-aluva:not(.is-single) .countdown,
-    .lane-aluva:not(.is-single) .clock-line {
-      justify-content: flex-start;
-      text-align: start;
-    }
-
-    .lane-tripunithura:not(.is-single) .head,
-    .lane-tripunithura:not(.is-single) .tag,
-    .lane-tripunithura:not(.is-single) .countdown,
-    .lane-tripunithura:not(.is-single) .clock-line {
-      justify-content: flex-end;
-      text-align: end;
-    }
-
-    :host(.is-single) .head,
-    :host(.is-single) .tag,
-    :host(.is-single) .countdown,
-    :host(.is-single) .clock-line {
-      justify-content: flex-start;
-      text-align: start;
-    }
-
+    /* Arrow first on a phone for both lanes, so the two names start at the
+       same x and scan as a list. Side by side the Tripunithura arrow goes
+       back after the name, pointing out of the board as DESIGN.md §5.4 has
+       it; the direction it points is the same either way. */
     .head-arrow {
       flex-shrink: 0;
+      order: -1;
+      inline-size: 1.125em;
+      block-size: 1.125em;
       fill: none;
       stroke: currentColor;
       stroke-width: 2.25;
       stroke-linecap: round;
       stroke-linejoin: round;
-    }
-
-    /* The "Your train" tag, and the spacer that stands in for it. Both are
-       exactly TAG_HEIGHT so the countdowns below them share a baseline. */
-    .tag,
-    .tag-spacer {
-      min-block-size: 22px;
     }
 
     .tag {
       display: flex;
       align-items: center;
       gap: var(--gmm-space-2);
+      min-block-size: 22px;
       font-size: var(--text-min);
       font-weight: 600;
       line-height: 1.375;
       color: var(--gmm-line-text);
     }
 
-    /* The square beside "Your train" */
+    /* The square beside "Your train": the shape that carries the state when
+       the colour does not. */
     .tag-mark {
       flex-shrink: 0;
+      inline-size: 0.625em;
+      block-size: 0.625em;
       fill: currentColor;
     }
 
-    /* The countdown: consistent locked height so adjacent lanes share exact baselines */
+    /* --- the next train ------------------------------------------------ */
+
+    /* Phone: countdown on the left, clock and reach on the right, bottoms
+       level. Wraps rather than squeezing, so at 200% text or in Malayalam
+       the right-hand part drops under the countdown instead of overflowing. */
+    .hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--gmm-space-1) var(--gmm-space-3);
+    }
+
+    /* 52px, 600, -0.05em (DESIGN.md §3). line-height 0.9 is safe because the
+       glyphs at this size are digits, a colon, or "Arriving", none of which
+       descend; the reservation keeps "Arriving" from making the row jump. */
     .countdown {
       display: flex;
       align-items: baseline;
       gap: var(--gmm-space-1);
+      min-block-size: calc(var(--text-countdown-board) * 0.9);
       font-size: var(--text-countdown-board);
-      font-weight: 700;
+      font-weight: 600;
       line-height: 0.9;
       letter-spacing: var(--tracking-board);
       color: var(--gmm-ink);
-      min-block-size: 44px;
     }
 
     .countdown.is-word {
+      align-items: flex-end;
       font-size: 1.5rem;
-      font-weight: 700;
-      line-height: 1.1;
-      letter-spacing: -0.02em;
-      min-block-size: 44px;
-      display: flex;
-      align-items: center;
-    }
-
-    @media (min-width: 1024px) {
-      .countdown {
-        font-size: var(--text-countdown-board-lg);
-        line-height: 0.95;
-        min-block-size: 52px;
-      }
-
-      .countdown.is-word {
-        font-size: 2.125rem;
-        line-height: 1;
-        min-block-size: 52px;
-      }
+      line-height: 1.2;
+      letter-spacing: var(--tracking-tight);
     }
 
     :host(.is-yours) .countdown {
       color: var(--gmm-line-text);
     }
 
+    /* "min" beside the figure, "AM" beside a clock. 18px, not the hero's
+       0.23em: 23% of 52px is 12px, under the floor. */
     .countdown-unit {
-      font-size: 1rem;
+      font-size: 1.125rem;
       font-weight: 600;
       letter-spacing: var(--tracking-tight);
-      margin-inline-start: 2px;
     }
 
-    /* "6:21 PM · 17 stations" - clean single-line fit that never breaks or wraps */
-    .clock-line {
-      font-size: 0.8125rem;
-      line-height: 1.35;
-      color: var(--gmm-ink-2);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-inline-size: 100%;
-      margin-block-end: 2px;
-    }
-
-    /* A following departure: hairline top border, time left, countdown right. */
-    .following-row {
-      inline-size: 100%;
-      padding-block: 8px;
-      border-block-start: 1px solid var(--gmm-rule);
-      margin-block-start: 4px;
-    }
-
-    .following {
+    /* The auto margin keeps it in the right-hand column when it wraps under
+       the countdown, rather than dropping to the left edge. */
+    .when {
       display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: var(--gmm-space-2);
-      line-height: 1.3;
+      flex-direction: column;
+      align-items: flex-end;
+      min-inline-size: 0;
+      margin-inline-start: auto;
+      line-height: 1.45;
+      text-align: end;
+      color: var(--gmm-ink-2);
     }
 
-    .following-clock {
-      font-size: 0.9375rem;
+    /* The departure clock: 22px, 600 (DESIGN.md §3's quieter time), with the
+       meridiem at 16px in ink-2. */
+    .when-clock {
+      font-size: var(--text-arrival);
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: var(--tracking-time);
+      color: var(--gmm-ink);
+      white-space: nowrap;
+    }
+
+    .when-meridiem {
+      font-size: var(--text-min);
+      font-weight: 500;
+      letter-spacing: normal;
+      color: var(--gmm-ink-2);
+    }
+
+    /* "in 5 h 14 min" / "Tomorrow", where the clock went once the clock
+       became the big figure. Both take 1.45 from .when, in both languages:
+       it is Malayalam's minimum (DESIGN.md §3), and a second rule for it
+       would be doubled by encapsulation into a 4 kB component budget. */
+    .when-wait {
+      font-size: var(--text-min);
       font-weight: 600;
       color: var(--gmm-ink);
     }
 
-    .following-countdown {
-      font-size: 0.8125rem;
-      font-weight: 500;
-      color: var(--gmm-ink-2);
+    .when-count {
+      font-size: var(--text-min);
     }
 
-    /* Rendered in every document, shown only at 1024px and above. DESIGN.md
-       §5.4: home shows 1 following train on a phone and 3 on desktop.
-       Removed from the box tree rather than visually hidden, because a row a sighted
-       reader cannot see must not be read out either — it is a duplicate of
-       what the station board shows in full, not hidden information. */
-    .following-row.is-wide-only {
+    .when-sep {
       display: none;
     }
 
-    @media (min-width: 1024px) {
-      .following-row.is-wide-only {
-        display: block;
-      }
-    }
+    /* --- the short-working line, and the spacers ------------------------- */
 
-    /* The short-working line, and the spacer the other lane uses to match it.
-       CLAUDE.md finding 10: this is the label that keeps a passenger off a
-       train that stops at Muttom depot. Body-sized, amber (5.72:1 on soft),
-       with an icon — never small print, never colour alone. */
-    .short-working,
-    .short-working-spacer {
-      min-block-size: 22px;
-    }
-
-    /* A spacer that only desktop needs, because the short working it matches
-       is on a row only desktop renders. Zero height below the breakpoint, so a
-       phone never carries a blank band it cannot account for. */
-    .short-working-spacer.is-wide-only {
-      display: none;
-    }
-
-    @media (min-width: 1024px) {
-      .short-working-spacer.is-wide-only {
-        display: block;
-      }
-    }
-
+    /* CLAUDE.md findings 9 and 10: the label that keeps a passenger off a
+       train that stops at Muttom depot. Body-sized, amber, with an icon —
+       never small print, never colour alone. Wraps at spaces when it must. */
     .short-working {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: var(--gmm-space-2);
       font-size: var(--text-min);
+      font-weight: 500;
       line-height: 1.375;
       color: var(--gmm-amber);
     }
 
+    /* Sized in em so it grows with the text at 200%, and centred on the
+       first line: (1.375 - 1) / 2 of the line box. */
     .short-working-icon {
       flex-shrink: 0;
+      inline-size: 1em;
+      block-size: 1em;
+      margin-block-start: 0.1875em;
       fill: none;
       stroke: currentColor;
       stroke-width: 2.25;
@@ -307,106 +303,254 @@ export type LaneSide = 'aluva' | 'tripunithura';
       stroke-linejoin: round;
     }
 
-    /* The closed state. Grey line, and the lane says so in words. */
-    .closed {
-      font-size: var(--text-arrival);
+    /* Stand-ins for the tag and the short-working line, side by side only. */
+    .tag-spacer,
+    .short-working-spacer {
+      display: none;
+      min-block-size: 22px;
+    }
+
+    /* --- following departures ------------------------------------------ */
+
+    /* Hairline above, time (600) left, wait right. */
+    .following-row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gmm-space-1);
+      padding-block-start: var(--gmm-space-3);
+      border-block-start: 1px solid var(--gmm-rule);
+    }
+
+    /* The rule is 1.27:1 on the soft panel and all but vanishes on your
+       lane's line-soft ground; the grey keeps the rows visibly separate. */
+    :host(.is-yours) .following-row {
+      border-block-start-color: var(--gmm-grey);
+    }
+
+    .following {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--gmm-space-3);
+      font-size: var(--text-min);
+      line-height: 1.4;
+    }
+
+    .following-clock {
       font-weight: 600;
       color: var(--gmm-ink);
     }
 
-    .lane-aluva .closed,
-    .lane-aluva .closed-sub {
-      text-align: start;
+    .following-countdown {
+      color: var(--gmm-ink-2);
+      text-align: end;
     }
 
-    .lane-tripunithura .closed,
-    .lane-tripunithura .closed-sub {
-      text-align: end;
+    /* Rendered in every document, shown only at 1024px and above. DESIGN.md
+       §5.4: home shows 1 following train on a phone and 3 on desktop.
+       Removed from the box tree rather than visually hidden, because a row a
+       sighted reader cannot see must not be read out either — it is a
+       duplicate of what the station board shows in full. */
+    .following-row.is-wide-only {
+      display: none;
+    }
+
+    /* --- no service ---------------------------------------------------- */
+
+    .closed {
+      font-size: var(--text-arrival);
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--gmm-ink);
     }
 
     .closed-sub {
       font-size: var(--text-min);
+      line-height: 1.4;
       color: var(--gmm-ink-2);
+    }
+
+    /* --- side by side -------------------------------------------------- */
+
+    @media (min-width: 1024px) {
+      .head-arrow {
+        order: 0;
+      }
+
+      /* The tag takes its own line, and the other lane reserves it. */
+      .head-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--gmm-space-2);
+      }
+
+      /* The countdown on its own line, the clock and reach under it on one:
+         a 230px lane has room for one or the other beside the countdown, not
+         both, and wrapping in one lane only would break the alignment. */
+      .hero {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--gmm-space-2);
+      }
+
+      .countdown {
+        min-block-size: calc(var(--text-countdown-board-lg) * 0.9);
+        font-size: var(--text-countdown-board-lg);
+      }
+
+      .countdown.is-word {
+        font-size: 2.125rem;
+        line-height: 1.1;
+      }
+
+      /* Exactly the 22px clock's line box, so a lane reading "Tomorrow" stays
+         level with one reading "11:44 PM". The 16px parts are set solid so
+         that, baseline-aligned beside the clock, they never reach past its
+         box — mixed sizes on one baseline otherwise grow the line. */
+      .when {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: var(--gmm-space-2);
+        min-block-size: calc(var(--text-arrival) * 1.2);
+        margin-inline-start: 0;
+        line-height: 1;
+        text-align: start;
+      }
+
+      .when-sep {
+        display: inline;
+      }
+
+      .tag-spacer,
+      .short-working-spacer {
+        display: block;
+      }
+
+      .following-row.is-wide-only {
+        display: flex;
+      }
     }
   `,
   template: `
-    <div class="head">
-      @if (side() === 'aluva') {
-        <svg viewBox="0 0 24 24" width="18" height="18" class="head-arrow" aria-hidden="true">
-          <path d="M19 12H5" />
-          <path d="M11 6l-6 6 6 6" />
-        </svg>
-        <span>{{ towardsName() }}</span>
-      } @else {
-        <span>{{ towardsName() }}</span>
-        <svg viewBox="0 0 24 24" width="18" height="18" class="head-arrow" aria-hidden="true">
-          <path d="M5 12h14" />
-          <path d="M13 6l6 6-6 6" />
-        </svg>
+    <div class="head-row">
+      <h3 class="head" [attr.aria-label]="t('board.towards', { name: towardsName() })">
+        @if (side() === 'aluva') {
+          <svg viewBox="0 0 24 24" width="18" height="18" class="head-arrow" aria-hidden="true">
+            <path d="M19 12H5" />
+            <path d="M11 6l-6 6 6 6" />
+          </svg>
+          <span>{{ towardsName() }}</span>
+        } @else {
+          <span>{{ towardsName() }}</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" class="head-arrow" aria-hidden="true">
+            <path d="M5 12h14" />
+            <path d="M13 6l6 6-6 6" />
+          </svg>
+        }
+      </h3>
+
+      <!--
+        The tag, or — side by side only — the space it would have taken, so
+        both lanes' countdowns sit on the same baseline.
+      -->
+      @if (isYours()) {
+        <p class="tag">
+          <svg viewBox="0 0 10 10" width="10" height="10" class="tag-mark" aria-hidden="true">
+            <rect width="10" height="10" rx="2" />
+          </svg>
+          <span>{{ t('board.yourTrain') }}</span>
+        </p>
+      } @else if (reserveTag()) {
+        <div class="tag-spacer" aria-hidden="true"></div>
       }
     </div>
 
-    <!--
-      The tag, or the space it would have taken. One of the two always renders,
-      so both lanes' countdowns sit on the same baseline.
-    -->
-    @if (isYours()) {
-      <p class="tag">
-        <svg viewBox="0 0 10 10" width="10" height="10" class="tag-mark" aria-hidden="true">
-          <rect width="10" height="10" rx="2" />
-        </svg>
-        <span>{{ t('board.yourTrain') }}</span>
-      </p>
-    } @else if (reserveTag()) {
-      <div class="tag-spacer" aria-hidden="true"></div>
-    }
-
     @if (next(); as row) {
-      <!--
-        The countdown carries an aria-label because "5" and "min" are separate
-        elements with a gap between them, and the raw text nodes read as two
-        unrelated fragments. The label names the direction too, since a lane's
-        heading is above it rather than beside it.
-      -->
-      <p
-        class="countdown tabular"
-        [class.is-word]="countdownUnit() === null"
-        [attr.aria-label]="t('board.laneCountdownLabel', {
-          name: towardsName(),
-          countdown: row.countdown,
-        })"
-      >
-        <span aria-hidden="true">{{ countdownNumber() }}</span>
-        @if (countdownUnit(); as unit) {
-          <span class="countdown-unit" aria-hidden="true">{{ unit }}</span>
-        }
-      </p>
+      <div class="hero">
+        <!--
+          The figure and its unit are two elements with a gap between them,
+          which a screen reader reads as two fragments, so they are hidden and
+          the sentence beside them is what is read. Text rather than an
+          aria-label, which a paragraph is not allowed to carry.
+        -->
+        <p class="countdown tabular" [class.is-word]="heroUnit() === null">
+          <span class="sr-only">{{
+            t('board.laneCountdownLabel', {
+              name: towardsName(),
+              countdown: row.distant ? row.clock : row.countdown,
+            })
+          }}</span>
+          <span aria-hidden="true">{{ heroNumber() }}</span>
+          @if (heroUnit(); as unit) {
+            <span class="countdown-unit" aria-hidden="true">{{ unit }}</span>
+          }
+        </p>
 
-      <p class="clock-line tabular">
-        {{ t('board.clockAndStations', { clock: row.clock, count: servesCount() }) }}
-      </p>
+        <p class="when tabular">
+          @if (row.distant) {
+            <span class="when-wait">{{
+              row.nextDay ? t('board.tomorrow') : t('board.inWait', { wait: row.countdown })
+            }}</span>
+          } @else {
+            <span class="when-clock"
+              >{{ clockTime() }}<span class="when-meridiem"> {{ clockMeridiem() }}</span></span
+            >
+          }
+          <span class="when-sep" aria-hidden="true">·</span>
+          <span class="when-count">{{ stationsLabel() }}</span>
+        </p>
+      </div>
+
+      <!-- Finding 9: the next train is the one being boarded. -->
+      @if (row.shortTurn) {
+        <p class="short-working">
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            class="short-working-icon"
+            aria-hidden="true"
+          >
+            <path d="M5 12h11" />
+            <path d="M19 6v12" />
+          </svg>
+          <span aria-hidden="true">{{ t('board.endsAt', { terminus: row.terminusName }) }}</span>
+          <span class="sr-only">{{
+            t('board.shortTurn', { terminus: row.terminusName, misses: towardsName() })
+          }}</span>
+        </p>
+      } @else if (reserveNextShortWorking()) {
+        <div class="short-working-spacer" aria-hidden="true"></div>
+      }
 
       @for (row of following(); track row.key; let i = $index) {
         <div
           class="following-row"
           [class.is-wide-only]="narrowCount() !== null && i >= narrowCount()!"
         >
+          <!--
+            Across the night the date is the useful half: at 11:30 PM "8 h 4
+            min" on every row says less than "Tomorrow" does.
+          -->
           <p class="following tabular">
             <span class="following-clock">{{ row.clock }}</span>
-            <span class="following-countdown">{{ row.countdown }}</span>
+            <span class="following-countdown">{{
+              row.distant && row.nextDay ? t('board.tomorrow') : row.countdown
+            }}</span>
           </p>
 
           <!--
             Finding 10. The 20 trips that terminate early are labelled here,
-            and the other lane reserves the same height so the rows below stay
-            level across the board.
+            and side by side the other lane reserves the same height so the
+            rows below stay level across the board.
           -->
           @if (row.shortTurn) {
             <p class="short-working">
               <svg
                 viewBox="0 0 24 24"
-                width="14"
-                height="14"
+                width="16"
+                height="16"
                 class="short-working-icon"
                 aria-hidden="true"
               >
@@ -426,21 +570,19 @@ export type LaneSide = 'aluva' | 'tripunithura';
                 t('board.shortTurn', { terminus: row.terminusName, misses: towardsName() })
               }}</span>
             </p>
-          } @else if (reserveShortWorking() || reserveShortWorkingWide()) {
-            <div
-              class="short-working-spacer"
-              [class.is-wide-only]="!reserveShortWorking()"
-              aria-hidden="true"
-            ></div>
+          } @else if (reserveShortWorking()) {
+            <div class="short-working-spacer" aria-hidden="true"></div>
           }
         </div>
       }
     } @else {
       <!-- No service. Said in words, not by a grey line alone. -->
-      <p class="closed">{{ t('board.closed') }}</p>
-      @if (opensAt(); as clock) {
-        <p class="closed-sub tabular">{{ t('board.opensAt', { clock }) }}</p>
-      }
+      <div class="hero">
+        <p class="closed">{{ t('board.closed') }}</p>
+        @if (opensAt(); as clock) {
+          <p class="closed-sub tabular">{{ t('board.opensAt', { clock }) }}</p>
+        }
+      </div>
     }
   `,
   host: {
@@ -452,9 +594,10 @@ export type LaneSide = 'aluva' | 'tripunithura';
 export class BoardLane {
   protected readonly t = inject(I18nService).t;
 
+  /** True at a terminus, where this is the only lane. */
   readonly isSingleLane = input<boolean>(false);
 
-  /** Which end of the line. Decides the arrow, the alignment and nothing else. */
+  /** Which end of the line. Decides the arrow and nothing else. */
   readonly side = input.required<LaneSide>();
 
   /** The terminus, read from the end of the line — never hardcoded. */
@@ -463,7 +606,7 @@ export class BoardLane {
   /** This lane's departures, soonest first. Empty when nothing more runs today. */
   readonly rows = input.required<readonly DepartureRow[]>();
 
-  /** How many stations this platform serves. Shown beside the clock. */
+  /** How many stations this platform serves. Shown beside the next train's clock. */
   readonly servesCount = input<number>(0);
 
   /** True when this lane serves the reader's destination. */
@@ -473,23 +616,20 @@ export class BoardLane {
    * Reserve the tag's height although this lane has no tag.
    *
    * Set by the board when the *other* lane is the reader's, so the countdowns
-   * share a baseline. A lane cannot work this out for itself.
+   * share a baseline side by side. A lane cannot work this out for itself.
    */
   readonly reserveTag = input<boolean>(false);
+
+  /** Reserve the next train's short-working line. Same reason. */
+  readonly reserveNextShortWorking = input<boolean>(false);
 
   /** Reserve the short-working line's height on every following row. Same reason. */
   readonly reserveShortWorking = input<boolean>(false);
 
-  /**
-   * Reserve it at 1024px and above only, for a short working that falls on a
-   * row only desktop renders. See `BoardPanel.reserveShortWorkingWide`.
-   */
-  readonly reserveShortWorkingWide = input<boolean>(false);
-
   /** When the first train runs tomorrow. Only read in the closed state. */
   readonly opensAt = input<string | null>(null);
 
-  /** How many following departures to show under the countdown. */
+  /** How many following departures to show under the next train. */
   readonly followingCount = input<number>(1);
 
   /**
@@ -528,28 +668,49 @@ export class BoardLane {
   );
 
   /**
-   * The countdown split into its number and its unit, so the unit can be set at
-   * 18px beside a 52px figure.
+   * What the big figure says: the countdown, or the clock once the wait is an
+   * hour or more (`DISTANT_SECONDS`) — "6:00 AM" rather than "5 h 14 min".
    *
-   * `countdown` arrives already formatted ("Due", "6 min", "1 h 12 min") and is
+   * Either arrives already formatted ("Arriving", "6 min", "6:00 AM") and is
    * **not** re-parsed into components here — it is split on the first space,
-   * once. "Due" has no space, so it renders whole at the large size with no
-   * unit, which is correct: it is a word, not a quantity.
-   *
-   * The 52px size has `line-height: 0.8`, which is safe for digits because
-   * they have no descenders. "Due" is the one value that reaches it as
-   * letters, and it has none either — no descender in D, u or e. A value that
-   * did would clip, so a new formatter output has to be checked against this.
+   * once, so the unit can be set at 18px beside a 52px figure. "Arriving" has
+   * no space, so it renders whole at the word size, which is correct: it is a
+   * word, not a quantity. The Malayalam forms split the same way.
    */
-  protected readonly countdownNumber = computed(() => {
-    const text = this.next()?.countdown ?? '';
+  readonly #hero = computed(() => {
+    const row = this.next();
+    if (row === null) return '';
+    return row.distant ? row.clock : row.countdown;
+  });
+
+  protected readonly heroNumber = computed(() => {
+    const text = this.#hero();
     const space = text.indexOf(' ');
     return space === -1 ? text : text.slice(0, space);
   });
 
-  protected readonly countdownUnit = computed(() => {
-    const text = this.next()?.countdown ?? '';
+  protected readonly heroUnit = computed(() => {
+    const text = this.#hero();
     const space = text.indexOf(' ');
     return space === -1 ? null : text.slice(space + 1);
+  });
+
+  /** "6:21" of "6:21 PM", so the meridiem can be set smaller (DESIGN.md §3). */
+  protected readonly clockTime = computed(() => {
+    const clock = this.next()?.clock ?? '';
+    const space = clock.indexOf(' ');
+    return space === -1 ? clock : clock.slice(0, space);
+  });
+
+  protected readonly clockMeridiem = computed(() => {
+    const clock = this.next()?.clock ?? '';
+    const space = clock.indexOf(' ');
+    return space === -1 ? '' : clock.slice(space + 1);
+  });
+
+  /** "17 stations", and "1 station" at the two platforms that serve one. */
+  protected readonly stationsLabel = computed(() => {
+    const count = this.servesCount();
+    return this.t(count === 1 ? 'board.stationsOne' : 'board.stations', { count });
   });
 }

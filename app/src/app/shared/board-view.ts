@@ -78,6 +78,24 @@ export const LAST_TRAIN_WINDOW_SECONDS = 3 * 60 * 60;
  */
 export const NEXT_DAY_SECONDS = 4 * 60 * 60;
 
+/**
+ * A wait this long is shown as a clock time, not as a countdown.
+ *
+ * The longest gap inside service is the 45m56s cliff (measured over every
+ * platform and both service patterns), so a wait of an hour or more only
+ * happens across the overnight gap — at 00:45 the next train from Aluva is the
+ * 6:00 AM, over five hours away. A five-hour countdown in the board's largest
+ * type answers nobody's question; "6:00 AM" does. An hour is also
+ * exactly where `localWait` gains its hours part, which is the point at which
+ * the countdown stops being one number and one unit.
+ *
+ * Deliberately not {@link NEXT_DAY_SECONDS}: that one separates "later
+ * tonight" from "tomorrow" when measured from the evening, and at 03:00 the
+ * 6:00 AM is three hours away — under four, and still not something to count
+ * down to.
+ */
+export const DISTANT_SECONDS = 60 * 60;
+
 /** Names shown before the served list is elided. */
 const SERVES_PREVIEW = 3;
 
@@ -95,6 +113,8 @@ export interface DepartureRow {
   readonly missesName: string | null;
   /** True when this departure is across the overnight gap. */
   readonly nextDay: boolean;
+  /** True when the wait is {@link DISTANT_SECONDS} or more: lead with the clock. */
+  readonly distant: boolean;
   /** True when this is the final departure of the service day. */
   readonly isLast: boolean;
 }
@@ -190,6 +210,7 @@ function rowFor(
     shortTurn: departure.shortTurn,
     missesName: departure.shortTurn ? endOfLine.name[locale] : null,
     nextDay: isNextDay(departure, now),
+    distant: departure.waitSeconds >= DISTANT_SECONDS,
     isLast: last !== null && last.departure.tripId === departure.tripId,
   };
 }

@@ -1,31 +1,43 @@
 /**
  * The departure board. DESIGN.md §5.4.
  *
- * A soft-grey panel carrying a header, the horizontal `LineTrack`, two lanes
- * side by side, and a "Full board" footer. Both directions are visible together
- * without scrolling past separate cards — that is golden rule 2 and the reason
- * the board is two columns rather than two stacked cards.
+ * A soft-grey panel carrying a header, both directions, and a "Full board"
+ * footer. Both directions are in the one panel, never in separate cards — that
+ * is golden rule 2, and it holds at every width.
  *
- * ## This component's one real job: keeping the lanes aligned
+ * ## Stacked on a phone, side by side from 1024px
  *
- * Everything else here is layout. The part that has to be got right is that
- * the two lanes stay level even though the things that make a lane taller only
+ * Below 1024px the two lanes are full-width rows, Aluva above Tripunithura —
+ * the same fixed order the track and the network strip use left to right, so
+ * a daily reader finds their direction in the same place every time. Two
+ * columns on a 360px phone left each lane about 150px, and "6:30 AM", "5 h 43
+ * min" and "Ends at Kadavanthra" all broke across lines; see `BoardLane`.
+ *
+ * At 1024px and above the lanes sit side by side under the horizontal
+ * `LineTrack`, whose left and right halves are those two columns. The track is
+ * not drawn below that width: stacked lanes do not map onto its halves, each
+ * lane's head already carries its arrow and its terminus in words, and a
+ * ringed node on a bar reads as a slider handle on a touch screen — a control
+ * that does nothing when it is pressed.
+ *
+ * ## This component's one real job: keeping side-by-side lanes aligned
+ *
+ * Everything else here is layout. What has to be got right is that two lanes
+ * side by side stay level even though the things that make a lane taller only
  * ever happen to one of them:
  *
  *   * the **"Your train" tag** is on the lane serving the reader's destination
  *     and on no other lane, ever; and
  *   * the **"Ends at Muttom" line** appears on the towards-Aluva lane at 20 of
  *     24 weekday platforms and essentially never on the towards-Tripunithura
- *     one (CLAUDE.md finding 9). So the lanes being asymmetric is the normal
- *     case on this network, not a rarity.
+ *     one (CLAUDE.md finding 9) — on the next train or on a following one. So
+ *     the lanes being asymmetric is the normal case on this network.
  *
  * A lane cannot see the other lane, so the reservations are computed here and
- * passed down. `reserveTag` is true for a lane when *either* lane is the
- * reader's; `reserveShortWorking` is true for both when *either* lane has a
- * short-working row on screen. `board-panel.spec.ts` asserts the asymmetric
- * case directly, because it is the one that regresses silently: the board
- * still renders, the numbers are still right, and the two countdowns are
- * simply 22px out of line.
+ * passed down, and the lanes only draw them side by side. `board-panel.spec.ts`
+ * asserts the asymmetric case directly, because it is the one that regresses
+ * silently: the board still renders, the numbers are still right, and the two
+ * countdowns are simply 22px out of line.
  *
  * ## Provenance
  *
@@ -54,26 +66,27 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
       background-color: var(--gmm-soft);
     }
 
-    .inner {
-      padding-block: var(--gmm-space-4) var(--gmm-space-1);
-    }
-
+    /* "DEPARTURES" and "Timetable · 6:16 PM". Wraps rather than truncating:
+       it is the provenance line, and a provenance line that can be cut off is
+       worse than none. */
     .header {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: baseline;
-      gap: var(--gmm-space-3);
-      padding-inline: var(--gmm-space-4);
-      padding-block-end: 8px;
+      gap: var(--gmm-space-1) var(--gmm-space-3);
+      padding: var(--gmm-space-4) var(--gmm-space-4) var(--gmm-space-1);
     }
 
+    /* Section label: 16px, 600, uppercase, +0.05em (DESIGN.md §3). */
     .heading {
       margin: 0;
       font-size: var(--text-min);
-      font-weight: 700;
-      line-height: 1.25;
+      font-weight: 600;
+      line-height: 1.3;
       letter-spacing: var(--tracking-label);
       text-transform: uppercase;
+      text-wrap: wrap;
       color: var(--gmm-ink);
     }
 
@@ -81,83 +94,111 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
     :host-context([lang='ml']) .heading {
       text-transform: none;
       letter-spacing: normal;
+      line-height: 1.45;
     }
 
-    /* "Timetable · 6:16 PM". ink-2 is 6.59:1 on the soft panel. */
+    /* ink-2 is 6.59:1 on the soft panel. Balanced, so at large text sizes it
+       breaks after the dot rather than between "6:16" and "PM". */
     .provenance {
+      margin: 0;
       font-size: var(--text-min);
-      line-height: 1.375;
+      line-height: 1.4;
+      text-wrap: balance;
       color: var(--gmm-ink-2);
-      text-align: end;
     }
 
+    /* Side by side only; see the header comment. */
     .track {
-      padding-inline: var(--gmm-space-3);
-      margin-block: var(--gmm-space-1) var(--gmm-space-2);
+      display: none;
     }
 
-    /* The lanes: two-column when both directions exist, single full-width when at terminus */
+    /* One column on a phone: the lanes are rows, a hairline between them. */
     .lanes {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      column-gap: var(--gmm-space-4);
-      align-items: start;
-      padding-inline: var(--gmm-space-4);
-      padding-block-start: var(--gmm-space-2);
-    }
-
-    .lanes.is-single-lane {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .lanes:not(.is-single-lane) > app-board-lane:first-child {
-      padding-inline-end: var(--gmm-space-3);
-      border-inline-end: 1px solid var(--gmm-rule);
+    .lanes > app-board-lane + app-board-lane {
+      border-block-start: 1px solid var(--gmm-rule);
     }
 
-    .lanes:not(.is-single-lane) > app-board-lane:last-child {
-      padding-inline-start: var(--gmm-space-1);
-    }
-
-    /* "Full board ›" — 44px touch target, per spec. */
+    /* "Full board ›" — the whole width of the panel, 48px (DESIGN.md §5.4). */
     .footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: var(--gmm-space-3);
-      min-block-size: 44px;
-      margin-block-start: var(--gmm-space-2);
-      margin-inline: var(--gmm-space-4);
+      min-block-size: 48px;
+      padding-inline: var(--gmm-space-4);
       border-block-start: 1px solid var(--gmm-rule);
       color: var(--gmm-ink);
       font-size: var(--text-min);
       font-weight: 600;
       text-decoration: none;
-      transition: color var(--gmm-hover) var(--gmm-ease);
+      touch-action: manipulation;
+      transition:
+        color var(--gmm-hover) var(--gmm-ease),
+        background-color var(--gmm-press) var(--gmm-ease);
+    }
+
+    /* Inset, so the focus outline is not cut off by a panel with rounded,
+       clipped corners — which is how home and route present this one. */
+    .footer:focus-visible {
+      outline-offset: calc(-1 * var(--gmm-focus-width));
     }
 
     .footer:hover {
       color: var(--gmm-line-text);
     }
 
+    .footer:active {
+      color: var(--gmm-line-text);
+      background-color: var(--gmm-line-soft);
+    }
+
     .footer:hover .footer-chevron {
-      transform: translateX(3px);
+      translate: 3px 0;
     }
 
     .footer-chevron {
       flex-shrink: 0;
+      inline-size: 1.25em;
+      block-size: 1.25em;
       fill: none;
       stroke: currentColor;
       stroke-width: 1.75;
       stroke-linecap: round;
       stroke-linejoin: round;
-      transition: transform var(--gmm-hover) var(--gmm-ease);
+      transition: translate var(--gmm-hover) var(--gmm-ease);
+    }
+
+    @media (min-width: 1024px) {
+      .track {
+        display: block;
+        padding-inline: var(--gmm-space-3);
+        margin-block-start: var(--gmm-space-2);
+      }
+
+      .lanes:not(.is-single-lane) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      /* Stretched, so the rule between the columns and your lane's ground
+         both run the full height of the taller lane. */
+      .lanes > app-board-lane + app-board-lane {
+        border-block-start: 0;
+        border-inline-start: 1px solid var(--gmm-rule);
+      }
     }
   `,
   template: `
-    <section class="inner" [attr.aria-label]="t('board.heading')">
+    <section [attr.aria-label]="t('board.heading')">
       <div class="header">
         <h2 class="heading">{{ t('board.heading') }}</h2>
+        <!--
+          Provenance. Never "Live" — these are timetable times, and saying
+          otherwise is the one thing the honesty rules forbid outright.
+        -->
         <p class="provenance tabular">{{ provenance() }}</p>
       </div>
 
@@ -178,8 +219,8 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
             [servesCount]="lane.servesAll.length"
             [isYours]="yourDirection() === lane.direction"
             [reserveTag]="reserveTag()"
+            [reserveNextShortWorking]="reserveNextShortWorking()"
             [reserveShortWorking]="reserveShortWorking()"
-            [reserveShortWorkingWide]="reserveShortWorkingWide()"
             [opensAt]="opensAt()"
             [followingCount]="followingCount()"
             [followingCountWide]="followingCountWide()"
@@ -194,8 +235,8 @@ import { LineTrack, type TrackEnd, type TrackSide } from './line-track';
             [servesCount]="lane.servesAll.length"
             [isYours]="yourDirection() === lane.direction"
             [reserveTag]="reserveTag()"
+            [reserveNextShortWorking]="reserveNextShortWorking()"
             [reserveShortWorking]="reserveShortWorking()"
-            [reserveShortWorkingWide]="reserveShortWorkingWide()"
             [opensAt]="opensAt()"
             [followingCount]="followingCount()"
             [followingCountWide]="followingCountWide()"
@@ -225,8 +266,8 @@ export class BoardPanel {
    * Both platforms, in whatever order the engine produced them.
    *
    * They are sorted into lanes here by `direction`, not by position in the
-   * array: DESIGN.md §5.3 fixes Aluva on the left and Tripunithura on the
-   * right at every station, and a caller passing them the other way round
+   * array: DESIGN.md §5.3 fixes Aluva first (left, or on top) and Tripunithura
+   * second at every station, and a caller passing them the other way round
    * would otherwise silently mirror the board.
    *
    * `direction_id = 1` is towards Aluva and `0` towards Tripunithura, derived
@@ -287,45 +328,43 @@ export class BoardPanel {
    * True as soon as *either* lane is the reader's, which is exactly when the
    * asymmetry exists. With no destination chosen neither lane has a tag and
    * nothing is reserved, so the board is 22px shorter rather than carrying a
-   * blank band.
+   * blank band. At a terminus there is no other lane to line up with.
    */
   protected readonly reserveTag = computed(() => {
+    if (this.isSingleLane()) return false;
     const direction = this.yourDirection();
     if (direction === null) return false;
     return this.boards().some((board) => board.direction === direction);
   });
 
   /**
-   * Reserve the short-working line's height in both lanes when either has one.
+   * Reserve the next train's short-working line in the lane whose next train
+   * runs through, when the other lane's does not.
    *
-   * Scoped to the rows actually on screen — `followingCount` of them per lane —
-   * because a short-working trip further down the timetable does not affect the
-   * height of what is rendered. Reserving on its account would put a permanent
-   * blank band under every board at the 20 weekday platforms of finding 9.
+   * Finding 9 makes this routine rather than rare: from 10:58 PM at MG Road
+   * the next train towards Aluva is the 11:44 PM to Muttom, while the other
+   * lane's next train runs the whole line.
    */
-  protected readonly reserveShortWorking = computed(() =>
-    this.#hasShortWorking(this.followingCount()),
-  );
-
-  /**
-   * The same question asked of the desktop row count.
-   *
-   * It has to be a second flag rather than a wider first one. The spacer is a
-   * height reserved in the lane *without* the short working so both lanes'
-   * rows stay level; if a short working falls on a row only desktop renders,
-   * a phone reserving for it would carry a blank 22px band under a row it
-   * cannot explain. So the narrow flag reserves for rows a phone shows and
-   * this one reserves, at 1024px and above only, for the rows desktop adds.
-   */
-  protected readonly reserveShortWorkingWide = computed(() => {
-    const wide = this.followingCountWide();
-    if (wide === null || wide <= this.followingCount()) return false;
-    return this.#hasShortWorking(wide) && !this.reserveShortWorking();
+  protected readonly reserveNextShortWorking = computed(() => {
+    if (this.isSingleLane()) return false;
+    return this.boards().some((board) => board.rows[0]?.shortTurn === true);
   });
 
-  #hasShortWorking(count: number): boolean {
+  /**
+   * Reserve the short-working line's height on the following rows when either
+   * lane has one among them.
+   *
+   * Scoped to the rows the widest breakpoint renders, because the spacers are
+   * only drawn side by side, which is only at that width. A short working
+   * further down the timetable does not affect the height of anything drawn,
+   * and reserving on its account would put a permanent blank band under every
+   * board at the 20 weekday platforms of finding 9.
+   */
+  protected readonly reserveShortWorking = computed(() => {
+    if (this.isSingleLane()) return false;
+    const shown = Math.max(this.followingCount(), this.followingCountWide() ?? 0);
     return this.boards().some((board) =>
-      board.rows.slice(1, 1 + count).some((row) => row.shortTurn),
+      board.rows.slice(1, 1 + shown).some((row) => row.shortTurn),
     );
-  }
+  });
 }
