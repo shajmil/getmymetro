@@ -84,12 +84,6 @@
   margin: var(--gmm-space-3) 0 0;
 }
 
-/* Reserved height so the page does not jump when the boards arrive. 30rem is
-   a measured two-lane board with four following trains each, which is what
-   this screen renders. */
-.board {
-  min-block-size: 30rem;
-}
 
 /* The live last-train panel. No reserved height: it renders nothing outside
    the last-train window, and a permanent band would cost every reader all day
@@ -342,8 +336,6 @@
     margin-inline: auto;
     border-radius: var(--gmm-radius-panel);
     overflow: hidden;
-    /* Four following trains a lane at this width, not a phone's stack. */
-    min-block-size: 26rem;
   }
 
   /* Prose and link lists. Half the grid plus its gutter, which is where the

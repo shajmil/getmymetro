@@ -86,16 +86,16 @@ import { JourneyRow } from './journey-line';
       padding-block: var(--gmm-space-5) 22px;
     }
 
-    /* The board panel's own skeleton, in the board's own two layouts: lanes
-       stacked as rows on a phone, side by side under the track from 1024px
-       (see BoardPanel). */
+    /* The board's own skeleton: the header and one tile per direction, in
+       the board's layout (see BoardPanel and BoardLane). */
     .board {
       margin-block-start: var(--gmm-space-5);
+      container-type: inline-size;
       background-color: var(--gmm-soft);
     }
 
     .board-header {
-      padding: var(--gmm-space-4) var(--gmm-space-4) var(--gmm-space-1);
+      padding: 14px var(--gmm-space-4) 10px;
     }
 
     .board-heading {
@@ -103,78 +103,62 @@ import { JourneyRow } from './journey-line';
       inline-size: 40%;
     }
 
-    .board-track {
-      display: none;
-      block-size: 10px;
-      margin: var(--gmm-space-4) var(--gmm-space-3) 0;
-      border-radius: var(--radius-full);
-    }
-
-    .lanes {
+    .tiles {
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
+      gap: var(--gmm-space-2);
+      padding: 0 var(--gmm-space-2) var(--gmm-space-2);
     }
 
-    .lane {
-      padding: var(--gmm-space-3) var(--gmm-space-4) var(--gmm-space-4);
+    @container (min-width: 40rem) {
+      .tiles {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
-    .lane + .lane {
-      border-block-start: 1px solid var(--gmm-rule);
+    .tile {
+      display: flex;
+      align-items: center;
+      gap: var(--gmm-space-3);
+      padding: var(--gmm-space-3) 14px;
+      border: 1px solid var(--gmm-rule);
+      border-radius: var(--gmm-radius-alert);
+      background-color: var(--gmm-bg);
     }
 
-    .lane-head {
-      block-size: 21px;
-      inline-size: 35%;
+    .tile-badge {
+      flex-shrink: 0;
+      inline-size: 2.25rem;
+      block-size: 2.25rem;
     }
 
-    /* The next train: the countdown on the left, the clock on the right. */
-    .lane-hero {
+    .tile-body {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .tile-line {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-block-start: var(--gmm-space-2);
     }
 
-    /* 52px at line-height 0.9 = 47px, the board countdown's real box. */
-    .lane-countdown {
-      block-size: 47px;
+    /* The name (18px at 1.3) and the countdown (32px at 1.1), then the
+       16px line under them. */
+    .tile-name {
+      block-size: 23px;
+      inline-size: 45%;
+    }
+
+    .tile-count {
+      block-size: 35px;
+      inline-size: 24%;
+    }
+
+    .tile-small {
+      block-size: 20px;
       inline-size: 30%;
-    }
-
-    .lane-clock {
-      block-size: 26px;
-      inline-size: 28%;
-    }
-
-    @media (min-width: 1024px) {
-      .board-track {
-        display: block;
-      }
-
-      .lanes {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .lane + .lane {
-        border-block-start: 0;
-        border-inline-start: 1px solid var(--gmm-rule);
-      }
-
-      .lane-hero {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--gmm-space-2);
-      }
-
-      .lane-countdown {
-        block-size: 54px;
-        inline-size: 45%;
-      }
-
-      .lane-clock {
-        inline-size: 80%;
-      }
     }
 
     /* The status message is visible text, not a visually-hidden one: a reader
@@ -211,14 +195,19 @@ import { JourneyRow } from './journey-line';
           <div class="board-header">
             <span class="block board-heading"></span>
           </div>
-          <span class="block board-track"></span>
-          <div class="lanes">
+          <div class="tiles">
             @for (lane of LANES; track lane) {
-              <div class="lane">
-                <span class="block lane-head"></span>
-                <div class="lane-hero">
-                  <span class="block lane-countdown"></span>
-                  <span class="block lane-clock"></span>
+              <div class="tile">
+                <span class="block tile-badge"></span>
+                <div class="tile-body">
+                  <div class="tile-line">
+                    <span class="block tile-name"></span>
+                    <span class="block tile-count"></span>
+                  </div>
+                  <div class="tile-line">
+                    <span class="block tile-small"></span>
+                    <span class="block tile-small"></span>
+                  </div>
                 </div>
               </div>
             }

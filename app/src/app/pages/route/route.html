@@ -373,15 +373,11 @@
         @if (boards().length > 0) {
           <app-board-panel
             class="board"
-            [stationName]="originName()"
             [boards]="boards()"
             [yourDirection]="journeyDirection()"
             [provenance]="provenanceLine()"
-            [trackEnd]="trackEnd()"
             [fullBoardPath]="originHref()"
             [opensAt]="opensAt()"
-            [followingCount]="1"
-            [followingCountWide]="3"
           />
         }
       </div>

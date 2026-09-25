@@ -68,7 +68,6 @@ import { BoardPanel } from '../../shared/board-panel';
 import { Booking, BOOKING_URL } from '../../shared/booking';
 import { Alert } from '../../shared/controls';
 import { LastTrainPanel } from '../../shared/last-train';
-import type { TrackEnd } from '../../shared/line-track';
 import { LineBand } from '../../shared/line-band';
 import { scrollToElement } from '../../shared/motion';
 import { JourneySkeleton } from '../../shared/skeleton';
@@ -287,20 +286,6 @@ export class StationPage {
     if (!this.closed()) return null;
     const clock = this.boards()[0]?.rows[0]?.clock;
     return clock ?? null;
-  });
-
-  /**
-   * A terminus, so `LineTrack` draws one half of the track only.
-   *
-   * Read off which platform survived rather than off the station's index:
-   * `stationFactsOf` drops the direction that cannot be boarded, so a feed
-   * that extended the line would move the terminus and this would follow it
-   * rather than pointing at whatever station happens to be index 0.
-   */
-  readonly trackEnd = computed<TrackEnd>(() => {
-    const boards = this.boards();
-    if (boards.length !== 1) return null;
-    return boards[0].direction === 0 ? 'aluva' : 'tripunithura';
   });
 
   /** The terminal sentence, or null. Names the direction from the feed. */

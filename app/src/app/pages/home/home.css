@@ -723,9 +723,6 @@
     border-radius: var(--gmm-radius-panel);
     overflow: hidden;
     margin-inline: 0;
-    /* The board no longer reserves a mobile board's height — at this width it
-       renders three following trains a lane, not one. */
-    min-block-size: 26rem;
   }
 
   /* The journey column gets the space the spec gives it. The hero's own

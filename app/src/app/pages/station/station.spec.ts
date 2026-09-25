@@ -159,11 +159,17 @@ describe('Station — the last train that gets you home', () => {
     expect(rendered).toContain('45 minutes before the 11:44 PM');
   });
 
-  it('labels a short-turn departure on the live board', async () => {
-    // 22:36 from Aluva towards Tripunithura runs only to Muttom depot.
-    await render({ slug: 'aluva', now: at(TUESDAY, 22, 30) });
-    expect(text()).toContain('Ends at Muttom');
-    expect(text()).toContain('does not reach Tripunithura');
+  it('reads out, but does not print, where a short-turn next train ends', async () => {
+    // 22:36 from Aluva towards Tripunithura runs only to Muttom depot. The
+    // board no longer prints "Ends at Muttom" (a product decision); the
+    // sentence is still read to assistive tech with the countdown.
+    await render({ slug: 'aluva', now: at(TUESDAY, 22, 32) });
+    const host = fixture?.nativeElement as HTMLElement;
+    expect(text()).not.toContain('Ends at Muttom');
+    const spoken = [...host.querySelectorAll('app-board-lane .sr-only')].map(
+      (el) => el.textContent ?? '',
+    );
+    expect(spoken.some((sentence) => sentence.includes('does not reach Tripunithura'))).toBe(true);
   });
 
   it('gives a terminus one platform, not an empty second one', async () => {

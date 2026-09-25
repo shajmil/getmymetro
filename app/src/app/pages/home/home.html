@@ -276,15 +276,11 @@
         @if (boards().length > 0) {
           <app-board-panel
             class="board"
-            [stationName]="stationLabel()"
             [boards]="boards()"
             [yourDirection]="journeyDirection()"
             [provenance]="provenanceLine()"
-            [trackEnd]="trackEnd()"
             [fullBoardPath]="stationHref()"
             [opensAt]="opensAt()"
-            [followingCount]="1"
-            [followingCountWide]="3"
           />
         } @else if (stop() !== null && data() === 'ready') {
           <p class="prose board-prose">{{ t('common.noDeparturesHere') }}</p>

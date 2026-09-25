@@ -72,7 +72,6 @@ import { JourneyRow } from '../../shared/journey-line';
 import { JourneySummary } from '../../shared/journey-summary';
 import { BoardPanel } from '../../shared/board-panel';
 import { LineBand } from '../../shared/line-band';
-import type { TrackEnd } from '../../shared/line-track';
 import { boardView, type BoardView } from '../../shared/board-view';
 import { asSeconds } from '../../core/data/seconds';
 import { istSecondsOfDay } from '../../core/engine/civil-time';
@@ -339,12 +338,6 @@ export class RoutePage {
     if (outlook === null) return null;
     const plan = outlook.certainty === 'unverified' ? outlook.provisional : outlook.result;
     return plan.direction;
-  });
-
-  readonly trackEnd = computed<TrackEnd>(() => {
-    const boards = this.boards();
-    if (boards.length !== 1) return null;
-    return boards[0].direction === 0 ? 'aluva' : 'tripunithura';
   });
 
   readonly provenanceLine = computed<string>(() => {

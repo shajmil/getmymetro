@@ -97,7 +97,6 @@ import { BOOKING_URL } from '../../shared/booking';
 import { Alert } from '../../shared/controls';
 import { JourneySummary } from '../../shared/journey-summary';
 import { LastTrainPanel } from '../../shared/last-train';
-import type { TrackEnd } from '../../shared/line-track';
 import { LineMap } from '../../shared/map/line-map';
 import { LineBand } from '../../shared/line-band';
 import { scrollToElement } from '../../shared/motion';
@@ -321,21 +320,6 @@ export class Home {
       if (lane !== undefined) return this.t('screen.lastGone', { name: lane.towardsName });
     }
     return this.t('screen.lastGoneBoth');
-  });
-
-  /**
-   * Set at a terminus, so `LineTrack` draws one half of the track only.
-   *
-   * A terminus has one platform because `stationFactsOf` drops the direction
-   * that cannot be boarded, so the end is read off which lane survived rather
-   * than off the station's index — a feed that extended the line would move
-   * the terminus and this would follow it.
-   */
-  readonly trackEnd = computed<TrackEnd>(() => {
-    const boards = this.boards();
-    if (boards.length !== 1) return null;
-    // The only platform runs towards Tripunithura, so this *is* Aluva.
-    return boards[0].direction === 0 ? 'aluva' : 'tripunithura';
   });
 
   /** "Timetable · 6:16 PM", or "Saved …" when the data is a fallback. */

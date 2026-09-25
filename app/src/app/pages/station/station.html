@@ -95,11 +95,9 @@
     @if (boards().length > 0) {
       <app-board-panel
         class="board"
-        [stationName]="displayName()"
         [boards]="boards()"
         [yourDirection]="journeyDirection()"
         [provenance]="provenanceLine()"
-        [trackEnd]="trackEnd()"
         [opensAt]="opensAt()"
         [followingCount]="FOLLOWING_PER_LANE"
       />
