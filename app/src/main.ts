@@ -1,4 +1,5 @@
 import { bootstrapApplication } from '@angular/platform-browser';
+import { inject } from '@vercel/analytics';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 
@@ -20,6 +21,18 @@ function registerServiceWorker(): void {
   void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
 }
 
+/**
+ * Initialize Vercel Web Analytics.
+ *
+ * Injected after app bootstrap, ensuring the analytics script loads after
+ * the application is ready. Uses the generic inject() method as Angular
+ * does not have a framework-specific integration.
+ */
+function initializeAnalytics(): void {
+  inject();
+}
+
 bootstrapApplication(App, appConfig)
   .then(registerServiceWorker)
+  .then(initializeAnalytics)
   .catch((err) => console.error(err));
