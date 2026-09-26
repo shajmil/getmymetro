@@ -98,18 +98,15 @@ export const EN = {
   // map: keralam.co's title says "Live Map" and its disclaimer is small grey
   // text below the frame, which is the failure this wording exists to avoid.
   'map.heading': 'Where the trains are now',
-  'map.scheduled':
-    "Scheduled positions, worked out from KMRL's timetable on your phone. No live tracking is published for this metro, so nothing here is measured.",
-  'map.unavailable':
-    'The map needs a connection and there is not one, so here is the line as a diagram instead. The times above are worked out on your phone and are unaffected.',
+  'map.scheduled': 'Scheduled positions — not live.',
+  'map.unavailable': 'No connection — showing the line as a diagram.',
   'map.loading': 'Loading the map.',
   'map.wholeLine': 'Whole line',
   'map.backTo': 'Back to {station}',
   'map.running': '{count} trains are running now.',
   'map.runningOne': 'One train is running now.',
   'map.noneRunning': 'No trains are running now.',
-  'map.legend':
-    'Circles are stations — tap one for its times. Arrows are trains, pointing the way they are travelling. An arrow with a bar across the front stops before the end of the line.',
+  'map.legend': 'Tap a station for its times.',
   'map.creditLead': 'Map data:',
   'map.allStations': 'All {count} stations on the line',
   'map.allStationsBody':
@@ -123,7 +120,6 @@ export const EN = {
   'board.noDepartures': 'No departures from this platform in the timetable we hold.',
   'board.then': 'then {clock}',
   'board.shortTurn': 'Only as far as {terminus} — this train does not reach {misses}.',
-  'board.nudge': 'Run — {next} min, then a {gap} min wait.',
   'board.lastHeading': 'Last train towards {name}',
   'board.throughGone': 'Gone — it left at {clock}',
   'board.throughGoneBody': 'That was the last train all the way to {terminus}.',
@@ -209,7 +205,7 @@ export const EN = {
    * whether this is the reader's station, so the sentence doubts exactly that
    * and nothing else.
    */
-  'home.fixOffNetwork': 'You are {distance} away — too far for this to be your station.',
+  'home.fixOffNetwork': '{distance} away',
   'home.fixFar':
     'You are {distance} from the metro line, so we cannot tell which station you want. These are the times at {station}, the closest one. Choose your station below — that will work better.',
   'home.fixVague':
@@ -282,7 +278,6 @@ export const EN = {
   /** "Station 8 of 25 · Line 1" — the whole orientation line, one string. */
   'screen.positionOnLine': 'Station {index} of {count} · {line}',
   /** The prompt when nothing has been chosen yet. DESIGN.md §6, "No destination". */
-  'screen.pickPrompt': "Pick a destination and we'll tell you which train to take and when to leave.",
   'screen.whereTo': 'Where to?',
   'screen.whereToLabel': 'WHERE TO?',
   'screen.searchPlaceholder': 'Station, in English or മലയാളം',
@@ -433,8 +428,8 @@ export const EN = {
   'meta.routeTitle': '{origin} to {destination} Metro - Timings & Fare Rs {fare}',
 
   // -------------------------------------------------------------- provenance
-  'prov.scheduled': "Scheduled times from KMRL's published timetable — not live.",
-  'prov.confirmed': 'KMRL confirmed these timings are current in {month}.',
+  'prov.scheduled': 'KMRL timetable, not live.',
+  'prov.confirmed': 'Confirmed {month}.',
 
   // ----------------------------------------------------------------- booking
   /**
@@ -455,9 +450,8 @@ export const EN = {
   'caveat.holidayHeading': 'Holiday timetable',
   'caveat.holidayBody':
     'Today is {names}. KMRL runs the Sunday timetable, and these are the Sunday times.',
-  'caveat.unknownHeading': 'If today is a public holiday',
-  'caveat.unknownBody':
-    "These are KMRL's Monday-to-Saturday times. On a public holiday the Sunday timetable runs instead, and it starts about 90 minutes later. KMRL publishes no list of holiday dates, so we cannot check today for you.",
+  'caveat.unknownHeading': 'Public holiday?',
+  'caveat.unknownBody': 'The Sunday timetable runs instead.',
 
   // -------------------------------------------------------------------- time
   /** `formatWait` output, localised. English matches `core/engine/clock.ts` exactly. */
@@ -545,18 +539,15 @@ export const ML: Readonly<Record<StringKey, string>> = {
 
   // -------------------------------------------------------------------- map
   'map.heading': 'ട്രെയിനുകൾ ഇപ്പോൾ എവിടെയാണ്',
-  'map.scheduled':
-    'KMRL-ന്റെ സമയവിവരപ്പട്ടികയിൽ നിന്ന് നിങ്ങളുടെ ഫോണിൽ കണക്കാക്കിയ സ്ഥാനങ്ങൾ. ഈ മെട്രോയ്ക്ക് തത്സമയ ട്രാക്കിംഗ് പ്രസിദ്ധീകരിക്കുന്നില്ല, അതിനാൽ ഇവിടെ ഒന്നും അളന്നതല്ല.',
-  'map.unavailable':
-    'മാപ്പിന് ഇന്റർനെറ്റ് വേണം, അത് ഇപ്പോൾ ഇല്ല. അതിനാൽ ലൈൻ ഒരു ചിത്രമായി താഴെ കാണിക്കുന്നു. മുകളിലുള്ള സമയങ്ങൾ നിങ്ങളുടെ ഫോണിൽ തന്നെ കണക്കാക്കുന്നതിനാൽ അവയ്ക്ക് മാറ്റമില്ല.',
+  'map.scheduled': 'ഷെഡ്യൂൾ പ്രകാരമുള്ള സ്ഥാനങ്ങൾ — തത്സമയമല്ല.',
+  'map.unavailable': 'ഇന്റർനെറ്റ് ഇല്ല — ലൈൻ ഒരു ചിത്രമായി കാണിക്കുന്നു.',
   'map.loading': 'മാപ്പ് ലഭ്യമാക്കുന്നു.',
   'map.wholeLine': 'ലൈൻ മുഴുവൻ',
   'map.backTo': '{station}-ലേക്ക് മടങ്ങുക',
   'map.running': 'ഇപ്പോൾ {count} ട്രെയിനുകൾ ഓടുന്നു.',
   'map.runningOne': 'ഇപ്പോൾ ഒരു ട്രെയിൻ ഓടുന്നു.',
   'map.noneRunning': 'ഇപ്പോൾ ട്രെയിനുകളൊന്നും ഓടുന്നില്ല.',
-  'map.legend':
-    'വൃത്തങ്ങൾ സ്റ്റേഷനുകളാണ് — സമയം കാണാൻ ഒന്നിൽ ടാപ്പ് ചെയ്യുക. അമ്പടയാളങ്ങൾ ട്രെയിനുകളാണ്, അവ പോകുന്ന ദിശയിലേക്കാണ് ചൂണ്ടുന്നത്. മുന്നിൽ ഒരു വരയുള്ള അമ്പടയാളം ലൈനിന്റെ അറ്റം വരെ പോകാത്ത ട്രെയിനാണ്.',
+  'map.legend': 'സമയം കാണാൻ ഒരു സ്റ്റേഷനിൽ ടാപ്പ് ചെയ്യുക.',
   'map.creditLead': 'മാപ്പ് ഡാറ്റ:',
   'map.allStations': 'ലൈനിലെ {count} സ്റ്റേഷനുകളും',
   'map.allStationsBody':
@@ -571,7 +562,6 @@ export const ML: Readonly<Record<StringKey, string>> = {
     'ഞങ്ങളുടെ പക്കലുള്ള സമയവിവരപ്പട്ടികയിൽ ഈ പ്ലാറ്റ്ഫോമിൽ നിന്ന് ട്രെയിനുകളൊന്നുമില്ല.',
   'board.then': 'പിന്നെ {clock}',
   'board.shortTurn': '{terminus} വരെ മാത്രം — ഈ ട്രെയിൻ {misses} വരെ പോകില്ല.',
-  'board.nudge': 'ഓടുക — {next} മിനിറ്റ്, പിന്നെ {gap} മിനിറ്റ് കാത്തിരിപ്പ്.',
   'board.lastHeading': '{name} ഭാഗത്തേക്കുള്ള അവസാന ട്രെയിൻ',
   'board.throughGone': 'പോയി — {clock}-ന് പുറപ്പെട്ടു',
   'board.throughGoneBody': '{terminus} വരെ പോകുന്ന അവസാന ട്രെയിൻ അതായിരുന്നു.',
@@ -615,7 +605,7 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'home.heading': 'കൊച്ചി മെട്രോ — എപ്പോൾ ഇറങ്ങണമെന്ന് അറിയുക',
   'home.fixAt': 'അടുത്തുള്ള സ്റ്റേഷൻ — നിങ്ങളിൽ നിന്ന് {distance}.',
   'home.fixNear': 'അടുത്തുള്ള സ്റ്റേഷൻ — {distance} അകലെ.',
-  'home.fixOffNetwork': 'നിങ്ങൾ {distance} അകലെയാണ് — ഇത് നിങ്ങളുടെ സ്റ്റേഷനാകാൻ വളരെ ദൂരം.',
+  'home.fixOffNetwork': '{distance} അകലെ',
   'home.fixFar':
     'നിങ്ങൾ മെട്രോ ലൈനിൽ നിന്ന് {distance} അകലെയാണ്, അതിനാൽ ഏത് സ്റ്റേഷനാണ് വേണ്ടതെന്ന് ഞങ്ങൾക്ക് പറയാനാകില്ല. ഏറ്റവും അടുത്തുള്ള {station}-ലെ സമയങ്ങളാണിവ. താഴെ നിന്ന് നിങ്ങളുടെ സ്റ്റേഷൻ തിരഞ്ഞെടുക്കുക — അതാണ് നല്ലത്.',
   'home.fixVague':
@@ -676,8 +666,6 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'screen.stationSearch': 'സ്റ്റേഷൻ',
   'screen.lineName': 'ലൈൻ 1',
   'screen.positionOnLine': '{count}-ൽ {index}-ാമത്തെ സ്റ്റേഷൻ · {line}',
-  'screen.pickPrompt':
-    'ഒരു ലക്ഷ്യസ്ഥാനം തിരഞ്ഞെടുക്കുക, ഏത് ട്രെയിൻ പിടിക്കണമെന്നും എപ്പോൾ ഇറങ്ങണമെന്നും ഞങ്ങൾ പറയാം.',
   'screen.whereTo': 'എങ്ങോട്ട്?',
   'screen.whereToLabel': 'എങ്ങോട്ട്?',
   'screen.searchPlaceholder': 'സ്റ്റേഷൻ, ഇംഗ്ലീഷിലോ മലയാളത്തിലോ',
@@ -807,8 +795,8 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'meta.routeTitle': '{origin} മുതൽ {destination} വരെ മെട്രോ - സമയം, നിരക്ക് Rs {fare}',
 
   // -------------------------------------------------------------- provenance
-  'prov.scheduled': 'KMRL പ്രസിദ്ധീകരിച്ച സമയവിവരപ്പട്ടികയിലെ സമയങ്ങൾ — തത്സമയമല്ല.',
-  'prov.confirmed': 'ഈ സമയങ്ങൾ നിലവിലുള്ളതാണെന്ന് KMRL {month}-ൽ സ്ഥിരീകരിച്ചു.',
+  'prov.scheduled': 'KMRL സമയവിവരപ്പട്ടിക, തത്സമയമല്ല.',
+  'prov.confirmed': '{month}-ൽ സ്ഥിരീകരിച്ചു.',
 
   // ----------------------------------------------------------------- booking
   'booking.channel': 'KMRLന്റെ സ്വന്തം ചാനൽ',
@@ -823,9 +811,8 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'caveat.holidayHeading': 'അവധിദിന സമയവിവരപ്പട്ടിക',
   'caveat.holidayBody':
     'ഇന്ന് {names} ആണ്. KMRL ഞായറാഴ്ചത്തെ സമയവിവരപ്പട്ടികയാണ് പിന്തുടരുന്നത്, ഇവ ഞായറാഴ്ചത്തെ സമയങ്ങളാണ്.',
-  'caveat.unknownHeading': 'ഇന്ന് പൊതു അവധിയാണെങ്കിൽ',
-  'caveat.unknownBody':
-    'ഇവ KMRL-ന്റെ തിങ്കൾ മുതൽ ശനി വരെയുള്ള സമയങ്ങളാണ്. പൊതു അവധി ദിവസങ്ങളിൽ പകരം ഞായറാഴ്ചത്തെ സമയവിവരപ്പട്ടികയാണ് പ്രവർത്തിക്കുക, അത് ഏകദേശം 90 മിനിറ്റ് വൈകിയാണ് തുടങ്ങുന്നത്. അവധി ദിവസങ്ങളുടെ പട്ടിക KMRL പ്രസിദ്ധീകരിക്കാത്തതിനാൽ ഇന്നത്തേത് ഞങ്ങൾക്ക് പരിശോധിക്കാനാകില്ല.',
+  'caveat.unknownHeading': 'പൊതു അവധിയാണോ?',
+  'caveat.unknownBody': 'പകരം ഞായറാഴ്ചത്തെ സമയവിവരപ്പട്ടികയാണ്.',
 
   // -------------------------------------------------------------------- time
   'time.due': 'ഇപ്പോൾ',

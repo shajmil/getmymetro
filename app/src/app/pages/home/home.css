@@ -144,6 +144,27 @@
   color: var(--gmm-ink-3);
 }
 
+/* "Where to?" in the From / To card, as a soft grey field — the shape every
+   trip planner uses for the box you tap to search. The node sits 22px down
+   the row; the 48px field's centre is at 24px, so it is lifted 2px onto it. */
+.destination-pick {
+  margin-block-start: -2px;
+}
+
+.destination-pick .where-to {
+  min-block-size: 48px;
+  border-color: var(--gmm-rule);
+  background-color: var(--gmm-soft);
+  color: var(--gmm-ink-2);
+  font-weight: 500;
+}
+
+.destination-pick .where-to:hover {
+  border-color: var(--gmm-grey);
+  background-color: var(--gmm-line-soft);
+  color: var(--gmm-ink);
+}
+
 /* The destination row's placeholder text, beside the dashed node. */
 .destination-empty {
   font-size: var(--text-body);
@@ -756,4 +777,25 @@
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+/* In the From / To card, Change is a secondary action beside the distance, so
+   it drops the outlined box and reads as teal text with its icon. Still a
+   44px target, and still the word, not an icon alone. line-text on white is
+   5.82:1. The negative end margin lines the text up with the card's edge
+   rather than the invisible button's. */
+app-journey-summary.is-compact .change-anchor .btn-secondary {
+  min-block-size: var(--gmm-touch);
+  margin-inline-end: calc(-1 * var(--gmm-space-2));
+  padding-inline: var(--gmm-space-2);
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--gmm-line-text);
+  font-weight: 600;
+}
+
+app-journey-summary.is-compact .change-anchor .btn-secondary:hover,
+app-journey-summary.is-compact .change-anchor .btn-secondary:active {
+  background-color: var(--gmm-line-soft);
+  color: var(--gmm-line-dark);
 }

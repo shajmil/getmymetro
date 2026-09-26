@@ -75,6 +75,7 @@
             [meta]="heroMeta()"
             [variant]="heroVariant()"
             [ariaLabel]="t('journey.yourJourney')"
+            [compact]="destinationStop() === null && !closed()"
           >
             <!--
               Change the origin. 44px secondary, per DESIGN.md §5.2.
@@ -220,24 +221,24 @@
                     <span class="closed-first-time tabular">{{ clock }}</span>
                   </p>
                 }
-              } @else {
-                <p class="prompt">{{ t('screen.pickPrompt') }}</p>
-                @if (destinationPath(); as path) {
-                  <p class="prompt-action">
-                    <a class="where-to" [routerLink]="path">
-                      <span>{{ t('screen.whereTo') }}</span>
-                      <svg viewBox="0 0 24 24" width="20" height="20" class="where-to-chevron" aria-hidden="true">
-                        <path d="M9 6l6 6-6 6" />
-                      </svg>
-                    </a>
-                  </p>
-                }
               }
             </ng-container>
 
-            <!-- The destination slot, when there is none. Keeps the dashed node
-                 from sitting beside an empty row. -->
-            <span slot="destination" class="destination-empty">{{ t('journey.whereTo') }}</span>
+            <!-- The destination slot, when there is none: the "Where to?" button
+                 itself, beside the dashed node it fills in. One question, asked
+                 once, where the answer will go. -->
+            <div slot="destination" class="destination-pick">
+              @if (destinationPath(); as path) {
+                <a class="where-to" [routerLink]="path">
+                  <span>{{ t('screen.whereTo') }}</span>
+                  <svg viewBox="0 0 24 24" width="20" height="20" class="where-to-chevron" aria-hidden="true">
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </a>
+              } @else {
+                <span class="destination-empty">{{ t('journey.whereTo') }}</span>
+              }
+            </div>
           </app-journey-summary>
         </section>
 
@@ -434,15 +435,6 @@
       </div>
     }
   }
-
-  <!--
-    Provenance, and the holiday caveat. Prominent, per the honesty rules:
-    these are timetable times, confirmed with KMRL, and the page says so.
-  -->
-  <div class="provenance-slot grid-page">
-    <app-service-caveat [caveat]="caveat()" />
-    <app-provenance />
-  </div>
 </div>
 
 <!-- TEXT ONLY. An element inside a noscript is an NG0500 hydration mismatch. -->

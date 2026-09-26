@@ -516,15 +516,7 @@
         </div>
       </section>
     </div>
-
-    <div class="grid-page">
-      <app-service-caveat [caveat]="caveat()" />
-    </div>
   }
-
-  <div class="grid-page provenance-slot">
-    <app-provenance />
-  </div>
 
   @if (activePicker(); as mode) {
     <div class="picker-backdrop" (click)="closePicker()">

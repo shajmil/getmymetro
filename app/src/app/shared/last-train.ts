@@ -36,9 +36,6 @@
  * second-to-last. A panel that led with the 11:44 would strand the passenger
  * it exists to protect.
  *
- * **The gap is the nudge, not the time.** "Run — 1 min, then a 20 min wait"
- * changes behaviour; "1 min" does not (MVP item 4).
- *
  * ## Shape
  *
  * Amber-soft ground and an amber icon, the same vocabulary as `Alert`
@@ -201,16 +198,6 @@ import type { BoardView } from './board-view';
               </p>
             }
           }
-
-          <!--
-            The run nudge (MVP item 4). It shows the gap, not just the time:
-            the gap is what changes behaviour.
-          -->
-          @if (panel.nudge; as nudge) {
-            <p class="secondary">
-              {{ t('board.nudge', { next: nudge.nextMinutes, gap: nudge.gapMinutes }) }}
-            </p>
-          }
         </div>
       </section>
     }
@@ -223,22 +210,21 @@ export class LastTrainPanel {
   readonly boards = input.required<readonly BoardView[]>();
 
   /**
-   * One panel per platform that has something to say, in board order.
+   * One panel per platform with a last-train report, in board order.
    *
-   * A platform with neither a last-train report nor a nudge emits nothing at
-   * all — this is a screen that changes character in the evening, not a
-   * permanent band. `lastTrainView` already returns `null` outside the
-   * last-train window and once the last train has gone, so the timing rule
-   * lives in the view model and is tested without a DOM.
+   * Nothing at all outside the evening: `lastTrainView` returns `null` until
+   * three hours before the last train and once it has gone. The "Run — 1 min"
+   * nudge used to open a panel too, which put a "Last train towards …"
+   * heading over it at 1 PM; it was removed rather than kept under the wrong
+   * heading.
    */
   protected readonly panels = computed(() =>
     this.boards()
-      .filter((board) => board.lastTrain !== null || board.nudge !== null)
+      .filter((board) => board.lastTrain !== null)
       .map((board) => ({
         direction: board.direction,
         heading: this.t('board.lastHeading', { name: board.towardsName }),
         last: board.lastTrain,
-        nudge: board.nudge,
       })),
   );
 }

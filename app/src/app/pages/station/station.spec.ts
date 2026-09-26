@@ -249,17 +249,17 @@ describe('Station — booking, honesty and provenance', () => {
 
   it('carries the holiday caveat on a weekday and not on a Sunday', async () => {
     await render({ now: at(TUESDAY, 12, 0) });
-    expect(text()).toContain('If today is a public holiday');
+    expect(text()).toContain('Public holiday?');
 
     await render({ now: at(SUNDAY, 12, 0) });
-    expect(text()).not.toContain('If today is a public holiday');
+    expect(text()).not.toContain('Public holiday?');
   });
 
   it('states provenance and its date, and nothing stronger', async () => {
     await render({ holidays: VOUCHED_2026 });
     const rendered = text();
-    expect(rendered).toContain("Scheduled times from KMRL's published timetable — not live");
-    expect(rendered).toContain('KMRL confirmed these timings are current in September 2026');
+    expect(rendered).toContain('KMRL timetable, not live.');
+    expect(rendered).toContain('Confirmed September 2026.');
     expect(rendered).not.toContain('may be wrong');
     expect(rendered).not.toContain('out of date');
   });

@@ -192,6 +192,64 @@ export type JourneyVariant = 'solid' | 'dotted' | 'muted';
     .content {
       min-inline-size: 0;
     }
+
+    /* Compact: the From / To card on Home before a destination is chosen.
+       A small teal ring for your station, a thin dotted line, and a small
+       hollow ring beside "Where to?" — the trip-planner shape, light enough
+       not to compete with the words. Declared last so it wins over the
+       variant rules above at equal specificity.
+
+       Geometry, in a 20px rail: nodes are 14px, centred on x = 10. The origin
+       centres on the station name's first line (14px down); the destination
+       on the 48px "Where to?" field (22px down). The line runs between them
+       with a 2px gap at each end. */
+    :host(.is-compact) {
+      grid-template-columns: 20px minmax(0, 1fr);
+      column-gap: var(--gmm-space-3);
+    }
+
+    :host(.is-compact) .rail {
+      inline-size: 20px;
+    }
+
+    :host(.is-compact) .segment {
+      inset-inline-start: 9px;
+      inline-size: 2px;
+      background-color: transparent;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        var(--gmm-grey) 0 3px,
+        transparent 3px 7px
+      );
+    }
+
+    :host(.is-compact) .segment-first {
+      inset-block: 23px 0;
+    }
+
+    :host(.is-compact) .segment-last {
+      inset-block-start: 0;
+      block-size: 13px;
+    }
+
+    :host(.is-compact) .node {
+      inset-inline-start: 3px;
+      inline-size: 14px;
+      block-size: 14px;
+      background-color: var(--gmm-bg);
+    }
+
+    /* Your station: line-text, 5.82:1 on white, so it passes as a graphic. */
+    :host(.is-compact) .node-origin {
+      inset-block-start: 7px;
+      border: 4px solid var(--gmm-line-text);
+    }
+
+    /* Not chosen yet: thin and grey, a different shape from the origin. */
+    :host(.is-compact) .node-pending {
+      inset-block-start: 15px;
+      border: 2px solid var(--gmm-ink-3);
+    }
   `,
   template: `
     <div class="rail" aria-hidden="true">
@@ -208,9 +266,13 @@ export type JourneyVariant = 'solid' | 'dotted' | 'muted';
   `,
   host: {
     '[class]': 'variantClass()',
+    '[class.is-compact]': 'compact()',
   },
 })
 export class JourneyRow {
+  /** The small From / To card rail. See the compact styles above. */
+  readonly compact = input<boolean>(false);
+
   /** Which node this row carries. `none` draws rail only. */
   readonly node = input<JourneyNode>('through');
 

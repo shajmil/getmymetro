@@ -113,7 +113,7 @@ describe('LineMap — saying what it is', () => {
       ).toBeTruthy();
     }
 
-    expect(text()).toContain('No live tracking is published for this metro');
+    expect(text()).toContain('Scheduled positions — not live.');
   });
 
   it('never uses the word live as a claim about the data', async () => {
@@ -150,7 +150,7 @@ describe('LineMap — when the tiles cannot be reached', () => {
     view.detectChanges();
 
     expect(host().querySelector('.frame')).toBeNull();
-    expect(text()).toContain('The map needs a connection and there is not one');
+    expect(text()).toContain('No connection — showing the line as a diagram.');
     // The diagram carries the whole line, so the page is still usable.
     expect(host().querySelectorAll('a.stop')).toHaveLength(25);
   });

@@ -311,7 +311,7 @@ describe('Home — reaching the rest of the app', () => {
   it('names both platforms in station names, not only as "towards"', async () => {
     await render({ geolocation: refuses(1), remembered: 'MGRD' });
     const rendered = text();
-    expect(rendered).toContain('Where are you going?');
+    expect(rendered).toContain('Where to?');
     expect(rendered).toContain('Towards Aluva');
     expect(rendered).toContain('Towards Tripunithura');
   });
@@ -338,7 +338,7 @@ describe('Home — the map sits under the answer, never over it', () => {
   it('says on the home screen itself that the positions are scheduled', async () => {
     await render({ geolocation: refuses(1), remembered: 'MGRD' });
     expect(text()).toContain('Scheduled positions');
-    expect(text()).toContain('No live tracking is published for this metro');
+    expect(text()).toContain('Scheduled positions — not live.');
   });
 });
 
@@ -442,12 +442,12 @@ describe('Home — warnings that only appear when they are true', () => {
     expect(text()).not.toContain('Nothing leaves this platform');
   });
 
-  it('tells you to run only when missing the train costs something', async () => {
+  it('shows no "Last train" panel for a run nudge in the daytime', async () => {
+    // The nudge used to open this panel, under a "Last train towards …"
+    // heading, at any time of day. It was removed (product decision).
     await render({ remembered: 'MGRD', now: at(TUESDAY, 6, 4) });
-    expect(text()).toContain('Run — 1 min, then a 20 min wait');
-
-    await render({ remembered: 'MGRD', now: at(TUESDAY, 12, 0) });
     expect(text()).not.toContain('Run —');
+    expect(text()).not.toContain('Last train towards');
   });
 });
 
@@ -455,8 +455,8 @@ describe('Home — the holiday caveat', () => {
   it('appears on a weekday, without alarming anyone', async () => {
     await render({ remembered: 'MGRD', now: at(TUESDAY, 12, 0) });
     const rendered = text();
-    expect(rendered).toContain('If today is a public holiday');
-    expect(rendered).toContain("These are KMRL's Monday-to-Saturday times");
+    expect(rendered).toContain('Public holiday?');
+    expect(rendered).toContain('The Sunday timetable runs instead.');
     expect(rendered).toContain('about 90 minutes later');
     // The times themselves are not in doubt, and the copy must not imply they are.
     expect(rendered).not.toContain('may be wrong');
@@ -465,20 +465,20 @@ describe('Home — the holiday caveat', () => {
 
   it('does not appear on a Sunday, which no holiday can change', async () => {
     await render({ remembered: 'MGRD', now: at(SUNDAY, 12, 0) });
-    expect(text()).not.toContain('If today is a public holiday');
+    expect(text()).not.toContain('Public holiday?');
     expect(text()).toContain('Towards Aluva');
   });
 
   it('does not appear when a reviewed calendar vouches for the date', async () => {
     await render({ remembered: 'MGRD', now: at(TUESDAY, 12, 0), holidays: VOUCHED_2026 });
-    expect(text()).not.toContain('If today is a public holiday');
+    expect(text()).not.toContain('Public holiday?');
   });
 });
 
 describe('Home — provenance', () => {
   it('states where the times came from and when that was last confirmed', async () => {
     await render({ remembered: 'MGRD' });
-    expect(text()).toContain("Scheduled times from KMRL's published timetable — not live");
-    expect(text()).toContain('KMRL confirmed these timings are current in September 2026');
+    expect(text()).toContain('KMRL timetable, not live.');
+    expect(text()).toContain('Confirmed September 2026.');
   });
 });

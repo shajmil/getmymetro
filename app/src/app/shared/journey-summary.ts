@@ -46,6 +46,7 @@ import { JourneyRow, type JourneyVariant } from './journey-line';
 @Component({
   selector: 'app-journey-summary',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.is-compact]': 'compact()' },
   imports: [JourneyRow],
   styles: `
     :host {
@@ -109,8 +110,46 @@ import { JourneyRow, type JourneyVariant } from './journey-line';
     }
 
     .here {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font-size: var(--text-min);
       color: var(--gmm-ink-2);
+    }
+
+    .here-pin {
+      flex-shrink: 0;
+      inline-size: 1.125rem;
+      block-size: 1.125rem;
+      fill: none;
+      stroke: var(--gmm-line-text);
+      stroke-width: 2;
+      stroke-linejoin: round;
+    }
+
+    /* The compact From / To card: before a destination is chosen there is no
+       train to show, so the origin and the "Where to?" field sit together in
+       one card, one short dotted line apart. */
+    :host(.is-compact) {
+      padding: var(--gmm-space-3) var(--gmm-space-4) var(--gmm-space-3) var(--gmm-space-3);
+      border: 1px solid var(--gmm-rule);
+      border-radius: var(--gmm-radius-panel);
+      background-color: var(--gmm-bg);
+    }
+
+    :host(.is-compact) .station-name {
+      font-size: 1.5rem;
+    }
+
+    /* Room between the Change button and the "Where to?" field below it. */
+    :host(.is-compact) .origin-meta {
+      margin-block-end: var(--gmm-space-3);
+    }
+
+    @media (min-width: 1024px) {
+      :host(.is-compact) .station-name {
+        font-size: 2rem;
+      }
     }
 
     /* The train block, in the middle row. */
@@ -268,15 +307,25 @@ import { JourneyRow, type JourneyVariant } from './journey-line';
   template: `
     <section [attr.aria-label]="ariaLabel()">
       <!-- Origin. The line starts at this node and runs down. -->
-      <app-journey-row node="origin" kind="first" [variant]="variant()">
+      <app-journey-row node="origin" kind="first" [variant]="variant()" [compact]="compact()">
         <h1 class="station-name">{{ originName() }}</h1>
         <div class="origin-meta">
-          <p class="here">{{ hereLabel() }}</p>
+          <p class="here">
+            @if (compact()) {
+              <svg viewBox="0 0 24 24" class="here-pin" aria-hidden="true">
+                <path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21z" />
+                <circle cx="12" cy="9.5" r="2.5" />
+              </svg>
+            }
+            <span>{{ hereLabel() }}</span>
+          </p>
           <ng-content select="[slot=change]" />
         </div>
       </app-journey-row>
 
-      <!-- The train. No node: a train is not a place. -->
+      <!-- The train. No node: a train is not a place. Absent from the compact
+           From / To card, where there is no train to show yet. -->
+      @if (!compact()) {
       <app-journey-row node="none" kind="through" [variant]="variant()">
         @if (countdown(); as text) {
           <div class="train">
@@ -324,9 +373,10 @@ import { JourneyRow, type JourneyVariant } from './journey-line';
           </div>
         }
       </app-journey-row>
+      }
 
       <!-- Destination. The line runs down to this node and stops. -->
-      <app-journey-row [node]="destinationNode()" kind="last" [variant]="variant()">
+      <app-journey-row [node]="destinationNode()" kind="last" [variant]="variant()" [compact]="compact()">
         @if (destinationName(); as name) {
           <div class="destination">
             <div class="destination-top">
@@ -382,6 +432,9 @@ export class JourneySummary {
 
   /** What a screen reader hears for the section as a whole. */
   readonly ariaLabel = input<string>('');
+
+  /** The From / To card: origin and "Where to?" only, no train row. */
+  readonly compact = input<boolean>(false);
 
   /** A chosen destination is an ink disc; an unchosen one is a dashed ring. */
   protected readonly destinationNode = computed(() =>
