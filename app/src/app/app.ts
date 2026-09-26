@@ -15,13 +15,14 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { RouterLink, RouterOutlet } from '@angular/router';
 
 import { LanguageSwitch } from './shared/controls';
+import { InstallPrompt } from './shared/install-prompt';
 import { I18nService } from './core/i18n/i18n';
 import { HTML_LANG } from './core/i18n/locale';
 import { PageTitleService } from './core/seo/page-title';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterOutlet, LanguageSwitch],
+  imports: [RouterLink, RouterOutlet, LanguageSwitch, InstallPrompt],
   templateUrl: './app.html',
   styleUrl: './app.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,6 +1,7 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
+import { captureInstallPrompt } from './app/core/pwa/install';
 
 /**
  * Register the service worker, after the app has booted.
@@ -19,6 +20,9 @@ function registerServiceWorker(): void {
   if (!('serviceWorker' in navigator)) return;
   void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
 }
+
+// Before the bootstrap: Chrome can fire its install event before Angular is up.
+captureInstallPrompt();
 
 bootstrapApplication(App, appConfig)
   .then(registerServiceWorker)

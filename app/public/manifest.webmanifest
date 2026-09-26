@@ -1,6 +1,6 @@
 {
-  "name": "getmymetro — Kochi Metro times",
-  "short_name": "getmymetro",
+  "name": "GetMyMetro — Kochi Metro times",
+  "short_name": "GetMyMetro",
   "description": "Kochi Metro departure times, fares and last-train warnings. Works offline.",
   "id": "/",
   "start_url": "/",
