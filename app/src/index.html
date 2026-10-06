@@ -50,6 +50,25 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Metro Timings" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Vercel Web Analytics and Speed Insights, the plain-HTML form.
+
+         Not the @vercel/analytics npm packages: their optional SvelteKit/Nuxt
+         peers pull Vite 8 against Angular's Vite 7 and npm 10 refuses to
+         resolve the tree. These two tags are what the packages inject anyway,
+         and they add nothing to our bundle — the scripts are served by Vercel
+         from /_vercel/ and loaded deferred, after the page is usable.
+
+         Cookieless and no session recording (unlike the competitor's Microsoft
+         Clarity, CLAUDE.md finding 7). On Cloudflare Pages /_vercel/ does not
+         exist, the deferred fetch 404s, and nothing else is affected.
+         public/sw.js leaves /_vercel/ alone so Vercel controls the versions. -->
+    <script>
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+      window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
   </head>
   <body>
     <app-root></app-root>

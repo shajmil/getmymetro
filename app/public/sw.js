@@ -154,6 +154,10 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  // Vercel's analytics scripts are same-origin and end in .js, so cacheFirst
+  // would pin one version forever. They are Vercel's to version, not ours,
+  // and there is nothing to measure offline.
+  if (url.pathname.startsWith('/_vercel/')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(pageFirst(request));
