@@ -66,6 +66,8 @@ import { formatClock } from '../../core/engine/clock';
 import { boardView, CLIFF_SECONDS, type BoardView } from '../../shared/board-view';
 import { BoardPanel } from '../../shared/board-panel';
 import { Booking, BOOKING_URL } from '../../shared/booking';
+import { FaqList } from '../../shared/faq-list';
+import { stationFaq } from '../../core/seo/faq';
 import { Alert } from '../../shared/controls';
 import { LastTrainPanel } from '../../shared/last-train';
 import { LineBand } from '../../shared/line-band';
@@ -112,6 +114,7 @@ type DataState = 'idle' | 'loading' | 'ready' | 'failed';
     Alert,
     BoardPanel,
     Booking,
+    FaqList,
     JourneySkeleton,
     LastTrainPanel,
     LineMap,
@@ -251,6 +254,11 @@ export class StationPage {
     if (facts === null) return [];
     return platformViews(facts, this.stations(), this.#i18n.locale());
   });
+
+  /** The same questions the FAQPage JSON-LD carries, rendered visibly. */
+  readonly faq = computed(() =>
+    stationFaq(this.#i18n.locale(), this.displayName(), this.platforms()),
+  );
 
   /** "Station 8 of 25" — orientation without a map. */
   readonly position = computed<string | null>(() => {

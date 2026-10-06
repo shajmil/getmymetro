@@ -266,6 +266,10 @@
   padding-block-start: var(--gmm-space-6);
 }
 
+.faq-slot {
+  padding-block-start: var(--gmm-space-6);
+}
+
 .map-slot {
   padding-block-start: var(--gmm-space-6);
 }

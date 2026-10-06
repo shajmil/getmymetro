@@ -472,6 +472,11 @@
         </section>
       }
 
+      <!-- The FAQPage JSON-LD's questions, visible. Same call, see core/seo/faq.ts. -->
+      <div class="faq-slot">
+        <app-faq-list [entries]="faq()" />
+      </div>
+
       <section class="related">
         <h2 class="section-title">{{ t('route.relatedHeading') }}</h2>
         <div class="link-list">

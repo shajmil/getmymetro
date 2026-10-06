@@ -67,6 +67,8 @@ import { I18nService } from '../../core/i18n/i18n';
 import { MetroEngineService } from '../../core/engine/metro-engine.service';
 import { PageTitleService } from '../../core/seo/page-title';
 import { BOOKING_URL } from '../../shared/booking';
+import { FaqList } from '../../shared/faq-list';
+import { routeFaq } from '../../core/seo/faq';
 import { Alert } from '../../shared/controls';
 import { JourneyRow } from '../../shared/journey-line';
 import { JourneySummary } from '../../shared/journey-summary';
@@ -114,6 +116,7 @@ export type RouteProblem = 'unknown' | 'same-station';
     JourneyRow,
     JourneySummary,
     BoardPanel,
+    FaqList,
     LineBand,
     LineMap,
     Provenance,
@@ -263,6 +266,12 @@ export class RoutePage {
     const facts = this.#facts();
     if (facts === null) return null;
     return routeReference(facts, this.stations(), this.#i18n.locale());
+  });
+
+  /** The same questions the FAQPage JSON-LD carries, rendered visibly. */
+  readonly faq = computed(() => {
+    const reference = this.reference();
+    return reference === null ? [] : routeFaq(this.#i18n.locale(), reference);
   });
 
   readonly #plan = computed(() => {

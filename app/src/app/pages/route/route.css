@@ -1039,6 +1039,11 @@
   order: 5;
 }
 
+.faq-slot {
+  order: 6;
+  padding-block-start: var(--gmm-space-6);
+}
+
 .provenance-slot {
   padding-block: var(--gmm-space-5) var(--gmm-space-7);
 }
@@ -1206,6 +1211,12 @@
     grid-column: 8 / span 5;
     grid-row: 3;
     order: 5;
+  }
+
+  .faq-slot {
+    grid-column: 1 / span 6;
+    grid-row: 4;
+    order: 6;
   }
 
   /* The caveat runs under both columns, so it needs the measure the grid does

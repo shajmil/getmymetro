@@ -410,6 +410,13 @@ export const EN = {
   'faq.fareQ': 'How much is the Kochi Metro fare from {origin} to {destination}?',
   'faq.fareA':
     "KMRL's published fare from {origin} to {destination} is ₹{fare} one way, the same in both directions. It is {hops} stations and about {minutes} minutes on the train.",
+  /** The visible FAQ block (shared/faq-list.ts). Same entries as the FAQPage JSON-LD. */
+  'faq.heading': 'Common questions',
+  'faq.stationTrainsQ': 'How many trains stop at {name} each day?',
+  'faq.stationTrainsA': '{days}: {count} trains, both directions together.',
+  'faq.stationFareQ': 'What is the Kochi Metro fare from {name}?',
+  'faq.stationFareA':
+    'From ₹{min} to ₹{max} one way, depending on where you get off. Every fare from {name} is listed on this page.',
 
   // --------------------------------------------------------- document title
   /**
@@ -787,6 +794,12 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'faq.fareQ': '{origin} മുതൽ {destination} വരെയുള്ള കൊച്ചി മെട്രോ നിരക്ക് എത്രയാണ്?',
   'faq.fareA':
     '{origin} മുതൽ {destination} വരെ KMRL പ്രസിദ്ധീകരിച്ച നിരക്ക് ഒരു വശത്തേക്ക് ₹{fare} ആണ്, രണ്ട് ദിശയിലും ഒരുപോലെ. ഇത് {hops} സ്റ്റേഷനുകളും ട്രെയിനിൽ ഏകദേശം {minutes} മിനിറ്റുമാണ്.',
+  'faq.heading': 'പതിവ് ചോദ്യങ്ങൾ',
+  'faq.stationTrainsQ': '{name}-ൽ ദിവസവും എത്ര ട്രെയിനുകൾ നിർത്തുന്നു?',
+  'faq.stationTrainsA': '{days}: രണ്ട് ദിശയിലും കൂടി {count} ട്രെയിനുകൾ.',
+  'faq.stationFareQ': '{name}-ൽ നിന്നുള്ള കൊച്ചി മെട്രോ നിരക്ക് എത്രയാണ്?',
+  'faq.stationFareA':
+    'ഇറങ്ങുന്ന സ്റ്റേഷൻ അനുസരിച്ച് ഒരു വശത്തേക്ക് ₹{min} മുതൽ ₹{max} വരെ. {name}-ൽ നിന്നുള്ള എല്ലാ നിരക്കുകളും ഈ പേജിലുണ്ട്.',
 
   // --------------------------------------------------------- document title
   'meta.homeTitle': 'Kochi Metro Timings — കൊച്ചി മെട്രോ സമയം, ആദ്യ, അവസാന ട്രെയിൻ, നിരക്ക്',

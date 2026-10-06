@@ -23,6 +23,7 @@
 import type { PlatformView } from '../../shared/platform-view';
 import type { RouteReference } from '../../pages/route/route-view';
 import { translate } from '../i18n/translate';
+import { routeFaq, stationFaq } from './faq';
 import type { AppLocale } from '../i18n/locale';
 
 /** JSON-LD is untyped by nature; this is as much shape as is worth asserting. */
@@ -102,42 +103,8 @@ export interface StationSeo {
 
 export function stationStructuredData(input: StationSeo): Node {
   const { locale, origin, url, name } = input;
-  const t = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) =>
-    translate(locale, key, params);
-
-  const questions: { q: string; a: string }[] = [];
-  for (const platform of input.platforms) {
-    const list = platform.patterns
-      .map((pattern) => t('faq.item', { days: pattern.dayLabel, clock: pattern.firstClock }))
-      .join(' ');
-    questions.push({
-      q: t('faq.stationFirstQ', { name, towards: platform.towardsName }),
-      a: t('faq.stationFirstA', { name, towards: platform.towardsName, list }),
-    });
-
-    // Lead with the train that arrives. See the file header.
-    const answers = platform.patterns.map((pattern) =>
-      pattern.lastShortTurn && pattern.lastThroughClock !== null
-        ? t('faq.stationLastAThrough', {
-            days: pattern.dayLabel,
-            towards: platform.towardsName,
-            name,
-            through: pattern.lastThroughClock,
-            last: pattern.lastClock,
-            terminus: pattern.lastTerminusName,
-          })
-        : t('faq.stationLastAPlain', {
-            days: pattern.dayLabel,
-            towards: platform.towardsName,
-            name,
-            last: pattern.lastClock,
-          }),
-    );
-    questions.push({
-      q: t('faq.stationLastQ', { name, towards: platform.towardsName }),
-      a: answers.join(' '),
-    });
-  }
+  // The same entries the page renders visibly in <app-faq-list>. See faq.ts.
+  const questions = stationFaq(locale, name, input.platforms);
 
   const station: Node = {
     '@type': 'TrainStation',
@@ -198,43 +165,7 @@ export interface RouteSeo {
 
 export function routeStructuredData(input: RouteSeo): Node {
   const { locale, origin, url, reference } = input;
-  const t = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) =>
-    translate(locale, key, params);
-  const names = { origin: reference.originName, destination: reference.destinationName };
-
-  const firstList = reference.patterns
-    .map((pattern) => t('faq.item', { days: pattern.dayLabel, clock: pattern.firstClock }))
-    .join(' ');
-
-  const lastAnswers = reference.patterns.map((pattern) => {
-    const base = t('faq.routeLastA', { ...names, days: pattern.dayLabel, clock: pattern.lastClock });
-    if (pattern.strandMinutes <= 0) return base;
-    return (
-      base +
-      t('faq.routeLastStrand', {
-        ...names,
-        minutes: pattern.strandMinutes,
-        platformClock: pattern.lastFromPlatformClock,
-      })
-    );
-  });
-
-  const typical =
-    reference.patterns.length === 0 ? 0 : reference.patterns[0].fastestMinutes;
-
-  const questions = [
-    { q: t('faq.routeFirstQ', names), a: t('faq.routeFirstA', { ...names, list: firstList }) },
-    { q: t('faq.routeLastQ', names), a: lastAnswers.join(' ') },
-    {
-      q: t('faq.fareQ', names),
-      a: t('faq.fareA', {
-        ...names,
-        fare: reference.fare,
-        hops: reference.hops,
-        minutes: typical,
-      }),
-    },
-  ];
+  const questions = routeFaq(locale, reference);
 
   const trip: Node = {
     '@type': 'TrainTrip',
