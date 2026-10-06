@@ -63,15 +63,14 @@ COPY = {
     "en": {
         "station_title": "{name} Metro Station, Kochi - Timings, First & Last Train",
         "station_desc": (
-            "Kochi Metro timings at {name}. First train {first}, last train "
-            "{last}, {trains} trains a day. Fares, next departures and full "
-            "schedule for both directions."
+            "Kochi Metro timings at {name}: first train {first}, last train "
+            "{last}, {trains} trains a day. Fares to every station, both directions."
         ),
         "route_title": "{origin} to {destination} Kochi Metro - Timings & Fare {fare}",
         "route_desc": (
-            "Kochi Metro from {origin} to {destination}. First train {first}, "
-            "last train {last}, {trains} trains daily, journey {duration} "
-            "minutes, fare {fare}. Full timetable and stops."
+            "Kochi Metro from {origin} to {destination}: first train {first}, "
+            "last train {last}, {trains} trains daily, {duration} minutes, "
+            "fare {fare}."
         ),
     },
     "ml": {

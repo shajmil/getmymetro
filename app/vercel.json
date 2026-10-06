@@ -1,9 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "buildCommand": "cd .. && python3 build_pages.py KMRLOpenData --base-url https://kochimetro.shajmil.site && cd app && npm run build",
   "outputDirectory": "dist/kochimetro/browser",
   "trailingSlash": false,
   "redirects": [
+    { "source": "/index.html", "destination": "/", "statusCode": 301 },
+    { "source": "/:path*/index.html", "destination": "/:path*", "statusCode": 301 },
     { "source": "/station/petta", "destination": "/station/pettah", "statusCode": 301 },
     { "source": "/ml/station/petta", "destination": "/ml/station/pettah", "statusCode": 301 },
     { "source": "/station/thaikoodam", "destination": "/station/thykoodam", "statusCode": 301 },
