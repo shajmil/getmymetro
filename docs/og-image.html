@@ -1,0 +1,100 @@
+<!doctype html>
+<!--
+  Source for public/og.png, the 1200x630 link preview every page declares.
+
+  Not part of the build: the PNG is committed. It lives outside app/ because
+  Tailwind v4 scans every file under app/ and would mint utilities from the
+  words in this stylesheet. Regenerate after changing it, from the repo root:
+
+    "C:/Program Files/Google/Chrome/Application/chrome.exe" --headless \
+      --hide-scrollbars --window-size=1200,630 \
+      --screenshot="$PWD/app/public/og.png" "file:///$PWD/docs/og-image.html"
+
+  The independence line is not decoration. "Kochi Metro" is KMRL's name and
+  the licence forbids implying their endorsement; a preview card is the one
+  surface a reader sees with no footer under it.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kochi Metro Timings preview</title>
+<style>
+  @font-face {
+    font-family: Geist;
+    src: url('../app/public/fonts/geist-latin.woff2') format('woff2');
+    font-weight: 100 900;
+  }
+  :root {
+    --line: #00a3b4;
+    --line-text: #00707c;
+    --ink: #101114;
+    --ink-2: #55575e;
+    --rail: #c9ccd1;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; background: #fff; }
+  body {
+    font-family: Geist, system-ui, sans-serif;
+    color: var(--ink);
+    padding: 72px 80px 0;
+    position: relative;
+  }
+  .brand { display: flex; align-items: center; gap: 20px; }
+  .brand svg { width: 56px; height: 56px; }
+  .brand span { font-size: 36px; font-weight: 600; letter-spacing: -0.01em; }
+  h1 {
+    margin-top: 44px;
+    font-size: 76px;
+    line-height: 1.06;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .sub { margin-top: 26px; font-size: 30px; color: var(--ink-2); }
+  .line {
+    position: absolute; left: 80px; right: 80px; top: 498px;
+    height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--rail) 0 37.5%, var(--line) 37.5% 100%);
+  }
+  .stops {
+    position: absolute; left: 80px; right: 80px; top: 498px;
+    display: flex; justify-content: space-between; align-items: center; height: 8px;
+  }
+  .stops i { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+  .stops b {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #fff; border: 6px solid var(--ink);
+  }
+  .ends {
+    position: absolute; left: 80px; right: 80px; top: 532px;
+    display: flex; justify-content: space-between;
+    font-size: 22px; font-weight: 600; letter-spacing: 0.04em; color: var(--ink-2);
+  }
+  .note {
+    position: absolute; left: 80px; right: 80px; bottom: 26px;
+    font-size: 19px; color: var(--ink-2); text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="brand">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#00707C"/>
+      <rect x="28.5" y="14.0" width="7.0" height="36.0" fill="#fff"/>
+      <circle cx="32" cy="14.0" r="7.5" fill="#00707C" stroke="#fff" stroke-width="5.5"/>
+      <circle cx="32" cy="50.0" r="9.5" fill="#fff"/>
+    </svg>
+    <span>Kochi Metro Timings</span>
+  </div>
+  <h1>Know when to leave,<br>not just where the train is.</h1>
+  <p class="sub">Next train, first &amp; last train and fares for all 25 stations.</p>
+
+  <div class="line"></div>
+  <div class="stops">
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    <b></b>
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+  </div>
+  <div class="ends"><span>ALUVA</span><span>TRIPUNITHURA</span></div>
+  <p class="note">Independent app · not affiliated with Kochi Metro Rail Limited</p>
+</body>
+</html>

@@ -13,11 +13,11 @@ gtfs_inspect.py so there is one place that knows how to read GTFS.
 Usage:
     python3 build_pages.py KMRLOpenData
     python3 build_pages.py KMRLOpenData.zip --out build
-    python3 build_pages.py KMRLOpenData --base-url https://getmymetro.com
+    python3 build_pages.py KMRLOpenData --base-url https://kochimetro.shajmil.site
 
 Outputs:
     build/pages.json    one entry per page, ready for a prerenderer
-    build/sitemap.xml   every URL, with the feed's build date
+    build/sitemap.xml   every URL, dated by the last change to the feed or this script
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -51,15 +52,22 @@ BOOKING_PREFILL_JOURNEY = False
 # Copy templates per language. The Malayalam strings are a starting point and
 # SHOULD BE REVIEWED BY A NATIVE SPEAKER before launch - machine-shaped meta
 # copy reads badly and is exactly the kind of thing that loses trust.
+#
+# "Kochi" is in every title because that is how the query is typed - "mg road
+# metro kochi", "aluva to edapally kochi metro" - and it was only in the
+# description before. The brand is deliberately NOT appended: Google shows the
+# site name above the title from the home page's WebSite JSON-LD, and
+# " | Kochi Metro Timings" would push a 70-character title past the cut-off
+# for the words people actually search.
 COPY = {
     "en": {
-        "station_title": "{name} Metro Station - Timings, First & Last Train",
+        "station_title": "{name} Metro Station, Kochi - Timings, First & Last Train",
         "station_desc": (
             "Kochi Metro timings at {name}. First train {first}, last train "
             "{last}, {trains} trains a day. Fares, next departures and full "
             "schedule for both directions."
         ),
-        "route_title": "{origin} to {destination} Metro - Timings & Fare {fare}",
+        "route_title": "{origin} to {destination} Kochi Metro - Timings & Fare {fare}",
         "route_desc": (
             "Kochi Metro from {origin} to {destination}. First train {first}, "
             "last train {last}, {trains} trains daily, journey {duration} "
@@ -67,13 +75,13 @@ COPY = {
         ),
     },
     "ml": {
-        "station_title": "{name} മെട്രോ സ്റ്റേഷൻ - സമയം, ആദ്യ, അവസാന ട്രെയിൻ",
+        "station_title": "{name} മെട്രോ സ്റ്റേഷൻ, കൊച്ചി - സമയം, ആദ്യ, അവസാന ട്രെയിൻ",
         "station_desc": (
             "{name} കൊച്ചി മെട്രോ സമയം. ആദ്യ ട്രെയിൻ {first}, അവസാന ട്രെയിൻ "
             "{last}, പ്രതിദിനം {trains} ട്രെയിനുകൾ. നിരക്ക്, അടുത്ത ട്രെയിനുകൾ, "
             "പൂർണ്ണ സമയവിവരം."
         ),
-        "route_title": "{origin} മുതൽ {destination} വരെ മെട്രോ - സമയം, നിരക്ക് {fare}",
+        "route_title": "{origin} മുതൽ {destination} വരെ കൊച്ചി മെട്രോ - സമയം, നിരക്ക് {fare}",
         "route_desc": (
             "{origin} മുതൽ {destination} വരെ കൊച്ചി മെട്രോ. ആദ്യ ട്രെയിൻ {first}, "
             "അവസാന ട്രെയിൻ {last}, പ്രതിദിനം {trains} ട്രെയിനുകൾ, യാത്ര "
@@ -412,7 +420,31 @@ def build_pages(feed: Feed) -> list[dict]:
     return pages
 
 
-def write_sitemap(pages: list[dict], base_url: str, path: str) -> None:
+def content_date(feed_path: str) -> str | None:
+    """When the page content last changed, from git, as a W3C date.
+
+    The pages are a function of the feed and of this script's copy, so the
+    last commit touching either is the honest lastmod. The build time is not:
+    it moves on every deploy, 1,252 URLs at once, while nothing changed.
+
+    Returns None outside a git checkout, or in a shallow clone whose history
+    does not reach the commit - the sitemap then carries no lastmod at all.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    try:
+        out = subprocess.run(
+            ["git", "log", "-1", "--format=%cs", "--",
+             os.path.abspath(feed_path), os.path.abspath(__file__)],
+            cwd=here, capture_output=True, text=True, timeout=10, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out if re.fullmatch(r"\d{4}-\d{2}-\d{2}", out) else None
+
+
+def write_sitemap(
+    pages: list[dict], base_url: str, path: str, stamp: str | None
+) -> None:
     """Every URL, in both languages, with a complete hreflang set on each.
 
     Three things that were wrong before, and all three cost indexing:
@@ -426,8 +458,11 @@ def write_sitemap(pages: list[dict], base_url: str, path: str) -> None:
       version Google guesses.
     * The home pages were missing entirely - / and /ml, the two URLs most
       likely to be linked to.
+
+    `lastmod` is omitted when `stamp` is None. A date that is not known is
+    better left out than invented: Google learns to ignore a sitemap whose
+    lastmod moves on every build without the pages changing.
     """
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
     base = base_url.rstrip("/")
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -453,7 +488,8 @@ def write_sitemap(pages: list[dict], base_url: str, path: str) -> None:
             lines.append(
                 f'    <xhtml:link rel="alternate" hreflang="x-default" href="{en}"/>'
             )
-            lines.append(f"    <lastmod>{stamp}</lastmod>")
+            if stamp is not None:
+                lines.append(f"    <lastmod>{stamp}</lastmod>")
             lines.append("  </url>")
 
     lines.append("</urlset>")
@@ -467,8 +503,13 @@ def main() -> int:
     ap.add_argument("--out", default="build", help="output directory")
     ap.add_argument(
         "--base-url",
-        default="https://example.com",
-        help="site origin, used for the sitemap",
+        default="https://kochimetro.shajmil.site",
+        help="site origin, used for the sitemap (must match SITE_ORIGIN in app/src/app/core/seo/site.ts)",
+    )
+    ap.add_argument(
+        "--lastmod",
+        default=None,
+        help="sitemap lastmod as YYYY-MM-DD; default is the last git commit to the feed or this script",
     )
     args = ap.parse_args()
 
@@ -494,7 +535,8 @@ def main() -> int:
         json.dump(manifest, fh, ensure_ascii=False, separators=(",", ":"))
 
     sitemap_path = os.path.join(args.out, "sitemap.xml")
-    write_sitemap(pages, args.base_url, sitemap_path)
+    stamp = args.lastmod or content_date(args.feed)
+    write_sitemap(pages, args.base_url, sitemap_path, stamp)
 
     by_kind = defaultdict(int)
     for p in pages:
@@ -503,7 +545,7 @@ def main() -> int:
     for (lang, kind), n in sorted(by_kind.items()):
         print(f"  {lang}  {kind:<8} {n}")
     print(f"  {pages_path} ({os.path.getsize(pages_path)/1024:,.0f} KB)")
-    print(f"  {sitemap_path} ({os.path.getsize(sitemap_path)/1024:,.0f} KB)")
+    print(f"  {sitemap_path} ({os.path.getsize(sitemap_path)/1024:,.0f} KB, lastmod {stamp or 'omitted'})")
     return 0
 
 
