@@ -395,7 +395,8 @@ const headingCounts = [];
  * not one, and would make the document count disagree with the sitemap by one
  * forever.
  */
-const pages = documents.filter((f) => f.name !== 'index.csr.html');
+const NOT_PAGES = new Set(['index.csr.html', '404.html']);
+const pages = documents.filter((f) => !NOT_PAGES.has(f.name));
 
 for (const file of pages) {
   const source = readFileSync(file.path, 'utf8');
@@ -473,6 +474,14 @@ if (headingCounts.length > 0) {
 const shell = documents.find((f) => f.name === 'index.csr.html');
 if (shell && !NOINDEX.test(readFileSync(shell.path, 'utf8'))) {
   problems.push('index.csr.html is not noindex — scripts/postbuild.mjs should have marked it.');
+}
+// And unknown paths must reach a real 404 page rather than the shell. The host
+// configs only route /from/* and /route/* to the shell; this is the rest.
+const notFoundPage = documents.find((f) => f.name === '404.html');
+if (!notFoundPage) {
+  problems.push('404.html is missing — unknown URLs would fall through to a 200.');
+} else if (!NOINDEX.test(readFileSync(notFoundPage.path, 'utf8'))) {
+  problems.push('404.html is not noindex.');
 }
 
 if (withoutTitle > 0) {

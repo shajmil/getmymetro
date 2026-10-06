@@ -89,6 +89,61 @@ if (existsSync(shellPath)) {
   console.log('  ok  index.csr.html marked noindex, follow');
 }
 
+/**
+ * `404.html`, served by the host with a real 404 status.
+ *
+ * Both hosts (public/_redirects, vercel.json) hand the client shell only to
+ * the paths that need it — `/from/*` and `/route/*` in both languages. Every
+ * other path is either a prerendered file or does not exist, and a path that
+ * does not exist gets this, with a 404 status, rather than the shell with a
+ * 200. A 200 for a missing page is a soft 404 however it is tagged.
+ *
+ * Static and self-contained: no Angular, no hydration, nothing that can fail.
+ * It lists all 25 stations from the same manifest the prerender reads, so a
+ * reader who followed a bad link is one tap from a real page.
+ */
+const manifestPath = join(repoRoot, 'build', 'pages.json');
+const stationLinks = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  .pages.filter((page) => page.type === 'station' && page.lang === 'en')
+  .map((page) => {
+    const name = page.title.split(' Metro Station')[0];
+    return `<li><a href="${page.path}">${name}</a></li>`;
+  });
+if (stationLinks.length !== 25) fail(`404.html expected 25 stations, found ${stationLinks.length}`);
+
+const notFound = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, follow">
+<title>Page not found · Kochi Metro Timings</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; background: #fff; color: #101114; font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 40rem; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 8px; }
+  p { color: #55575e; margin: 0 0 24px; }
+  a { color: #00707c; }
+  ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 24px; }
+  li { padding: 6px 0; break-inside: avoid; }
+  .home { display: inline-block; margin-bottom: 32px; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Page not found</h1>
+  <p>That address is not a page on Kochi Metro Timings. Pick a station below, or start from the home page.</p>
+  <a class="home" href="/">Kochi Metro Timings home</a> · <a class="home" href="/ml" lang="ml">മലയാളം</a>
+  <ul>${stationLinks.join('')}</ul>
+</main>
+</body>
+</html>
+`;
+writeFileSync(join(browserDir, '404.html'), notFound);
+console.log('  ok  404.html written (25 station links, noindex)');
+
 // ----------------------------------------------------------------- 3. sw
 
 const swPath = join(browserDir, 'sw.js');

@@ -152,31 +152,16 @@
         <!-- Mobile layout: Heading block from screen 04 -->
         <header class="heading-block mobile-only">
             <p class="eyebrow">{{ t('screen.route') }}</p>
+            <!-- A sentence, not three buttons. The heading is what a search
+                 engine and a screen reader take the page to be about, and as
+                 buttons it read "AluvaToMG Road" — and in Malayalam put വരെ
+                 after the origin. Changing either end is the toolbar's job,
+                 directly below. -->
             <h1 class="route-title">
-              <button
-                type="button"
-                class="route-title-station"
-                (click)="openPicker('origin')"
-                [attr.title]="t('route.changeFromHeading')"
-              >
-                <span>{{ originName() }}</span>
-              </button>
-              <button
-                type="button"
-                class="route-title-swap"
-                (click)="swapRoute()"
-                [attr.title]="t('route.swap')"
-              >
-                <span class="route-joiner">{{ t('line.to') }}</span>
-              </button>
-              <button
-                type="button"
-                class="route-title-station"
-                (click)="openPicker('destination')"
-                [attr.title]="t('route.changeToHeading')"
-              >
-                <span>{{ destinationName() }}</span>
-              </button>
+              @for (part of headingParts(); track $index) {
+                @if (!$first) { {{ ' ' }} }
+                <span [class.route-joiner]="part.joiner">{{ part.text }}</span>
+              }
             </h1>
 
             <!-- Quick route card: Linked From/To inputs + centered Swap button -->

@@ -42,11 +42,10 @@
 
 /* "Pathadipalam to M.G. Road". The joiner is quieter than the names because
    the names are what is being compared and "to" is punctuation. */
+/* Inline flow, not flex: flex items render as separate lines of text, so the
+   heading's innerText read "Aluva\nto\nMG Road". The spaces between the parts
+   are real and do the spacing. */
 .route-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--gmm-space-2);
   margin: var(--gmm-space-1) 0 var(--gmm-space-2);
   font-size: clamp(1.5rem, 6.5vw, 1.875rem);
   font-weight: 600;
@@ -68,47 +67,6 @@
   font-weight: 400;
   color: var(--gmm-ink-3);
   margin-inline: 2px;
-}
-
-.route-title-station {
-  display: inline;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: inherit;
-  letter-spacing: inherit;
-  line-height: inherit;
-  cursor: pointer;
-  text-decoration: none;
-  border-radius: var(--gmm-radius-button);
-  transition: color var(--gmm-hover) var(--gmm-ease);
-}
-
-.route-title-station:hover {
-  color: var(--gmm-line-text);
-  text-decoration: underline;
-  text-decoration-color: var(--gmm-line-text);
-}
-
-.route-title-swap {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 var(--gmm-space-1);
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  border-radius: var(--gmm-radius-toggle);
-  transition: background-color var(--gmm-hover) var(--gmm-ease);
-}
-
-.route-title-swap:hover {
-  background-color: var(--gmm-soft);
-}
-
-.route-title-swap:hover .route-joiner {
-  color: var(--gmm-line-text);
 }
 
 /* The hero: countdown left, departure → arrival right, aligned on one baseline. */

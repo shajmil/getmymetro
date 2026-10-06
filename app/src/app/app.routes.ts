@@ -46,8 +46,8 @@ const destination = () =>
  * to a `/route/:pair` page that *is* prerendered and *is* in the sitemap, so
  * the destinations are already indexed with better content than a picker. A
  * crawler has nothing to gain here and the reader arrives by tapping, not by
- * searching. `public/_redirects` rewrites it to the client shell, which is
- * what every unmatched path already does.
+ * searching. `public/_redirects` and `vercel.json` rewrite it to the client
+ * shell, which postbuild marks noindex. Unmatched paths get a real 404.
  */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', loadComponent: home },

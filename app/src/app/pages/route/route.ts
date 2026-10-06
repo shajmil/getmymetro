@@ -189,6 +189,28 @@ export class RoutePage {
   });
 
   /**
+   * `route.heading` cut at its placeholders, so the joining words can be set
+   * quieter than the names while the heading stays one sentence in source
+   * order: "Aluva to MG Road", "ആലുവ മുതൽ എം.ജി റോഡ് വരെ". Splitting the
+   * catalogue string rather than hardcoding "to" is what keeps the Malayalam
+   * word order right.
+   */
+  readonly headingParts = computed(() => {
+    const names: Record<string, string> = {
+      '{origin}': this.originName(),
+      '{destination}': this.destinationName(),
+    };
+    const template = this.t('route.heading', { origin: '{origin}', destination: '{destination}' });
+    return template
+      .split(/(\{origin\}|\{destination\})/)
+      .map((piece) => piece.trim())
+      .filter((piece) => piece !== '')
+      .map((piece) =>
+        piece in names ? { text: names[piece], joiner: false } : { text: piece, joiner: true },
+      );
+  });
+
+  /**
    * `null` when the pair is a journey, otherwise why it is not.
    *
    * Every ordered pair of *distinct* stations on this line is travelable —

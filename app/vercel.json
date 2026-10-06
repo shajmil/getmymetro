@@ -17,5 +17,10 @@
     { "source": "/station/m-g-road", "destination": "/station/mg-road", "statusCode": 301 },
     { "source": "/ml/station/m-g-road", "destination": "/ml/station/mg-road", "statusCode": 301 }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.csr.html" }]
+  "rewrites": [
+    { "source": "/from/:slug", "destination": "/index.csr.html" },
+    { "source": "/ml/from/:slug", "destination": "/index.csr.html" },
+    { "source": "/route/:pair", "destination": "/index.csr.html" },
+    { "source": "/ml/route/:pair", "destination": "/index.csr.html" }
+  ]
 }

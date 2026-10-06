@@ -26,17 +26,25 @@
 /station/m-g-road         /station/mg-road           301
 /ml/station/m-g-road      /ml/station/mg-road        301
 
-# 2. Everything else that is not a prerendered file: the client shell.
+# 2. The two kinds of page that are not prerendered: the client shell.
 #
-#    All 1,252 pages are prerendered, so this only catches a URL nobody
-#    built — a mistyped slug, or a route page for a pair that does not exist.
-#    It rewrites (200) rather than redirects, so the URL survives and the
-#    router lands on the page's own "no station with that name" branch, which
-#    carries the whole line and is not a dead end.
+#    /from/* is the choose-destination screen, deliberately not prerendered
+#    (see app.routes.ts). /route/* catches a pair typed with a variant spelling,
+#    /route/aluva-to-edappally, which core/data/slugs.ts resolves. Both rewrite
+#    (200) so the URL survives, and both get a shell scripts/postbuild.mjs has
+#    marked noindex - neither is a page Google should hold.
 #
 #    index.csr.html and NOT index.html: index.html is the prerendered home
 #    page, complete with hydration annotations for the home route. Serving it
-#    for /station/typo would make Angular try to hydrate the home page's DOM
-#    into a station page — an NG0500 mismatch. index.csr.html has no
-#    annotations, so the app simply client-renders.
-/*                        /index.csr.html            200
+#    here would make Angular try to hydrate the home page DOM into another
+#    page - an NG0500 mismatch. index.csr.html has no annotations.
+/from/*                   /index.csr.html            200
+/ml/from/*                /index.csr.html            200
+/route/*                  /index.csr.html            200
+/ml/route/*               /index.csr.html            200
+
+# 3. Everything else gets 404.html with a real 404 status - Cloudflare Pages
+#    serves it automatically when nothing above matches. There is deliberately
+#    no catch-all: a 200 for a page that does not exist is a soft 404, and
+#    noindex does not change the status code. Station typos are covered by the
+#    301s in section 1; anything else was never a page.
