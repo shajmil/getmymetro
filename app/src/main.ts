@@ -2,6 +2,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { captureInstallPrompt } from './app/core/pwa/install';
+import { inject } from '@vercel/analytics';
 
 /**
  * Register the service worker, after the app has booted.
@@ -23,6 +24,9 @@ function registerServiceWorker(): void {
 
 // Before the bootstrap: Chrome can fire its install event before Angular is up.
 captureInstallPrompt();
+
+// Initialize Vercel Web Analytics
+inject();
 
 bootstrapApplication(App, appConfig)
   .then(registerServiceWorker)
