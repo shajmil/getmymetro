@@ -2,6 +2,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { captureInstallPrompt } from './app/core/pwa/install';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 
 /**
  * Register the service worker, after the app has booted.
@@ -25,5 +26,8 @@ function registerServiceWorker(): void {
 captureInstallPrompt();
 
 bootstrapApplication(App, appConfig)
-  .then(registerServiceWorker)
+  .then(() => {
+    registerServiceWorker();
+    injectSpeedInsights();
+  })
   .catch((err) => console.error(err));
