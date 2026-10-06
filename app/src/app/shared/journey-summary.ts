@@ -308,7 +308,11 @@ import { JourneyRow, type JourneyVariant } from './journey-line';
     <section [attr.aria-label]="ariaLabel()">
       <!-- Origin. The line starts at this node and runs down. -->
       <app-journey-row node="origin" kind="first" [variant]="variant()" [compact]="compact()">
-        <h1 class="station-name">{{ originName() }}</h1>
+        @if (originIsHeading()) {
+          <h1 class="station-name">{{ originName() }}</h1>
+        } @else {
+          <p class="station-name">{{ originName() }}</p>
+        }
         <div class="origin-meta">
           <p class="here">
             @if (compact()) {
@@ -402,6 +406,13 @@ export class JourneySummary {
 
   /** Where the reader is. */
   readonly originName = input.required<string>();
+
+  /**
+   * Whether the origin name is the page's `<h1>`. True on Home, where it is
+   * the page's subject. The route page has its own "A to B" heading, so it
+   * passes `false` — two `<h1>`s on one document blur what the page is about.
+   */
+  readonly originIsHeading = input<boolean>(true);
 
   /** "You're here", or "From" on the choose-destination screen. */
   readonly hereLabel = input.required<string>();

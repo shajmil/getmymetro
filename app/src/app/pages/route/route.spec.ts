@@ -338,7 +338,7 @@ describe('Route — booking, honesty and cross-links', () => {
     /*
      * The `<app-booking>` panel carried the sentences the open-data licence
      * needs: whose channel this is, that KMRL runs the booking, and that
-     * getmymetro sells nothing and sees nothing. CLAUDE.md finding 1 ends the
+     * Kochi Metro Timings sells nothing and sees nothing. CLAUDE.md finding 1 ends the
      * licence automatically if the app implies KMRL endorses it, so deleting
      * the panel without moving those sentences would have traded a duplicate
      * for a licence breach. This is the test that would have caught that.
@@ -351,7 +351,7 @@ describe('Route — booking, honesty and cross-links', () => {
 
     expect(framing).toContain("KMRL's own channel");
     expect(framing).toContain("Booking is KMRL's service");
-    expect(framing).toContain('getmymetro does not sell tickets, take payment');
+    expect(framing).toContain('Kochi Metro Timings does not sell tickets, take payment');
     expect(framing).toContain('tell the bot where you are going');
     // Nothing that would read as an endorsement or an unverified claim.
     expect(framing).not.toContain('discount');

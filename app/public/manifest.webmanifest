@@ -1,7 +1,7 @@
 {
-  "name": "GetMyMetro — Kochi Metro times",
-  "short_name": "GetMyMetro",
-  "description": "Kochi Metro departure times, fares and last-train warnings. Works offline.",
+  "name": "Kochi Metro Timings",
+  "short_name": "Metro Timings",
+  "description": "Kochi Metro timings, fares and last-train warnings for all 25 stations. Independent app, not affiliated with KMRL. Works offline.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

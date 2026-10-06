@@ -83,7 +83,7 @@ function loadManifest(): Manifest {
   }
   throw new Error(
     'build/pages.json not found. It is build-time only and gitignored; ' +
-      'regenerate it with: python3 build_pages.py KMRLOpenData --base-url https://getmymetro.com',
+      'regenerate it with: python3 build_pages.py KMRLOpenData --base-url https://kochimetro.shajmil.site',
   );
 }
 

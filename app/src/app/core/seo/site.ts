@@ -12,4 +12,4 @@
  * than shipping on `*.pages.dev`. Change it here, re-run `build_pages.py` with
  * the matching `--base-url`, and the gate will confirm they agree.
  */
-export const SITE_ORIGIN = 'https://getmymetro.com';
+export const SITE_ORIGIN = 'https://kochimetro.shajmil.site';

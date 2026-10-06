@@ -88,6 +88,7 @@
         <section class="desktop-hero" aria-live="polite">
           <app-journey-summary
             [originName]="originName()"
+            [originIsHeading]="false"
             [hereLabel]="t('journey.youreHere')"
             [destinationName]="destinationName()"
             [towardsName]="journey()?.towardsName ?? ''"

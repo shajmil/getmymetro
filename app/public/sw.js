@@ -1,5 +1,5 @@
 /**
- * getmymetro's service worker. Hand-written, and small on purpose.
+ * kochimetro's service worker. Hand-written, and small on purpose.
  *
  * ---------------------------------------------------------------------------
  * Why not `@angular/service-worker`
@@ -56,7 +56,7 @@
 const VERSION = '__VERSION__';
 const PRECACHE = [];
 
-const CACHE = `getmymetro-${VERSION}`;
+const CACHE = `kochimetro-${VERSION}`;
 /** What an uncached navigation falls back to: the empty client shell. */
 const SHELL = '/index.csr.html';
 /** The whole network, ~7 kB over the wire. */
@@ -77,7 +77,10 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       for (const name of await caches.keys()) {
-        if (name.startsWith('getmymetro-') && name !== CACHE) await caches.delete(name);
+        // `getmymetro-` is the name this app shipped under before the rename;
+        // a browser that ran that worker on this origin still holds its cache.
+        const ours = name.startsWith('kochimetro-') || name.startsWith('getmymetro-');
+        if (ours && name !== CACHE) await caches.delete(name);
       }
       // Safe without `skipWaiting`: a new version only reaches activate once
       // every page running the old one has gone.

@@ -1,5 +1,5 @@
 {
-  "name": "getmymetro",
+  "name": "kochimetro",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -10,7 +10,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:ci": "ng test --no-watch",
-    "serve:ssr:getmymetro": "node dist/getmymetro/server/server.mjs"
+    "serve:ssr:kochimetro": "node dist/kochimetro/server/server.mjs"
   },
   "prettier": {
     "printWidth": 100,

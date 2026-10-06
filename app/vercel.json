@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd .. && python3 build_pages.py KMRLOpenData --base-url https://getmymetro.com && cd app && npm run build",
-  "outputDirectory": "dist/getmymetro/browser",
+  "buildCommand": "cd .. && python3 build_pages.py KMRLOpenData --base-url https://kochimetro.shajmil.site && cd app && npm run build",
+  "outputDirectory": "dist/kochimetro/browser",
   "trailingSlash": false,
   "redirects": [
     { "source": "/station/petta", "destination": "/station/pettah", "statusCode": 301 },

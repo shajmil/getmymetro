@@ -28,7 +28,15 @@ import type { AppLocale } from '../i18n/locale';
 /** JSON-LD is untyped by nature; this is as much shape as is worth asserting. */
 type Node = Record<string, unknown>;
 
-export const SITE_NAME = 'getmymetro';
+/**
+ * The product's name, as search results and link previews show it.
+ *
+ * A description, not a claim: "Kochi Metro" is KMRL's brand and the licence
+ * forbids implying their endorsement (CLAUDE.md finding 1), so the name says
+ * what the app holds — the timings — and every surface that carries it also
+ * carries `shell.disclaimer`.
+ */
+export const SITE_NAME = 'Kochi Metro Timings';
 
 /** KMRL's line, named once. */
 const LINE_NAME = 'Kochi Metro';
@@ -256,18 +264,47 @@ export function routeStructuredData(input: RouteSeo): Node {
   ]);
 }
 
+/**
+ * The home page graph: what the site is called, and what it is.
+ *
+ * `WebSite.name` is where Google takes the site name it prints above every
+ * result, which is why the 1,250 content titles do not repeat the brand. It
+ * only works from the home page, so it lives here and nowhere else.
+ *
+ * `WebApplication` carries the independence statement in machine-readable
+ * form. A result card that reads as KMRL's own app is the endorsement the
+ * licence forbids, and it is cheaper to say so in the markup than to argue it
+ * after the fact.
+ */
 export function homeStructuredData(locale: AppLocale, origin: string, url: string): Node {
   return graph([
     {
       '@type': 'WebSite',
       '@id': `${origin}/#website`,
       name: SITE_NAME,
-      url,
-      inLanguage: locale,
       // No `alternateName: "Kochi Metro Live"`. The competitor claims "live"
       // in its markup and disclaims it in small grey text under the map
-      // (CLAUDE.md finding 7). These times are scheduled and say so.
+      // (CLAUDE.md finding 7). These times are scheduled and say so. Nor a
+      // bare "Kochi Metro", which is KMRL's name, not ours.
+      alternateName: ['Kochi Metro Timings app', 'കൊച്ചി മെട്രോ സമയം'],
+      url,
+      inLanguage: locale,
       about: { '@type': 'Place', name: LINE_NAME },
+    },
+    {
+      '@type': 'WebApplication',
+      '@id': `${origin}/#app`,
+      name: SITE_NAME,
+      url,
+      description: `${translate(locale, 'meta.homeDescription')} ${translate(locale, 'shell.disclaimer')}`,
+      applicationCategory: 'TravelApplication',
+      operatingSystem: 'Any',
+      browserRequirements: 'Requires a modern web browser',
+      inLanguage: ['en', 'ml'],
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: 0, priceCurrency: 'INR' },
+      image: `${origin}/og.png`,
+      isPartOf: { '@id': `${origin}/#website` },
     },
   ]);
 }

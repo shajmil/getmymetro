@@ -1,7 +1,7 @@
 /**
  * The "Add to home screen" banner.
  *
- *   [icon]  Install GetMyMetro                 [Install]  [×]
+ *   [icon]  Install Kochi Metro Timings        [Install]  [×]
  *           Open it from your home screen. Works offline.
  *
  * Android / desktop Chrome: the Install button opens the browser's own install

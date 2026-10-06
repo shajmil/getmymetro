@@ -64,10 +64,10 @@ export const EN = {
   /** The segmented switch's group label. */
   'shell.languageGroup': 'Language',
   'shell.disclaimer':
-    'getmymetro is an independent app. It is not endorsed by, affiliated with, or operated by Kochi Metro Rail Limited.',
+    'Kochi Metro Timings is an independent app. It is not endorsed by, affiliated with, or operated by Kochi Metro Rail Limited.',
 
   // ---------------------------------------------------- add to home screen
-  'install.title': 'Install GetMyMetro',
+  'install.title': 'Install Kochi Metro Timings',
   'install.body': 'Open it from your home screen. Works offline.',
   /** iPhone / iPad: Safari has no install dialog, only the Share menu. */
   'install.iosBody': 'Tap Share, then “Add to Home Screen”.',
@@ -421,11 +421,12 @@ export const EN = {
    * achieve the same thing. If one side changes, change both — the build gate
    * compares a sample.
    */
-  'meta.homeTitle': 'getmymetro — Kochi Metro times',
+  'meta.homeTitle': 'Kochi Metro Timings — Next Train, First & Last Train, Fares',
   'meta.homeDescription':
-    'Kochi Metro departure times, fares and last-train warnings for all 25 stations. Know when to leave, not just where the train is. Works offline.',
-  'meta.stationTitle': '{name} Metro Station - Timings, First & Last Train',
-  'meta.routeTitle': '{origin} to {destination} Metro - Timings & Fare Rs {fare}',
+    'Kochi Metro timings for all 25 stations from Aluva to Tripunithura: next train, first and last train, fares. Know when to leave. Works offline.',
+  'meta.ogImageAlt': 'Kochi Metro Timings — timings, fares and last trains for the Aluva to Tripunithura line',
+  'meta.stationTitle': '{name} Metro Station, Kochi - Timings, First & Last Train',
+  'meta.routeTitle': '{origin} to {destination} Kochi Metro - Timings & Fare Rs {fare}',
 
   // -------------------------------------------------------------- provenance
   'prov.scheduled': 'KMRL timetable, not live.',
@@ -444,7 +445,7 @@ export const EN = {
     'KMRL sells tickets over WhatsApp on their own number. This link opens that chat with "Book Ticket" ready to send — you press send yourself.',
   'booking.cta': 'Book on WhatsApp',
   'booking.note':
-    "It does not carry your journey with it, so tell the bot where you are going. Booking is KMRL's service and happens entirely in WhatsApp; getmymetro does not sell tickets, take payment, or see anything you send.",
+    "It does not carry your journey with it, so tell the bot where you are going. Booking is KMRL's service and happens entirely in WhatsApp; Kochi Metro Timings does not sell tickets, take payment, or see anything you send.",
 
   // ------------------------------------------------------------- day service
   'caveat.holidayHeading': 'Holiday timetable',
@@ -510,9 +511,9 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'shell.switchTitle': 'ഈ പേജ് ഇംഗ്ലീഷിൽ വായിക്കുക',
   'shell.languageGroup': 'ഭാഷ',
   'shell.disclaimer':
-    'getmymetro ഒരു സ്വതന്ത്ര ആപ്പാണ്. ഇത് കൊച്ചി മെട്രോ റെയിൽ ലിമിറ്റഡിന്റെ അംഗീകാരമുള്ളതോ അവരുമായി ബന്ധപ്പെട്ടതോ അവർ നടത്തുന്നതോ അല്ല.',
+    'Kochi Metro Timings ഒരു സ്വതന്ത്ര ആപ്പാണ്. ഇത് കൊച്ചി മെട്രോ റെയിൽ ലിമിറ്റഡിന്റെ അംഗീകാരമുള്ളതോ അവരുമായി ബന്ധപ്പെട്ടതോ അവർ നടത്തുന്നതോ അല്ല.',
 
-  'install.title': 'GetMyMetro ഇൻസ്റ്റാൾ ചെയ്യുക',
+  'install.title': 'Kochi Metro Timings ഇൻസ്റ്റാൾ ചെയ്യുക',
   'install.body': 'ഹോം സ്ക്രീനിൽ നിന്ന് തുറക്കാം. ഇന്റർനെറ്റ് ഇല്ലാതെയും പ്രവർത്തിക്കും.',
   'install.iosBody': 'Share അമർത്തി “Add to Home Screen” തിരഞ്ഞെടുക്കുക.',
   'install.button': 'ഇൻസ്റ്റാൾ',
@@ -788,11 +789,12 @@ export const ML: Readonly<Record<StringKey, string>> = {
     '{origin} മുതൽ {destination} വരെ KMRL പ്രസിദ്ധീകരിച്ച നിരക്ക് ഒരു വശത്തേക്ക് ₹{fare} ആണ്, രണ്ട് ദിശയിലും ഒരുപോലെ. ഇത് {hops} സ്റ്റേഷനുകളും ട്രെയിനിൽ ഏകദേശം {minutes} മിനിറ്റുമാണ്.',
 
   // --------------------------------------------------------- document title
-  'meta.homeTitle': 'getmymetro — കൊച്ചി മെട്രോ സമയം',
+  'meta.homeTitle': 'Kochi Metro Timings — കൊച്ചി മെട്രോ സമയം, ആദ്യ, അവസാന ട്രെയിൻ, നിരക്ക്',
   'meta.homeDescription':
     'എല്ലാ 25 സ്റ്റേഷനുകളിലെയും കൊച്ചി മെട്രോ സമയം, നിരക്ക്, അവസാന ട്രെയിൻ മുന്നറിയിപ്പ്. ട്രെയിൻ എവിടെയെന്ന് മാത്രമല്ല, എപ്പോൾ ഇറങ്ങണമെന്നും അറിയുക. ഓഫ്‌ലൈനിലും പ്രവർത്തിക്കും.',
-  'meta.stationTitle': '{name} മെട്രോ സ്റ്റേഷൻ - സമയം, ആദ്യ, അവസാന ട്രെയിൻ',
-  'meta.routeTitle': '{origin} മുതൽ {destination} വരെ മെട്രോ - സമയം, നിരക്ക് Rs {fare}',
+  'meta.ogImageAlt': 'Kochi Metro Timings — ആലുവ മുതൽ തൃപ്പൂണിത്തുറ വരെ കൊച്ചി മെട്രോ സമയം, നിരക്ക്, അവസാന ട്രെയിൻ',
+  'meta.stationTitle': '{name} മെട്രോ സ്റ്റേഷൻ, കൊച്ചി - സമയം, ആദ്യ, അവസാന ട്രെയിൻ',
+  'meta.routeTitle': '{origin} മുതൽ {destination} വരെ കൊച്ചി മെട്രോ - സമയം, നിരക്ക് Rs {fare}',
 
   // -------------------------------------------------------------- provenance
   'prov.scheduled': 'KMRL സമയവിവരപ്പട്ടിക, തത്സമയമല്ല.',
@@ -805,7 +807,7 @@ export const ML: Readonly<Record<StringKey, string>> = {
     'KMRL അവരുടെ സ്വന്തം നമ്പറിൽ WhatsApp വഴി ടിക്കറ്റ് വിൽക്കുന്നു. ഈ ലിങ്ക് "Book Ticket" എന്ന സന്ദേശവുമായി ആ ചാറ്റ് തുറക്കും — അയയ്ക്കുന്നത് നിങ്ങൾ തന്നെ.',
   'booking.cta': 'WhatsApp വഴി ബുക്ക് ചെയ്യുക',
   'booking.note':
-    'ഇത് നിങ്ങളുടെ യാത്രാവിവരം കൂടെ കൊണ്ടുപോകില്ല, അതിനാൽ എവിടേക്കാണ് പോകുന്നതെന്ന് ബോട്ടിനോട് പറയുക. ബുക്കിംഗ് KMRL-ന്റെ സേവനമാണ്, അത് പൂർണ്ണമായും WhatsApp-ൽ നടക്കുന്നു; getmymetro ടിക്കറ്റ് വിൽക്കുന്നില്ല, പണം സ്വീകരിക്കുന്നില്ല, നിങ്ങൾ അയയ്ക്കുന്നത് കാണുന്നുമില്ല.',
+    'ഇത് നിങ്ങളുടെ യാത്രാവിവരം കൂടെ കൊണ്ടുപോകില്ല, അതിനാൽ എവിടേക്കാണ് പോകുന്നതെന്ന് ബോട്ടിനോട് പറയുക. ബുക്കിംഗ് KMRL-ന്റെ സേവനമാണ്, അത് പൂർണ്ണമായും WhatsApp-ൽ നടക്കുന്നു; Kochi Metro Timings ടിക്കറ്റ് വിൽക്കുന്നില്ല, പണം സ്വീകരിക്കുന്നില്ല, നിങ്ങൾ അയയ്ക്കുന്നത് കാണുന്നുമില്ല.',
 
   // ------------------------------------------------------------- day service
   'caveat.holidayHeading': 'അവധിദിന സമയവിവരപ്പട്ടിക',

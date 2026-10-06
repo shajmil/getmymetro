@@ -34,6 +34,7 @@ import { translate } from './core/i18n/translate';
 import type { AppLocale } from './core/i18n/locale';
 import { SITE_ORIGIN } from './core/seo/site';
 import {
+  SITE_NAME,
   homeStructuredData,
   routeStructuredData,
   stationStructuredData,
@@ -68,7 +69,7 @@ import {
 const CANDIDATE_PATHS = [
   join(process.cwd(), 'public', 'data', 'network.json'),
   join(process.cwd(), 'app', 'public', 'data', 'network.json'),
-  join(process.cwd(), 'dist', 'getmymetro', 'browser', 'data', 'network.json'),
+  join(process.cwd(), 'dist', 'kochimetro', 'browser', 'data', 'network.json'),
 ];
 
 /** Decoded once per process, not once per prerendered document. */
@@ -143,11 +144,31 @@ function applyMeta(
   // their own title and description from the catalogue rather than inheriting
   // index.html's, which would make them a duplicate pair.
   const found = pageMetaFor(path);
-  title.setTitle(found?.title ?? translate(locale, 'meta.homeTitle'));
-  meta.updateTag({
-    name: 'description',
-    content: found?.description ?? translate(locale, 'meta.homeDescription'),
-  });
+  const pageTitle = found?.title ?? translate(locale, 'meta.homeTitle');
+  const pageDescription = found?.description ?? translate(locale, 'meta.homeDescription');
+  title.setTitle(pageTitle);
+  meta.updateTag({ name: 'description', content: pageDescription });
+
+  // Link previews. Most of these URLs travel through WhatsApp, which reads
+  // only Open Graph; without it a shared route page is a bare URL. One image
+  // for the whole site (public/og.png, source in docs/og-image.html) — the
+  // per-page title and description carry the specifics.
+  for (const [property, content] of [
+    ['og:type', 'website'],
+    ['og:site_name', SITE_NAME],
+    ['og:title', pageTitle],
+    ['og:description', pageDescription],
+    ['og:url', `${SITE_ORIGIN}${path}`],
+    ['og:image', `${SITE_ORIGIN}/og.png`],
+    ['og:image:type', 'image/png'],
+    ['og:image:width', '1200'],
+    ['og:image:height', '630'],
+    ['og:image:alt', translate(locale, 'meta.ogImageAlt')],
+    ['og:locale:alternate', locale === 'ml' ? 'en_IN' : 'ml_IN'],
+  ] as const) {
+    meta.updateTag({ property, content });
+  }
+  meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
 
   const canonical = pathWithoutLocale(path);
   setHead(document, 'canonical', { href: `${SITE_ORIGIN}${path}` });

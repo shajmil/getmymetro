@@ -241,7 +241,7 @@ describe('Station — booking, honesty and provenance', () => {
     expect(link?.getAttribute('href')).toBe('https://wa.me/919188957488?text=Book%20Ticket');
     const rendered = text();
     expect(rendered).toContain('KMRL sells tickets over WhatsApp on their own number');
-    expect(rendered).toContain('getmymetro does not sell tickets');
+    expect(rendered).toContain('Kochi Metro Timings does not sell tickets');
     // The discount figure that circulates is unverified. Never repeat it.
     expect(rendered).not.toContain('10%');
     expect(rendered).not.toContain('discount');

@@ -1,12 +1,13 @@
 /**
- * After `ng build`: finish the two things the Angular builder cannot.
+ * After `ng build`: finish the three things the Angular builder cannot.
  *
- *   1. Give `sw.js` its precache list. The filenames are content-hashed, so
- *      the list only exists once the build has run.
- *   2. Put `build/sitemap.xml` where a crawler looks for it. It is generated
+ *   1. Put `build/sitemap.xml` where a crawler looks for it. It is generated
  *      by `build_pages.py` from the same manifest the prerender reads, so
  *      copying it is what keeps the sitemap and the prerendered set in step —
  *      `check-bundle-size.mjs` then asserts they agree.
+ *   2. Mark the client shell `noindex`, so no non-prerendered URL is indexed.
+ *   3. Give `sw.js` its precache list. The filenames are content-hashed, so
+ *      the list only exists once the build has run.
  *
  * Runs before `check-bundle-size.mjs`, so the gate sees the finished output.
  */
@@ -57,13 +58,38 @@ const sitemapSource = join(repoRoot, 'build', 'sitemap.xml');
 if (!existsSync(sitemapSource)) {
   fail(
     'build/sitemap.xml is missing. Regenerate it with: ' +
-      'python3 build_pages.py KMRLOpenData --base-url https://getmymetro.com',
+      'python3 build_pages.py KMRLOpenData --base-url https://kochimetro.shajmil.site',
   );
 }
 copyFileSync(sitemapSource, join(browserDir, 'sitemap.xml'));
 console.log(`  ok  sitemap.xml copied from build/ (${readFileSync(sitemapSource, 'utf8').match(/<loc>/g)?.length ?? 0} URLs)`);
 
-// ----------------------------------------------------------------- 2. sw
+// ------------------------------------------------- 2. the client shell
+
+/**
+ * `index.csr.html` must never be indexed.
+ *
+ * The host serves it, with a 200, for every path that is not a prerendered
+ * file: `/from/*` (deliberately unindexed, see app.routes.ts), route URLs typed
+ * with a variant spelling (`/route/aluva-to-edappally`, a duplicate of a page
+ * that has its own canonical), and paths that do not exist at all. Without
+ * this, all three reach Google as thin 200s with the generic home title and no
+ * canonical — soft 404s and duplicates. `follow` keeps its links counting.
+ *
+ * Only this file: a prerendered page is always served as itself, first.
+ */
+const shellPath = join(browserDir, 'index.csr.html');
+if (existsSync(shellPath)) {
+  const shell = readFileSync(shellPath, 'utf8');
+  if (!shell.includes('name="robots"')) {
+    const tagged = shell.replace('<head>', '<head><meta name="robots" content="noindex, follow">');
+    if (tagged === shell) fail('index.csr.html has no <head> to mark noindex');
+    writeFileSync(shellPath, tagged);
+  }
+  console.log('  ok  index.csr.html marked noindex, follow');
+}
+
+// ----------------------------------------------------------------- 3. sw
 
 const swPath = join(browserDir, 'sw.js');
 if (!existsSync(swPath)) fail('sw.js is missing from the browser output — is it still in public/?');
@@ -86,6 +112,7 @@ const EXCLUDE = [
   /^robots\.txt$/,
   /^_redirects$/,
   /^sw\.js$/,
+  /^og\.png$/, // link-preview image: fetched by crawlers, never needed offline
   /noto-sans-malayalam\.woff2$/,
   /geist-LICENSE\.txt$/,
 ];

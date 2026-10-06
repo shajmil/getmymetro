@@ -1,5 +1,5 @@
 /**
- * Ship gate. Eight checks, one exit code, run as part of `npm run build`.
+ * Ship gate. Nine checks, one exit code, run as part of `npm run build`.
  *
  *   1. Initial JS/CSS, gzipped, under 150 KiB.
  *   2. Everything the browser can download, under a data budget.
@@ -9,6 +9,7 @@
  *   6. Every prerendered document has its own title and description.
  *   7. The prerendered set and the sitemap agree, on count and on origin.
  *   8. No rendered text below 16px, in any emitted CSS.
+ *   9. Every page has a link preview and one <h1>; only the shell is noindex.
  *
  * Checks 4-7 exist because `npm run build` passing and `npm run test:ci`
  * passing did not, on their own, mean the app worked. A `<p>` inside a
@@ -371,6 +372,9 @@ const NOSCRIPT = /<noscript[^>]*>([\s\S]*?)<\/noscript>/gi;
 const TITLE = /<title[^>]*>([\s\S]*?)<\/title>/i;
 const DESCRIPTION = /<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i;
 const CANONICAL = /<link\s+rel=["']canonical["']\s+href=["']([^"']*)["']/i;
+const OG_IMAGE = /<meta\s+property=["']og:image["']\s+content=["']https?:\/\/[^"']+["']/i;
+const NOINDEX = /<meta\s+name=["']robots["']\s+content=["'][^"']*noindex/i;
+const H1 = /<h1[\s>]/gi;
 
 const titles = new Map();
 const descriptions = new Map();
@@ -378,6 +382,9 @@ const canonicalOrigins = new Set();
 let withNoscript = 0;
 let withoutTitle = 0;
 let withoutDescription = 0;
+let withoutPreview = 0;
+const noindexed = [];
+const headingCounts = [];
 
 /**
  * `index.csr.html` is the client shell, not a page.
@@ -435,6 +442,37 @@ for (const file of pages) {
 
   const canonical = CANONICAL.exec(source)?.[1];
   if (canonical) canonicalOrigins.add(new URL(canonical).origin);
+
+  // 9. Search-facing invariants. A link preview on every page, because most
+  //    of these URLs are shared through WhatsApp, which reads only Open Graph.
+  //    No prerendered page may be noindex — they are the sitemap. And exactly
+  //    one <h1>: the route page once rendered two, the origin and the A-to-B.
+  if (!OG_IMAGE.test(source)) withoutPreview++;
+  if (NOINDEX.test(source)) noindexed.push(file.name);
+  const h1s = body.match(H1)?.length ?? 0;
+  if (h1s !== 1) headingCounts.push(`${file.name} (${h1s})`);
+}
+
+if (withoutPreview > 0) {
+  problems.push(`${withoutPreview} prerendered document(s) have no absolute og:image.`);
+}
+if (noindexed.length > 0) {
+  problems.push(
+    `${noindexed.length} prerendered document(s) are noindex, e.g. ${noindexed.slice(0, 3).join(', ')}.`,
+  );
+}
+if (headingCounts.length > 0) {
+  problems.push(
+    `${headingCounts.length} prerendered document(s) do not have exactly one <h1>, e.g. ` +
+      headingCounts.slice(0, 3).join(', '),
+  );
+}
+// The shell is the one document that must be noindex: the host serves it with
+// a 200 for every unmatched path, so without it unknown and misspelled URLs
+// are indexed as thin duplicates of the home page.
+const shell = documents.find((f) => f.name === 'index.csr.html');
+if (shell && !NOINDEX.test(readFileSync(shell.path, 'utf8'))) {
+  problems.push('index.csr.html is not noindex — scripts/postbuild.mjs should have marked it.');
 }
 
 if (withoutTitle > 0) {
