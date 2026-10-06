@@ -1,5 +1,5 @@
 /**
- * Ship gate. Nine checks, one exit code, run as part of `npm run build`.
+ * Ship gate. Ten checks, one exit code, run as part of `npm run build`.
  *
  *   1. Initial JS/CSS, gzipped, under 150 KiB.
  *   2. Everything the browser can download, under a data budget.
@@ -10,6 +10,7 @@
  *   7. The prerendered set and the sitemap agree, on count and on origin.
  *   8. No rendered text below 16px, in any emitted CSS.
  *   9. Every page has a link preview and one <h1>; only the shell is noindex.
+ *  10. FAQPage JSON-LD matches the FAQ the page visibly renders, entry for entry.
  *
  * Checks 4-7 exist because `npm run build` passing and `npm run test:ci`
  * passing did not, on their own, mean the app worked. A `<p>` inside a
@@ -383,7 +384,38 @@ let withNoscript = 0;
 let withoutTitle = 0;
 let withoutDescription = 0;
 let withoutPreview = 0;
+const faqProblems = [];
 const noindexed = [];
+
+const JSON_LD = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/;
+const VISIBLE_FAQ =
+  /class="faq-q-text"[^>]*>([\s\S]*?)<\/h3>[\s\S]*?class="faq-a"[^>]*>([\s\S]*?)<\/p>/g;
+const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+const visibleText = (html) =>
+  html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(amp|lt|gt|quot|#39);/g, (entity) => ENTITIES[entity])
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** Null when the FAQPage node and the visible FAQ agree (or neither exists). */
+function faqDisagreement(source) {
+  const raw = JSON_LD.exec(source)?.[1];
+  const graph = raw ? JSON.parse(raw.split('<\\/').join('</'))['@graph'] ?? [] : [];
+  const node = graph.find((n) => n['@type'] === 'FAQPage');
+  const marked = (node?.mainEntity ?? []).map((e) => [
+    e.name.replace(/\s+/g, ' ').trim(),
+    e.acceptedAnswer.text.replace(/\s+/g, ' ').trim(),
+  ]);
+  const shown = [...source.matchAll(VISIBLE_FAQ)].map((m) => [visibleText(m[1]), visibleText(m[2])]);
+  if (marked.length === 0 && shown.length === 0) return null;
+  if (marked.length !== shown.length) {
+    return `${marked.length} FAQ entries in JSON-LD, ${shown.length} visible`;
+  }
+  const at = marked.findIndex((pair, i) => pair[0] !== shown[i][0] || pair[1] !== shown[i][1]);
+  return at === -1 ? null : `FAQ entry ${at + 1} differs between JSON-LD and the page`;
+}
 const headingCounts = [];
 
 /**
@@ -449,11 +481,23 @@ for (const file of pages) {
   //    No prerendered page may be noindex — they are the sitemap. And exactly
   //    one <h1>: the route page once rendered two, the origin and the A-to-B.
   if (!OG_IMAGE.test(source)) withoutPreview++;
+
+  // 10. FAQ markup says only what the page shows. Google's condition for
+  //     FAQPage is that every question and answer is visible; core/seo/faq.ts
+  //     feeds both from one call, and this proves the output still agrees.
+  const faqMismatch = faqDisagreement(source);
+  if (faqMismatch !== null) faqProblems.push(`${file.name}: ${faqMismatch}`);
   if (NOINDEX.test(source)) noindexed.push(file.name);
   const h1s = body.match(H1)?.length ?? 0;
   if (h1s !== 1) headingCounts.push(`${file.name} (${h1s})`);
 }
 
+if (faqProblems.length > 0) {
+  problems.push(
+    `${faqProblems.length} page(s) carry FAQ markup that does not match the visible FAQ, e.g. ` +
+      faqProblems.slice(0, 2).join('; '),
+  );
+}
 if (withoutPreview > 0) {
   problems.push(`${withoutPreview} prerendered document(s) have no absolute og:image.`);
 }

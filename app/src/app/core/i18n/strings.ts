@@ -67,7 +67,7 @@ export const EN = {
     'Kochi Metro Timings is an independent app. It is not endorsed by, affiliated with, or operated by Kochi Metro Rail Limited.',
 
   // ---------------------------------------------------- add to home screen
-  'install.title': 'Install Kochi Metro Timings',
+  'install.title': 'Install the app',
   'install.body': 'Open it from your home screen. Works offline.',
   /** iPhone / iPad: Safari has no install dialog, only the Share menu. */
   'install.iosBody': 'Tap Share, then “Add to Home Screen”.',
@@ -520,7 +520,7 @@ export const ML: Readonly<Record<StringKey, string>> = {
   'shell.disclaimer':
     'Kochi Metro Timings ഒരു സ്വതന്ത്ര ആപ്പാണ്. ഇത് കൊച്ചി മെട്രോ റെയിൽ ലിമിറ്റഡിന്റെ അംഗീകാരമുള്ളതോ അവരുമായി ബന്ധപ്പെട്ടതോ അവർ നടത്തുന്നതോ അല്ല.',
 
-  'install.title': 'Kochi Metro Timings ഇൻസ്റ്റാൾ ചെയ്യുക',
+  'install.title': 'ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്യുക',
   'install.body': 'ഹോം സ്ക്രീനിൽ നിന്ന് തുറക്കാം. ഇന്റർനെറ്റ് ഇല്ലാതെയും പ്രവർത്തിക്കും.',
   'install.iosBody': 'Share അമർത്തി “Add to Home Screen” തിരഞ്ഞെടുക്കുക.',
   'install.button': 'ഇൻസ്റ്റാൾ',
